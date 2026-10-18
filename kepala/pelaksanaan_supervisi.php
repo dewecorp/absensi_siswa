@@ -1084,9 +1084,11 @@ $rata_nilai = count($scores) > 0 ? round(array_sum($scores) / count($scores), 2)
                                                 <div class="p-2 mb-2 rounded" style="background: #f8fafc; font-size: 12px; border: 1px dashed #cbd5e1; line-height: 1.4;">
                                                     <small class="text-muted d-block font-weight-bold" style="font-size: 10.5px;"><i class="fas fa-project-diagram text-primary mr-1"></i> Program:</small>
                                                     <span class="text-dark font-weight-bold"><?= htmlspecialchars((string)($r['nama_program'] ?: '-')) ?></span>
-                                                    <div class="mt-1 pt-1 border-top text-muted d-flex justify-content-between align-items-center" style="font-size: 11px;">
-                                                        <span><i class="fas fa-user-tie mr-1 text-muted"></i> <?= htmlspecialchars((string)($r['supervisor'] ?: '-')) ?></span>
-                                                        <span class="text-truncate" style="max-width: 140px;" title="<?= htmlspecialchars((string)$r['nama_instrumen']) ?>"><i class="fas fa-tasks mr-1 text-muted"></i> <?= htmlspecialchars((string)($r['nama_instrumen'] ?: '-')) ?></span>
+                                                    <div class="mt-1 pt-1 border-top text-muted" style="font-size: 11px;">
+                                                        <div><i class="fas fa-user-tie mr-1 text-muted"></i> <?= htmlspecialchars((string)($r['supervisor'] ?: '-')) ?></div>
+                                                        <?php if (!empty($r['nama_instrumen'])): ?>
+                                                        <div class="mt-1"><i class="fas fa-tasks mr-1 text-info"></i> <?= htmlspecialchars((string)$r['nama_instrumen']) ?></div>
+                                                        <?php endif; ?>
                                                     </div>
                                                 </div>
 
@@ -1114,13 +1116,15 @@ $rata_nilai = count($scores) > 0 ? round(array_sum($scores) / count($scores), 2)
                                                 <?php if (!empty($r['rekomendasi']) || !empty($r['prioritas_perbaikan'])): ?>
                                                     <div class="p-2 rounded mb-2" style="background: #fffdf5; border: 1px solid #fef08a; font-size: 11.5px; line-height: 1.35;">
                                                         <?php if (!empty($r['rekomendasi'])): ?>
-                                                            <div class="text-truncate text-dark mb-1">
-                                                                <strong class="text-warning"><i class="fas fa-lightbulb mr-1"></i> Rekomendasi:</strong> <?= htmlspecialchars($r['rekomendasi']) ?>
+                                                            <div class="mb-2">
+                                                                <strong class="text-warning d-block mb-1"><i class="fas fa-lightbulb mr-1"></i> Rekomendasi:</strong>
+                                                                <span class="text-dark"><?= nl2br(htmlspecialchars($r['rekomendasi'])) ?></span>
                                                             </div>
                                                         <?php endif; ?>
                                                         <?php if (!empty($r['prioritas_perbaikan'])): ?>
-                                                            <div class="text-truncate text-muted">
-                                                                <strong><i class="fas fa-flag mr-1 text-danger"></i> Prioritas:</strong> <?= htmlspecialchars($r['prioritas_perbaikan']) ?>
+                                                            <div class="<?= !empty($r['rekomendasi']) ? 'pt-2 border-top' : '' ?>">
+                                                                <strong class="d-block mb-1"><i class="fas fa-flag mr-1 text-danger"></i> Prioritas:</strong>
+                                                                <span class="text-muted"><?= nl2br(htmlspecialchars($r['prioritas_perbaikan'])) ?></span>
                                                             </div>
                                                         <?php endif; ?>
                                                     </div>

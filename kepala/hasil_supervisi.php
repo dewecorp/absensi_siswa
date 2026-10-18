@@ -300,7 +300,7 @@ $rata_nilai_hasil = count($scores_hasil) > 0 ? round(array_sum($scores_hasil) / 
                                                         <strong class="text-dark"><?= htmlspecialchars((string)($r['supervisor'] ?: '-')) ?></strong>
                                                     </div>
                                                     <?php if (!empty($r['nama_instrumen'])): ?>
-                                                    <div class="mt-1 pt-1 border-top text-truncate text-muted" title="<?= htmlspecialchars((string)$r['nama_instrumen']) ?>">
+                                                    <div class="mt-1 pt-1 border-top text-muted">
                                                         <i class="fas fa-tasks mr-1 text-info"></i> <?= htmlspecialchars((string)$r['nama_instrumen']) ?>
                                                     </div>
                                                     <?php endif; ?>
@@ -328,20 +328,23 @@ $rata_nilai_hasil = count($scores_hasil) > 0 ? round(array_sum($scores_hasil) / 
 
                                                 <!-- Temuan Ringkas Box -->
                                                 <?php if (!empty($r['kekuatan']) || !empty($r['kelemahan']) || !empty($r['rekomendasi'])): ?>
-                                                    <div class="p-2 rounded mb-2" style="background: #fffdf5; border: 1px solid #fef08a; font-size: 11.5px; line-height: 1.35;">
+                                                    <div class="p-2 rounded mb-2" style="background: #fffdf5; border: 1px solid #fef08a; font-size: 11.5px; line-height: 1.5;">
                                                         <?php if (!empty($r['kekuatan'])): ?>
-                                                            <div class="text-truncate text-success mb-1">
-                                                                <strong><i class="fas fa-thumbs-up mr-1"></i> Kekuatan:</strong> <span class="text-dark"><?= htmlspecialchars($r['kekuatan']) ?></span>
+                                                            <div class="mb-2">
+                                                                <strong class="text-success d-block mb-1"><i class="fas fa-thumbs-up mr-1"></i> Kekuatan:</strong>
+                                                                <span class="text-dark"><?= nl2br(htmlspecialchars($r['kekuatan'])) ?></span>
                                                             </div>
                                                         <?php endif; ?>
                                                         <?php if (!empty($r['kelemahan'])): ?>
-                                                            <div class="text-truncate text-danger mb-1">
-                                                                <strong><i class="fas fa-exclamation-triangle mr-1"></i> Kelemahan:</strong> <span class="text-dark"><?= htmlspecialchars($r['kelemahan']) ?></span>
+                                                            <div class="mb-2 <?= !empty($r['kekuatan']) ? 'pt-2 border-top' : '' ?>">
+                                                                <strong class="text-danger d-block mb-1"><i class="fas fa-exclamation-triangle mr-1"></i> Kelemahan:</strong>
+                                                                <span class="text-dark"><?= nl2br(htmlspecialchars($r['kelemahan'])) ?></span>
                                                             </div>
                                                         <?php endif; ?>
                                                         <?php if (!empty($r['rekomendasi'])): ?>
-                                                            <div class="text-truncate text-warning">
-                                                                <strong><i class="fas fa-lightbulb mr-1"></i> Rekomendasi:</strong> <span class="text-dark"><?= htmlspecialchars($r['rekomendasi']) ?></span>
+                                                            <div class="<?= (!empty($r['kekuatan']) || !empty($r['kelemahan'])) ? 'pt-2 border-top' : '' ?>">
+                                                                <strong class="text-warning d-block mb-1"><i class="fas fa-lightbulb mr-1"></i> Rekomendasi:</strong>
+                                                                <span class="text-dark"><?= nl2br(htmlspecialchars($r['rekomendasi'])) ?></span>
                                                             </div>
                                                         <?php endif; ?>
                                                     </div>

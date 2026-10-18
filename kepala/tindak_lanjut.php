@@ -1,4 +1,4 @@
-﻿<?php
+<?php
 require_once '../config/database.php';
 require_once '../config/functions.php';
 require_once '../config/supervisi.php';
@@ -612,8 +612,9 @@ $persen_selesai_tl = $total_tl > 0 ? round(($count_selesai_tl / $total_tl) * 100
                                                 <!-- Rekomendasi & Rencana Tindakan Box -->
                                                 <div class="p-2 mb-2 rounded" style="background: #f8fafc; font-size: 11.5px; border: 1px dashed #cbd5e1; line-height: 1.4;">
                                                     <?php if (!empty($r['rekomendasi'])): ?>
-                                                        <div class="text-truncate text-muted mb-1" title="<?= htmlspecialchars($r['rekomendasi']) ?>">
-                                                            <strong class="text-warning"><i class="fas fa-lightbulb mr-1"></i> Rekomendasi:</strong> <?= htmlspecialchars($r['rekomendasi']) ?>
+                                                        <div class="mb-2">
+                                                            <strong class="text-warning d-block mb-1"><i class="fas fa-lightbulb mr-1"></i> Rekomendasi:</strong>
+                                                            <span class="text-dark"><?= nl2br(htmlspecialchars($r['rekomendasi'])) ?></span>
                                                         </div>
                                                     <?php endif; ?>
                                                     <div class="text-dark" style="font-size: 12px;">
@@ -648,7 +649,7 @@ $persen_selesai_tl = $total_tl > 0 ? round(($count_selesai_tl / $total_tl) * 100
                                                                 </a>
                                                             <?php endif; ?>
                                                             <?php if (!empty($r['bukti'])): ?>
-                                                                <span class="text-truncate text-muted" style="max-width: 140px;" title="<?= htmlspecialchars($r['bukti']) ?>"><?= htmlspecialchars($r['bukti']) ?></span>
+                                                                <span class="text-muted" style="word-break: break-word;"><?= nl2br(htmlspecialchars($r['bukti'])) ?></span>
                                                             <?php endif; ?>
                                                         </div>
                                                     <?php endif; ?>
