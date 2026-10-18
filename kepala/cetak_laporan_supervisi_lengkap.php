@@ -524,7 +524,7 @@ table { max-width: calc(100% - var(--cx)); margin-left: var(--cx) !important; }
 <p>Supervisi dilaksanakan dengan pendekatan klinis bersahabat (<strong>collegial clinical supervision</strong>) yang menekankan kemitraan, keterbukaan, dan fokus pada perbaikan pembelajaran, bukan penilaian yang bersifat menghukum.</p>
 <h3 class="subsub">Program Kerja Supervisi</h3>
 <table>
-    <thead><tr><th style="width:5%">No</th><th>Jenis</th><th>Nama Program</th><th>Tujuan</th><th>Penanggung Jawab</th><th class="c">Status</th></tr></thead>
+    <thead><tr><th style="width:5%">No</th><th style="width:16%">Jenis</th><th style="width:25%">Nama Program</th><th>Tujuan</th><th style="width:20%">Penanggung Jawab</th></tr></thead>
     <tbody>
     <?php if ($jenisPrograms): ?>
         <?php foreach ($jenisPrograms as $i => $pr): ?>
@@ -534,11 +534,10 @@ table { max-width: calc(100% - var(--cx)); margin-left: var(--cx) !important; }
                 <td><?= h($pr['nama_program']) ?></td>
                 <td><?= nl2br(h($pr['tujuan'] ?? '')) ?></td>
                 <td><?= h($pr['penanggung_jawab'] ?: '-') ?></td>
-                <td class="c"><?= h($pr['status'] ?: '-') ?></td>
             </tr>
         <?php endforeach; ?>
     <?php else: ?>
-        <tr><td colspan="6" class="c text-muted" style="padding:12px;font-style:italic">Belum ada data program kerja supervisi pada periode ini.</td></tr>
+        <tr><td colspan="5" class="c text-muted" style="padding:12px;font-style:italic">Belum ada data program kerja supervisi pada periode ini.</td></tr>
     <?php endif; ?>
     </tbody>
 </table>

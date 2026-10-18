@@ -40,11 +40,11 @@ $program_list = array_values(array_filter($program_all_raw, function ($p) use ($
 $jadwal_list = [];
 try {
     $stmt = $pdo->prepare("
-        SELECT j.id_jadwal, j.id_guru, j.id_program, j.id_instrumen, j.nama_guru, j.jenis_supervisi, j.tanggal, j.fokus
+        SELECT j.id_jadwal, j.id_guru, j.id_program, j.id_instrumen, j.nama_guru, j.jenis_supervisi, j.tanggal, j.fokus,
+               p.id_pelaksanaan
         FROM tb_sv_jadwal j
         LEFT JOIN tb_sv_pelaksanaan p ON p.id_jadwal = j.id_jadwal
         WHERE j.jenis_supervisi = ?
-          AND p.id_pelaksanaan IS NULL
         ORDER BY j.tanggal DESC LIMIT 200
     ");
     $stmt->execute([$sv_jenis]);
@@ -54,10 +54,10 @@ try {
 if (!$jadwal_list) {
     try {
         $jadwal_list = $pdo->query("
-            SELECT j.id_jadwal, j.id_guru, j.id_program, j.id_instrumen, j.nama_guru, j.jenis_supervisi, j.tanggal, j.fokus
+            SELECT j.id_jadwal, j.id_guru, j.id_program, j.id_instrumen, j.nama_guru, j.jenis_supervisi, j.tanggal, j.fokus,
+                   p.id_pelaksanaan
             FROM tb_sv_jadwal j
             LEFT JOIN tb_sv_pelaksanaan p ON p.id_jadwal = j.id_jadwal
-            WHERE p.id_pelaksanaan IS NULL
             ORDER BY j.tanggal DESC LIMIT 200
         ")->fetchAll(PDO::FETCH_ASSOC);
     } catch (Throwable $e) {}
@@ -408,6 +408,16 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && $can_manage) {
             sv_flash('success', 'Pelaksanaan supervisi berhasil disimpan.');
         } elseif ($aksi === 'hapus') {
             $id = (int)($_POST['id_pelaksanaan'] ?? 0);
+            if ($id > 0) {
+                try {
+                    $stJadwal = $pdo->prepare("SELECT id_jadwal FROM tb_sv_pelaksanaan WHERE id_pelaksanaan = ? LIMIT 1");
+                    $stJadwal->execute([$id]);
+                    $jid = (int)($stJadwal->fetchColumn() ?: 0);
+                    if ($jid > 0) {
+                        $pdo->prepare("UPDATE tb_sv_jadwal SET status = 'Terjadwal' WHERE id_jadwal = ?")->execute([$jid]);
+                    }
+                } catch (Throwable $e) {}
+            }
             $pdo->prepare("DELETE FROM tb_sv_penilaian WHERE id_pelaksanaan = ?")->execute([$id]);
             $pdo->prepare("DELETE FROM tb_sv_manajerial_detail WHERE id_pelaksanaan = ?")->execute([$id]);
             $pdo->prepare("DELETE FROM tb_sv_pelaksanaan WHERE id_pelaksanaan = ?")->execute([$id]);
@@ -611,7 +621,29 @@ function svHitungNilai() {
 
 $(document).ready(function () {
     document.querySelectorAll('form[method="GET"]').forEach(function(f){f.querySelectorAll('select, input[type="date"]').forEach(function(el){el.addEventListener('change',function(){f.submit();});});});
-    var dttablepelaksanaan=$('#table-pelaksanaan').DataTable({language:{search:'Cari:',lengthMenu:'Tampilkan _MENU_ data',info:'Menampilkan _START_ sampai _END_ dari _TOTAL_ data',infoEmpty:'Tidak ada data',zeroRecords:'Data tidak ditemukan',paginate:{first:'Awal',last:'Akhir',next:'Berikutnya',previous:'Sebelumnya'}},pageLength:10,order:[[1,'desc']],columnDefs:[],responsive:false});dttablepelaksanaan.on('order.dt search.dt draw.dt',function(){var info=dttablepelaksanaan.page.info();dttablepelaksanaan.column(0,{search:'applied',order:'applied'}).nodes().each(function(cell,i){if(cell) cell.innerHTML=info.page*info.length+i+1;});}).draw();
+    
+    function svFilterPelaksanaanCards() {
+        var q = $.trim($('#filter-search-pelaksanaan').val() || '').toLowerCase();
+        var st = $('#filter-status-card').val();
+        var visible = 0;
+        $('.pelaksanaan-card-col').each(function () {
+            var searchData = $(this).data('search') || '';
+            var statusData = $(this).data('status') || '';
+            var matchSearch = !q || searchData.indexOf(q) !== -1;
+            var matchStatus = !st || String(statusData) === String(st);
+            if (matchSearch && matchStatus) {
+                $(this).removeClass('d-none');
+                visible++;
+            } else {
+                $(this).addClass('d-none');
+            }
+        });
+        $('#empty-search-msg').toggle(visible === 0);
+        $('#pelaksanaan-count-badge').text(visible + ' Pelaksanaan');
+    }
+    $('#filter-search-pelaksanaan').on('input', svFilterPelaksanaanCards);
+    $('#filter-status-card').on('change', svFilterPelaksanaanCards);
+
     var programJenis = {};
     $('#sv-program-select option').each(function () { var v = $(this).val(); if (v) programJenis[v] = $(this).data('jenis'); });
     var instrumenJenis = {};
@@ -792,6 +824,28 @@ $(document).ready(function () {
             svPopulateMapel(d.id_guru || $('#sv-guru-select').val(), false);
             if (d.mapel_di_supervisi) { $('#sv-mapel-select').val(d.mapel_di_supervisi); }
         }
+        // Ensure id_jadwal selection and option availability
+        var targetJadwal = d.id_jadwal;
+        if ((!targetJadwal || targetJadwal === '0') && d.id_guru && typeof svJadwalList !== 'undefined') {
+            var mJadwal = svJadwalList.find(function(j) {
+                return String(j.id_guru) === String(d.id_guru) && (!d.tanggal || j.tanggal === d.tanggal);
+            }) || svJadwalList.find(function(j) {
+                return String(j.id_guru) === String(d.id_guru);
+            });
+            if (mJadwal) targetJadwal = mJadwal.id_jadwal;
+        }
+        if (targetJadwal) {
+            var $selJadwal = $('#form-pelaksanaan [name=id_jadwal]');
+            if ($selJadwal.length) {
+                var existsJ = $selJadwal.find('option[value="' + targetJadwal + '"]').length > 0;
+                if (!existsJ) {
+                    var jRow = (typeof svJadwalList !== 'undefined') ? svJadwalList.find(function(j){ return String(j.id_jadwal) === String(targetJadwal); }) : null;
+                    var labelJ = jRow ? ((jRow.nama_guru || '-') + ' - ' + (jRow.tanggal || '')) : ((d.nama_guru || '-') + ' - ' + (d.tanggal || ''));
+                    $selJadwal.append('<option value="' + targetJadwal + '">' + $('<div>').text(labelJ).html() + '</option>');
+                }
+                $selJadwal.val(String(targetJadwal));
+            }
+        }
         svRenderPenilaian();
         if (window.GDSRefresh) {
             try {
@@ -854,8 +908,20 @@ JS;
 
 include '../templates/header.php';
 include '../templates/sidebar.php';
+
+$total_pelaksanaan = count($rows);
+$count_selesai = count(array_filter($rows, fn($r) => ($r['status'] ?? '') === 'Selesai'));
+$count_draft = $total_pelaksanaan - $count_selesai;
+$persen_selesai = $total_pelaksanaan > 0 ? round(($count_selesai / $total_pelaksanaan) * 100) : 0;
+$scores = array_filter(array_map(fn($r) => $r['nilai'] !== null ? (float)$r['nilai'] : null, $rows), fn($v) => $v !== null);
+$rata_nilai = count($scores) > 0 ? round(array_sum($scores) / count($scores), 2) : 0;
 ?>
 <div class="main-content">
+    <style>
+    .hover-shadow { transition: all 0.2s ease-in-out; }
+    .hover-shadow:hover { box-shadow: 0 0.5rem 1.5rem rgba(0,0,0,0.1) !important; transform: translateY(-2px); }
+    .transition { transition: all 0.2s ease-in-out; }
+    </style>
     <section class="section">
         <div class="section-header">
             <h1>Supervisi <?= htmlspecialchars($sv_jenis) ?></h1>
@@ -871,51 +937,68 @@ include '../templates/sidebar.php';
             <input type="hidden" id="svPrintPlace" value="<?= htmlspecialchars($school_profile['tempat_jadwal'] ?? 'Padang', ENT_QUOTES) ?>">
             <input type="hidden" id="svPrintDate" value="<?= date('d F Y') ?>">
 
-            <div class="card">
-                <div class="card-body">
+            <div class="card mb-3">
+                <div class="card-body py-3">
                     <form method="GET" class="form-row align-items-end">
                         <input type="hidden" name="jenis" value="<?= htmlspecialchars($sv_jenis, ENT_QUOTES) ?>">
-                        <div class="form-group col-md-3 mb-2">
+                        <div class="form-group col-md-2 mb-2">
                             <label class="small font-weight-bold">Tahun Ajaran</label>
-                            <select class="form-control" name="tahun_ajaran">
+                            <select class="form-control form-control-sm" name="tahun_ajaran" onchange="this.form.submit()">
                                 <?php foreach (sv_tahun_ajaran_options($pdo) as $ta): ?><option value="<?= htmlspecialchars($ta, ENT_QUOTES) ?>" <?= $ta === $filter_ta ? 'selected' : '' ?>><?= htmlspecialchars($ta) ?></option><?php endforeach; ?>
                             </select>
                         </div>
                         <div class="form-group col-md-3 mb-2">
-                            <label class="small font-weight-bold">Guru/PTK</label>
-                            <select class="form-control" name="guru">
-                                <option value="">Semua</option>
+                            <label class="small font-weight-bold"><?= $is_manajerial ? 'Unit/Bagian' : 'Guru/PTK' ?></label>
+                            <select class="form-control form-control-sm" name="guru" onchange="this.form.submit()">
+                                <option value="">Semua <?= $is_manajerial ? 'Unit/Bagian' : 'Guru/PTK' ?></option>
                                 <?php foreach ($guru_list as $g): ?><option value="<?= (int)$g['id_guru'] ?>" <?= (string)$g['id_guru'] === $filter_guru ? 'selected' : '' ?>><?= htmlspecialchars($g['nama_guru']) ?></option><?php endforeach; ?>
                             </select>
                         </div>
-                        <div class="form-group col-md-3 mb-2">
-                            <label class="small font-weight-bold">Status</label>
-                            <select class="form-control" name="status">
-                                <option value="">Semua</option>
-                                <option value="Draft" <?= $filter_status === 'Draft' ? 'selected' : '' ?>>Draft</option>
-                                <option value="Selesai" <?= $filter_status === 'Selesai' ? 'selected' : '' ?>>Selesai</option>
+                        <div class="form-group col-md-2 mb-2">
+                            <label class="small font-weight-bold">Filter Status</label>
+                            <select class="form-control form-control-sm" id="filter-status-card">
+                                <option value="">Semua Status</option>
+                                <option value="Selesai">Selesai</option>
+                                <option value="Draft">Draft</option>
                             </select>
                         </div>
-                        <div class="form-group col-md-3 mb-2">
-                            <label class="small font-weight-bold">Dari Tanggal</label>
-                            <input type="date" class="form-control" name="tanggal_dari" value="<?= htmlspecialchars($filter_dari, ENT_QUOTES) ?>">
-                        </div>
-                        <div class="form-group col-md-3 mb-2">
-                            <label class="small font-weight-bold">Sampai Tanggal</label>
-                            <input type="date" class="form-control" name="tanggal_sampai" value="<?= htmlspecialchars($filter_sampai, ENT_QUOTES) ?>">
-                        </div>
-                        <div class="form-group col-md-3 mb-2 d-flex align-items-end">
-                            <div>
-                                <a href="<?= htmlspecialchars(basename(__FILE__), ENT_QUOTES) ?>?jenis=<?= urlencode($sv_jenis) ?>" class="btn btn-light"><i class="fas fa-undo"></i> Reset</a>
+                        <div class="form-group col-md-4 mb-2">
+                            <label class="small font-weight-bold">Cari Pelaksanaan</label>
+                            <div class="input-group input-group-sm">
+                                <input type="text" class="form-control" id="filter-search-pelaksanaan" placeholder="Cari nama, program, instrumen, supervisor...">
+                                <div class="input-group-append">
+                                    <span class="input-group-text"><i class="fas fa-search"></i></span>
+                                </div>
                             </div>
+                        </div>
+                        <div class="form-group col-md-1 mb-2 d-flex align-items-end">
+                            <a href="<?= htmlspecialchars(basename(__FILE__), ENT_QUOTES) ?>?jenis=<?= urlencode($sv_jenis) ?>" class="btn btn-light btn-sm btn-block" title="Reset Filter"><i class="fas fa-undo"></i></a>
                         </div>
                     </form>
                 </div>
             </div>
 
+            <!-- Stats Chips -->
+            <div class="d-flex flex-wrap align-items-center mb-3" style="gap: 8px;">
+                <span class="badge badge-light border text-dark px-3 py-2" style="border-radius: 8px; font-size: 12px;">
+                    <i class="fas fa-clipboard-list text-primary mr-1"></i> Total: <strong id="pelaksanaan-count-badge"><?= (int)$total_pelaksanaan ?> Pelaksanaan</strong>
+                </span>
+                <span class="badge badge-light border text-dark px-3 py-2" style="border-radius: 8px; font-size: 12px;">
+                    <i class="fas fa-check-circle text-success mr-1"></i> Selesai: <strong><?= (int)$count_selesai ?></strong> <small class="text-success font-weight-bold">(<?= $persen_selesai ?>%)</small>
+                </span>
+                <span class="badge badge-light border text-dark px-3 py-2" style="border-radius: 8px; font-size: 12px;">
+                    <i class="fas fa-pencil-ruler text-warning mr-1"></i> Draft: <strong><?= (int)$count_draft ?></strong>
+                </span>
+                <?php if ($total_pelaksanaan > 0): ?>
+                <span class="badge badge-light border text-dark px-3 py-2" style="border-radius: 8px; font-size: 12px;">
+                    <i class="fas fa-chart-line text-info mr-1"></i> Rata-rata Nilai: <strong><?= number_format($rata_nilai, 2) ?></strong>
+                </span>
+                <?php endif; ?>
+            </div>
+
             <div class="card">
                 <div class="card-header">
-                    <h4>Daftar Pelaksanaan Supervisi <?= htmlspecialchars($sv_jenis) ?></h4>
+                    <h4>Daftar Pelaksanaan Supervisi <?= htmlspecialchars($sv_jenis) ?> <small class="text-muted"><?= $filter_ta !== '' ? 'TA ' . htmlspecialchars($filter_ta) : '' ?></small></h4>
                     <div class="card-header-action">
                         <button class="btn btn-success" id="btn-excel" type="button"><i class="fas fa-file-excel"></i> Excel</button>
                         <button class="btn btn-warning" id="btn-pdf" type="button"><i class="fas fa-file-pdf"></i> PDF</button>
@@ -925,61 +1008,190 @@ include '../templates/sidebar.php';
                     </div>
                 </div>
                 <div class="card-body">
-                    <style>#table-pelaksanaan{font-size:13px}#table-pelaksanaan th{font-size:13px;white-space:nowrap}#table-pelaksanaan td{vertical-align:middle}#table-pelaksanaan th:last-child,#table-pelaksanaan td:last-child{white-space:nowrap;text-align:center;min-width:120px}#table-pelaksanaan td:last-child .btn{margin:2px;display:inline-block;vertical-align:middle}</style>
-                    <div class="table-responsive">
-                        <table class="table table-striped" id="table-pelaksanaan">
-                            <thead>
-                                <tr>
-                                    <th width="5%">No</th>
-                                    <th><?= $is_manajerial ? 'Unit/Bagian' : 'Guru' ?></th>
-                                    <?php if (!$is_manajerial): ?><th>Mata Pelajaran</th><?php endif; ?>
-                                    <th>Program</th>
-                                    <th>Tanggal</th>
-                                    <th>Supervisor</th>
-                                    <th>Instrumen</th>
-                                    <th>Nilai</th>
-                                    <th>Predikat</th>
-                                    <th style="width:180px">Kekuatan</th>
-                                    <th style="width:180px">Kelemahan</th>
-                                    <th style="width:180px">Fokus</th>
-                                    <th>Rekomendasi</th>
-                                    <th style="min-width:120px">Prioritas</th>
-                                    <th>Status</th>
-                                    <?php if ($can_manage): ?><th width="10%">Aksi</th><?php endif; ?>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                <?php foreach ($rows as $r): ?>
-                                    <tr>
-                                        <td class="text-center"></td>
-                                        <td><?= htmlspecialchars($is_manajerial ? ($r['unit_bagian'] ?: '-') : ($r['nama_guru'] ?: '-')) ?></td>
-                                        <?php if (!$is_manajerial): ?><td><?= htmlspecialchars((string)($r['mapel_di_supervisi'] ?? '')) ?></td><?php endif; ?>
-                                        <td><?= htmlspecialchars((string)$r['nama_program']) ?></td>
-                                        <td><?= $r['tanggal'] ? date('d/m/Y', strtotime($r['tanggal'])) : '-' ?></td>
-                                        <td><?= htmlspecialchars((string)$r['supervisor']) ?></td>
-                                        <td><?= htmlspecialchars((string)$r['nama_instrumen']) ?></td>
-                                        <td><?= $r['nilai'] !== null ? htmlspecialchars(number_format((float)$r['nilai'], 2)) : '-' ?></td>
-                                        <td><?= htmlspecialchars((string)$r['predikat']) ?></td>
-                                        <td style="max-width:180px;white-space:normal"><?= nl2br(htmlspecialchars((string)$r['kekuatan'])) ?></td>
-                                        <td style="max-width:180px;white-space:normal"><?= nl2br(htmlspecialchars((string)$r['kelemahan'])) ?></td>
-                                        <td style="max-width:180px;white-space:normal"><?= nl2br(htmlspecialchars((string)$r['fokus'])) ?></td>
-                                        <td><?= htmlspecialchars((string)$r['rekomendasi']) ?></td>
-                                        <td><?= htmlspecialchars((string)$r['prioritas_perbaikan']) ?></td>
-                                        <td><span class="badge badge-<?= $r['status'] === 'Selesai' ? 'success' : 'secondary' ?>"><?= htmlspecialchars($r['status']) ?></span></td>
-                                        <?php if ($can_manage): ?>
-                                        <td style="white-space:nowrap">
-                                            <div class="d-inline-flex align-items-center">
-                                            <a class="btn btn-sm btn-outline-primary mr-1" href="hasil_supervisi_detail.php?id=<?= (int)$r['id_pelaksanaan'] ?>" title="Detail"><i class="fas fa-eye"></i></a>
-                                            <button class="btn btn-warning btn-sm btn-edit mr-1" type="button" data-row='<?= htmlspecialchars(json_encode($r, JSON_HEX_APOS | JSON_HEX_QUOT), ENT_QUOTES) ?>'><i class="fas fa-edit"></i></button>
-                                            <button class="btn btn-danger btn-sm btn-hapus" type="button" data-id="<?= (int)$r['id_pelaksanaan'] ?>"><i class="fas fa-trash"></i></button>
+                    <?php if (empty($rows)): ?>
+                        <div class="alert alert-info text-center py-4">
+                            <i class="fas fa-info-circle fa-2x mb-2 d-block text-info"></i>
+                            Belum ada pelaksanaan supervisi <?= htmlspecialchars($sv_jenis) ?> pada filter ini.
+                            <?php if ($can_manage): ?>
+                                <br><small class="text-muted">Klik tombol <strong>"Tambah"</strong> untuk mencatat pelaksanaan baru.</small>
+                            <?php endif; ?>
+                        </div>
+                    <?php else: ?>
+                        <div id="empty-search-msg" class="alert alert-warning text-center" style="display:none;">
+                            <i class="fas fa-search mr-1"></i> Tidak ada data pelaksanaan yang cocok dengan pencarian Anda.
+                        </div>
+                        <div class="row" id="pelaksanaan-cards-container">
+                            <?php foreach ($rows as $r): ?>
+                                <?php
+                                $isDone = ($r['status'] === 'Selesai');
+                                $statusBadge = $isDone ? 'success' : 'secondary';
+                                $nama = $is_manajerial ? ($r['unit_bagian'] ?: '-') : ($r['nama_guru'] ?: '-');
+                                $pred = (string)($r['predikat'] ?? '');
+                                $predColor = 'secondary';
+                                if (stripos($pred, 'Amat Baik') !== false || stripos($pred, 'Sangat Baik') !== false || stripos($pred, 'A') === 0) {
+                                    $predColor = 'success';
+                                } elseif (stripos($pred, 'Baik') !== false || stripos($pred, 'B') === 0) {
+                                    $predColor = 'primary';
+                                } elseif (stripos($pred, 'Cukup') !== false || stripos($pred, 'C') === 0) {
+                                    $predColor = 'warning';
+                                } elseif (stripos($pred, 'Kurang') !== false || stripos($pred, 'D') === 0) {
+                                    $predColor = 'danger';
+                                }
+
+                                $searchBlob = strtolower(implode(' ', [
+                                    $nama,
+                                    $r['mapel_di_supervisi'] ?? '',
+                                    $r['nama_program'] ?? '',
+                                    $r['nama_instrumen'] ?? '',
+                                    $r['supervisor'] ?? '',
+                                    $r['status'] ?? '',
+                                    $r['predikat'] ?? '',
+                                    $r['kekuatan'] ?? '',
+                                    $r['kelemahan'] ?? '',
+                                    $r['rekomendasi'] ?? '',
+                                    $r['prioritas_perbaikan'] ?? ''
+                                ]));
+                                ?>
+                                <div class="col-12 col-md-6 col-lg-4 d-flex align-items-stretch mb-4 pelaksanaan-card-col"
+                                     data-search="<?= htmlspecialchars($searchBlob, ENT_QUOTES) ?>"
+                                     data-status="<?= htmlspecialchars($r['status'] ?? '', ENT_QUOTES) ?>">
+                                    <div class="card w-100 border-0 shadow-sm hover-shadow transition" style="border-radius: 12px; overflow: hidden; background: #fff; border: 1px solid #e2e8f0 !important;">
+                                        <div class="card-body p-3 d-flex flex-column justify-content-between">
+                                            <div>
+                                                <!-- Top Bar -->
+                                                <div class="d-flex justify-content-between align-items-center mb-2">
+                                                    <span class="badge badge-info px-2 py-1 font-weight-bold" style="font-size: 11.5px; border-radius: 6px;">
+                                                        <i class="fas fa-clipboard-check mr-1"></i> <?= htmlspecialchars($sv_jenis) ?>
+                                                    </span>
+                                                    <span class="badge badge-<?= $statusBadge ?> px-2 py-1 font-weight-bold" style="font-size: 11px; border-radius: 6px;">
+                                                        <i class="fas <?= $isDone ? 'fa-check-circle' : 'fa-pencil-ruler' ?> mr-1"></i> <?= htmlspecialchars($r['status']) ?>
+                                                    </span>
+                                                </div>
+
+                                                <!-- Nama Target & Mapel -->
+                                                <h6 class="font-weight-bold text-dark mb-1" style="font-size: 15px; line-height: 1.4;">
+                                                    <?= htmlspecialchars($nama) ?>
+                                                </h6>
+                                                <div class="text-muted small mb-2 d-flex flex-wrap align-items-center" style="gap: 6px; font-size: 11.5px;">
+                                                    <?php if (!$is_manajerial && !empty($r['mapel_di_supervisi'])): ?>
+                                                        <span class="badge badge-light border text-dark font-weight-normal"><i class="fas fa-book text-muted mr-1"></i> <?= htmlspecialchars($r['mapel_di_supervisi']) ?></span>
+                                                        <span>&bull;</span>
+                                                    <?php endif; ?>
+                                                    <span><i class="far fa-calendar-alt text-muted mr-1"></i> <?= $r['tanggal'] ? date('d/m/Y', strtotime($r['tanggal'])) : '-' ?></span>
+                                                </div>
+
+                                                <!-- Program & Supervisor Box -->
+                                                <div class="p-2 mb-2 rounded" style="background: #f8fafc; font-size: 12px; border: 1px dashed #cbd5e1; line-height: 1.4;">
+                                                    <small class="text-muted d-block font-weight-bold" style="font-size: 10.5px;"><i class="fas fa-project-diagram text-primary mr-1"></i> Program:</small>
+                                                    <span class="text-dark font-weight-bold"><?= htmlspecialchars((string)($r['nama_program'] ?: '-')) ?></span>
+                                                    <div class="mt-1 pt-1 border-top text-muted d-flex justify-content-between align-items-center" style="font-size: 11px;">
+                                                        <span><i class="fas fa-user-tie mr-1 text-muted"></i> <?= htmlspecialchars((string)($r['supervisor'] ?: '-')) ?></span>
+                                                        <span class="text-truncate" style="max-width: 140px;" title="<?= htmlspecialchars((string)$r['nama_instrumen']) ?>"><i class="fas fa-tasks mr-1 text-muted"></i> <?= htmlspecialchars((string)($r['nama_instrumen'] ?: '-')) ?></span>
+                                                    </div>
+                                                </div>
+
+                                                <!-- Metrik Nilai & Predikat -->
+                                                <div class="p-2 mb-2 rounded d-flex justify-content-between align-items-center" style="background: #f8fafc; border: 1px solid #e2e8f0;">
+                                                    <div>
+                                                        <small class="text-muted d-block" style="font-size: 10.5px;">Nilai Supervisi</small>
+                                                        <h5 class="mb-0 text-primary font-weight-bold" style="font-size: 20px;">
+                                                            <?= $r['nilai'] !== null ? number_format((float)$r['nilai'], 2) : '-' ?>
+                                                        </h5>
+                                                    </div>
+                                                    <div class="text-right">
+                                                        <small class="text-muted d-block" style="font-size: 10.5px;">Predikat</small>
+                                                        <?php if (!empty($pred)): ?>
+                                                            <span class="badge badge-<?= $predColor ?> font-weight-bold" style="font-size: 11px; padding: 4px 10px; border-radius: 6px;">
+                                                                <?= htmlspecialchars($pred) ?>
+                                                            </span>
+                                                        <?php else: ?>
+                                                            <span class="text-muted font-italic" style="font-size: 11px;">Belum dinilai</span>
+                                                        <?php endif; ?>
+                                                    </div>
+                                                </div>
+
+                                                <!-- Highlight Catatan Ringkas -->
+                                                <?php if (!empty($r['rekomendasi']) || !empty($r['prioritas_perbaikan'])): ?>
+                                                    <div class="p-2 rounded mb-2" style="background: #fffdf5; border: 1px solid #fef08a; font-size: 11.5px; line-height: 1.35;">
+                                                        <?php if (!empty($r['rekomendasi'])): ?>
+                                                            <div class="text-truncate text-dark mb-1">
+                                                                <strong class="text-warning"><i class="fas fa-lightbulb mr-1"></i> Rekomendasi:</strong> <?= htmlspecialchars($r['rekomendasi']) ?>
+                                                            </div>
+                                                        <?php endif; ?>
+                                                        <?php if (!empty($r['prioritas_perbaikan'])): ?>
+                                                            <div class="text-truncate text-muted">
+                                                                <strong><i class="fas fa-flag mr-1 text-danger"></i> Prioritas:</strong> <?= htmlspecialchars($r['prioritas_perbaikan']) ?>
+                                                            </div>
+                                                        <?php endif; ?>
+                                                    </div>
+                                                <?php endif; ?>
                                             </div>
-                                        </td>
-                                        <?php endif; ?>
-                                    </tr>
-                                <?php endforeach; ?>
-                            </tbody>
-                        </table>
-                    </div>
+
+                                            <!-- Footer Aksi -->
+                                            <div class="pt-2 mt-2 border-top d-flex justify-content-end" style="gap: 6px;">
+                                                <a class="btn btn-outline-primary btn-sm px-3" href="hasil_supervisi_detail.php?id=<?= (int)$r['id_pelaksanaan'] ?>" style="border-radius: 6px; font-size: 12px;">
+                                                    <i class="fas fa-eye mr-1"></i> Detail
+                                                </a>
+                                                <?php if ($can_manage): ?>
+                                                <button class="btn btn-outline-warning btn-sm btn-edit px-3" type="button"
+                                                    data-row='<?= htmlspecialchars(json_encode($r, JSON_HEX_APOS | JSON_HEX_QUOT), ENT_QUOTES) ?>' style="border-radius: 6px; font-size: 12px;">
+                                                    <i class="fas fa-edit mr-1"></i> Edit
+                                                </button>
+                                                <button class="btn btn-outline-danger btn-sm btn-hapus px-3" type="button" data-id="<?= (int)$r['id_pelaksanaan'] ?>" style="border-radius: 6px; font-size: 12px;">
+                                                    <i class="fas fa-trash mr-1"></i> Hapus
+                                                </button>
+                                                <?php endif; ?>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            <?php endforeach; ?>
+                        </div>
+                    <?php endif; ?>
+
+                    <!-- Hidden table for Excel export -->
+                    <table class="d-none" id="table-pelaksanaan">
+                        <thead>
+                            <tr>
+                                <th>No</th>
+                                <th><?= $is_manajerial ? 'Unit/Bagian' : 'Guru' ?></th>
+                                <?php if (!$is_manajerial): ?><th>Mata Pelajaran</th><?php endif; ?>
+                                <th>Program</th>
+                                <th>Tanggal</th>
+                                <th>Supervisor</th>
+                                <th>Instrumen</th>
+                                <th>Nilai</th>
+                                <th>Predikat</th>
+                                <th>Kekuatan</th>
+                                <th>Kelemahan</th>
+                                <th>Fokus</th>
+                                <th>Rekomendasi</th>
+                                <th>Prioritas</th>
+                                <th>Status</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <?php foreach ($rows as $idx => $r): ?>
+                                <tr>
+                                    <td><?= $idx + 1 ?></td>
+                                    <td><?= htmlspecialchars($is_manajerial ? ($r['unit_bagian'] ?: '-') : ($r['nama_guru'] ?: '-')) ?></td>
+                                    <?php if (!$is_manajerial): ?><td><?= htmlspecialchars((string)($r['mapel_di_supervisi'] ?? '')) ?></td><?php endif; ?>
+                                    <td><?= htmlspecialchars((string)$r['nama_program']) ?></td>
+                                    <td><?= $r['tanggal'] ? date('d/m/Y', strtotime($r['tanggal'])) : '-' ?></td>
+                                    <td><?= htmlspecialchars((string)$r['supervisor']) ?></td>
+                                    <td><?= htmlspecialchars((string)$r['nama_instrumen']) ?></td>
+                                    <td><?= $r['nilai'] !== null ? htmlspecialchars(number_format((float)$r['nilai'], 2)) : '-' ?></td>
+                                    <td><?= htmlspecialchars((string)$r['predikat']) ?></td>
+                                    <td><?= htmlspecialchars((string)$r['kekuatan']) ?></td>
+                                    <td><?= htmlspecialchars((string)$r['kelemahan']) ?></td>
+                                    <td><?= htmlspecialchars((string)$r['fokus']) ?></td>
+                                    <td><?= htmlspecialchars((string)$r['rekomendasi']) ?></td>
+                                    <td><?= htmlspecialchars((string)$r['prioritas_perbaikan']) ?></td>
+                                    <td><?= htmlspecialchars($r['status']) ?></td>
+                                </tr>
+                            <?php endforeach; ?>
+                        </tbody>
+                    </table>
                 </div>
             </div>
         </div>

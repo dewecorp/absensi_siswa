@@ -429,6 +429,28 @@ $(document).ready(function () {
         var id = $(this).data('id');
         Swal.fire({title:'Jadwalkan Supervisi Ulang',text:'Buat jadwal supervisi ulang untuk tindak lanjut ini?',icon:'warning',showCancelButton:true,confirmButtonColor:'#d33',cancelButtonColor:'#6c757d',confirmButtonText:'Ya, Hapus!',cancelButtonText:'Batal'}).then(function(r){if(r.isConfirmed){var f=document.createElement('form');f.method='POST';f.action='tindak_lanjut.php';var fields={aksi: 'jadwalkan_ulang', id_tindak_lanjut: id};Object.keys(fields).forEach(function(k){var i=document.createElement('input');i.type='hidden';i.name=k;i.value=fields[k];f.appendChild(i);});document.body.appendChild(f);f.submit();}})
     });
+    function svFilterTlCards() {
+        var q = $.trim($('#filter-search-tl').val() || '').toLowerCase();
+        var st = $('#filter-status-card').val();
+        var visible = 0;
+        $('.tl-card-col').each(function () {
+            var searchData = $(this).data('search') || '';
+            var statusData = $(this).data('status') || '';
+            var matchSearch = !q || searchData.indexOf(q) !== -1;
+            var matchStatus = !st || String(statusData) === String(st);
+            if (matchSearch && matchStatus) {
+                $(this).removeClass('d-none');
+                visible++;
+            } else {
+                $(this).addClass('d-none');
+            }
+        });
+        $('#empty-search-msg').toggle(visible === 0);
+        $('#tl-count-badge').text(visible + ' Tindak Lanjut');
+    }
+    $('#filter-search-tl').on('input', svFilterTlCards);
+    $('#filter-status-card').on('change', svFilterTlCards);
+
     $('#btn-excel').on('click', function () { var table=document.getElementById('table-tl');if(!table) return;if(typeof XLSX!=='undefined'){var clone=table.cloneNode(true);for(var i=0;i<clone.rows.length;i++){if(clone.rows[i].cells.length>0) clone.rows[i].deleteCell(-1);}var wb=XLSX.utils.table_to_book(clone,{sheet:"Sheet1"});XLSX.writeFile(wb,'tindak_lanjut.xlsx');}else{var clone=table.cloneNode(true);for(var i=0;i<clone.rows.length;i++){if(clone.rows[i].cells.length>0) clone.rows[i].deleteCell(-1);}var html='<table border="1">'+clone.innerHTML+'</table>';var a=document.createElement('a');a.href='data:application/vnd.ms-excel;charset=utf-8,'+encodeURIComponent(html);a.download='tindak_lanjut.xls';a.click();}; });
     $('#btn-pdf').on('click', function () { var q = $('form[method=GET]').serialize(); window.open('cetak_supervisi.php?page=tindak_lanjut&' + q, '_blank'); });
 });
@@ -436,8 +458,19 @@ JS;
 
 include '../templates/header.php';
 include '../templates/sidebar.php';
+
+$total_tl = count($rows);
+$count_selesai_tl = count(array_filter($rows, fn($r) => ($r['status'] ?? '') === 'Selesai'));
+$count_proses_tl = count(array_filter($rows, fn($r) => ($r['status'] ?? '') === 'Dalam Proses'));
+$count_ulang_tl = count(array_filter($rows, fn($r) => ($r['status'] ?? '') === 'Perlu Supervisi Ulang'));
+$persen_selesai_tl = $total_tl > 0 ? round(($count_selesai_tl / $total_tl) * 100) : 0;
 ?>
 <div class="main-content">
+    <style>
+    .hover-shadow { transition: all 0.2s ease-in-out; }
+    .hover-shadow:hover { box-shadow: 0 0.5rem 1.5rem rgba(0,0,0,0.1) !important; transform: translateY(-2px); }
+    .transition { transition: all 0.2s ease-in-out; }
+    </style>
     <section class="section">
         <div class="section-header">
             <h1>Tindak Lanjut</h1>
@@ -453,22 +486,57 @@ include '../templates/sidebar.php';
             <input type="hidden" id="svPrintPlace" value="<?= htmlspecialchars($school_profile['tempat_jadwal'] ?? 'Padang', ENT_QUOTES) ?>">
             <input type="hidden" id="svPrintDate" value="<?= date('d F Y') ?>">
 
-            <div class="card">
-                <div class="card-body">
+            <div class="card mb-3">
+                <div class="card-body py-3">
                     <form method="GET" class="form-row align-items-end">
-                        <div class="form-group col-md-4 mb-2">
-                            <label class="small font-weight-bold">Status</label>
-                            <select class="form-control" name="status">
-                                <option value="">Semua</option>
+                        <div class="form-group col-md-3 mb-2">
+                            <label class="small font-weight-bold">Filter Status Server</label>
+                            <select class="form-control form-control-sm" name="status" onchange="this.form.submit()">
+                                <option value="">Semua Status</option>
                                 <?php foreach (sv_status_tindak_lanjut_list() as $s): ?><option value="<?= $s ?>" <?= $s === $filter_status ? 'selected' : '' ?>><?= $s ?></option><?php endforeach; ?>
                             </select>
                         </div>
-                        <div class="form-group col-md-4 mb-2">
-                            <button type="submit" class="btn btn-primary"><i class="fas fa-filter"></i> Filter</button>
-                            <a href="tindak_lanjut.php" class="btn btn-light">Reset</a>
+                        <div class="form-group col-md-3 mb-2">
+                            <label class="small font-weight-bold">Filter Kartu</label>
+                            <select class="form-control form-control-sm" id="filter-status-card">
+                                <option value="">Semua Kartu</option>
+                                <option value="Selesai">Selesai</option>
+                                <option value="Dalam Proses">Dalam Proses</option>
+                                <option value="Perlu Supervisi Ulang">Perlu Supervisi Ulang</option>
+                            </select>
+                        </div>
+                        <div class="form-group col-md-5 mb-2">
+                            <label class="small font-weight-bold">Cari Tindak Lanjut</label>
+                            <div class="input-group input-group-sm">
+                                <input type="text" class="form-control" id="filter-search-tl" placeholder="Cari nama guru, rencana, penanggung jawab, catatan...">
+                                <div class="input-group-append">
+                                    <span class="input-group-text"><i class="fas fa-search"></i></span>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="form-group col-md-1 mb-2 d-flex align-items-end">
+                            <a href="tindak_lanjut.php" class="btn btn-light btn-sm btn-block" title="Reset Filter"><i class="fas fa-undo"></i></a>
                         </div>
                     </form>
                 </div>
+            </div>
+
+            <!-- Stats Chips -->
+            <div class="d-flex flex-wrap align-items-center mb-3" style="gap: 8px;">
+                <span class="badge badge-light border text-dark px-3 py-2" style="border-radius: 8px; font-size: 12px;">
+                    <i class="fas fa-tasks text-primary mr-1"></i> Total: <strong id="tl-count-badge"><?= (int)$total_tl ?> Tindak Lanjut</strong>
+                </span>
+                <span class="badge badge-light border text-dark px-3 py-2" style="border-radius: 8px; font-size: 12px;">
+                    <i class="fas fa-check-circle text-success mr-1"></i> Selesai: <strong><?= (int)$count_selesai_tl ?></strong> <small class="text-success font-weight-bold">(<?= $persen_selesai_tl ?>%)</small>
+                </span>
+                <span class="badge badge-light border text-dark px-3 py-2" style="border-radius: 8px; font-size: 12px;">
+                    <i class="fas fa-spinner text-warning mr-1"></i> Dalam Proses: <strong><?= (int)$count_proses_tl ?></strong>
+                </span>
+                <?php if ($count_ulang_tl > 0): ?>
+                <span class="badge badge-light border text-dark px-3 py-2" style="border-radius: 8px; font-size: 12px;">
+                    <i class="fas fa-redo text-danger mr-1"></i> Perlu Supervisi Ulang: <strong><?= (int)$count_ulang_tl ?></strong>
+                </span>
+                <?php endif; ?>
             </div>
 
             <div class="card">
@@ -483,64 +551,176 @@ include '../templates/sidebar.php';
                     </div>
                 </div>
                 <div class="card-body">
-                    <div class="table-responsive">
-                        <table class="table table-striped" id="table-tl">
-                             <thead>
-                                 <tr>
-                                     <th width="5%">No</th>
-                                     <th>Guru/Unit</th>
-                                     <th>Rekomendasi</th>
-                                     <th>Bentuk</th>
-                                     <th>Rencana Tindakan</th>
-                                     <th>Penanggung Jawab</th>
-                                     <th>Target Selesai</th>
-                                     <th>Realisasi</th>
-                                     <th>Bukti</th>
-                                     <th>Status</th>
-                                     <th>Tanggal Selesai</th>
-                                     <th>Catatan</th>
-                                     <?php if ($can_manage): ?><th width="12%">Aksi</th><?php endif; ?>
-                                 </tr>
-                             </thead>
-                             <tbody>
-                                 <?php foreach ($rows as $r): ?>
-                                     <?php
-                                     $badge = 'secondary';
-                                     if ($r['status'] === 'Selesai') $badge = 'success';
-                                     elseif ($r['status'] === 'Dalam Proses') $badge = 'warning';
-                                     elseif ($r['status'] === 'Perlu Supervisi Ulang') $badge = 'danger';
-                                     ?>
-                                     <tr>
-                                         <td class="text-center"></td>
-                                         <td><?= htmlspecialchars($r['nama_guru'] ?: ($r['unit_bagian'] ?: '-')) ?></td>
-                                        <td><?= htmlspecialchars((string)$r['rekomendasi']) ?></td>
-                                        <td><?= htmlspecialchars((string)$r['bentuk_tindak_lanjut']) ?></td>
-                                        <td><?= htmlspecialchars((string)$r['rencana_tindakan']) ?></td>
-                                        <td><?= htmlspecialchars((string)$r['penanggung_jawab']) ?></td>
-                                        <td><?= $r['target_selesai'] ? date('d/m/Y', strtotime($r['target_selesai'])) : '-' ?></td>
-                                        <td><?= $r['realisasi'] ? date('d/m/Y', strtotime($r['realisasi'])) : '-' ?></td>
-                                         <td>
-                                             <?php if (!empty($r['bukti_file'])): ?><a href="<?= htmlspecialchars(sv_upload_url($r['bukti_file']), ENT_QUOTES) ?>" target="_blank" title="<?= htmlspecialchars(basename($r['bukti_file'])) ?>"><i class="fas fa-file-alt fa-lg"></i></a><br><?php endif; ?>
-                                             <?= htmlspecialchars((string)$r['bukti']) ?>
-                                             <?php if (!empty($r['tautan_dokumen'])): ?><br><a href="<?= htmlspecialchars($r['tautan_dokumen'], ENT_QUOTES) ?>" target="_blank"><i class="fas fa-link"></i> Tautan</a><?php endif; ?>
-                                         </td>
-                                        <td><span class="badge badge-<?= $badge ?>"><?= htmlspecialchars($r['status']) ?></span></td>
-                                        <td><?= $r['tanggal_selesai'] ? date('d/m/Y', strtotime($r['tanggal_selesai'])) : '-' ?></td>
-                                        <td><?= htmlspecialchars((string)$r['catatan']) ?></td>
-                                        <?php if ($can_manage): ?>
-                                        <td style="white-space:nowrap">
-                                            <div class="d-inline-flex align-items-center">
-                                            <button class="btn btn-warning btn-sm btn-edit mr-1" type="button" data-row='<?= htmlspecialchars(json_encode($r, JSON_HEX_APOS | JSON_HEX_QUOT), ENT_QUOTES) ?>'><i class="fas fa-edit"></i></button>
-                                            <button class="btn btn-info btn-sm btn-ulang mr-1" type="button" data-id="<?= (int)$r['id_tindak_lanjut'] ?>" title="Jadwalkan Supervisi Ulang"><i class="fas fa-redo"></i></button>
-                                            <button class="btn btn-danger btn-sm btn-hapus" type="button" data-id="<?= (int)$r['id_tindak_lanjut'] ?>"><i class="fas fa-trash"></i></button>
+                    <?php if (empty($rows)): ?>
+                        <div class="alert alert-info text-center py-4">
+                            <i class="fas fa-info-circle fa-2x mb-2 d-block text-info"></i>
+                            Belum ada data tindak lanjut supervisi pada filter ini.
+                            <?php if ($can_manage): ?>
+                                <br><small class="text-muted">Klik tombol <strong>"Tambah"</strong> untuk membuat rencana tindak lanjut baru.</small>
+                            <?php endif; ?>
+                        </div>
+                    <?php else: ?>
+                        <div id="empty-search-msg" class="alert alert-warning text-center" style="display:none;">
+                            <i class="fas fa-search mr-1"></i> Tidak ada data tindak lanjut yang cocok dengan pencarian Anda.
+                        </div>
+                        <div class="row" id="tl-cards-container">
+                            <?php foreach ($rows as $r): ?>
+                                <?php
+                                $badge = 'secondary';
+                                if ($r['status'] === 'Selesai') $badge = 'success';
+                                elseif ($r['status'] === 'Dalam Proses') $badge = 'warning';
+                                elseif ($r['status'] === 'Perlu Supervisi Ulang') $badge = 'danger';
+
+                                $nama = $r['nama_guru'] ?: ($r['unit_bagian'] ?: '-');
+                                $searchBlob = strtolower(implode(' ', [
+                                    $nama,
+                                    $r['rekomendasi'] ?? '',
+                                    $r['bentuk_tindak_lanjut'] ?? '',
+                                    $r['rencana_tindakan'] ?? '',
+                                    $r['penanggung_jawab'] ?? '',
+                                    $r['status'] ?? '',
+                                    $r['bukti'] ?? '',
+                                    $r['catatan'] ?? ''
+                                ]));
+                                ?>
+                                <div class="col-12 col-md-6 col-lg-4 d-flex align-items-stretch mb-4 tl-card-col"
+                                     data-search="<?= htmlspecialchars($searchBlob, ENT_QUOTES) ?>"
+                                     data-status="<?= htmlspecialchars($r['status'] ?? '', ENT_QUOTES) ?>">
+                                    <div class="card w-100 border-0 shadow-sm hover-shadow transition" style="border-radius: 12px; overflow: hidden; background: #fff; border: 1px solid #e2e8f0 !important;">
+                                        <div class="card-body p-3 d-flex flex-column justify-content-between">
+                                            <div>
+                                                <!-- Top Bar -->
+                                                <div class="d-flex justify-content-between align-items-center mb-2">
+                                                    <span class="badge badge-info px-2 py-1 font-weight-bold" style="font-size: 11.5px; border-radius: 6px;">
+                                                        <i class="fas fa-hands-helping mr-1"></i> <?= htmlspecialchars($r['bentuk_tindak_lanjut'] ?: 'Tindak Lanjut') ?>
+                                                    </span>
+                                                    <span class="badge badge-<?= $badge ?> px-2 py-1 font-weight-bold" style="font-size: 11px; border-radius: 6px;">
+                                                        <i class="fas <?= $r['status'] === 'Selesai' ? 'fa-check-circle' : ($r['status'] === 'Dalam Proses' ? 'fa-spinner' : 'fa-redo') ?> mr-1"></i> <?= htmlspecialchars($r['status']) ?>
+                                                    </span>
+                                                </div>
+
+                                                <!-- Nama Target -->
+                                                <h6 class="font-weight-bold text-dark mb-1" style="font-size: 15px; line-height: 1.4;">
+                                                    <?= htmlspecialchars($nama) ?>
+                                                </h6>
+                                                <div class="text-muted small mb-2 d-flex flex-wrap align-items-center" style="gap: 6px; font-size: 11.5px;">
+                                                    <span><i class="fas fa-user-shield text-muted mr-1"></i> PJ: <strong><?= htmlspecialchars((string)($r['penanggung_jawab'] ?: '-')) ?></strong></span>
+                                                    <span>&bull;</span>
+                                                    <span><i class="far fa-calendar-check text-muted mr-1"></i> Target: <?= $r['target_selesai'] ? date('d/m/Y', strtotime($r['target_selesai'])) : '-' ?></span>
+                                                </div>
+
+                                                <!-- Rekomendasi & Rencana Tindakan Box -->
+                                                <div class="p-2 mb-2 rounded" style="background: #f8fafc; font-size: 11.5px; border: 1px dashed #cbd5e1; line-height: 1.4;">
+                                                    <?php if (!empty($r['rekomendasi'])): ?>
+                                                        <div class="text-truncate text-muted mb-1" title="<?= htmlspecialchars($r['rekomendasi']) ?>">
+                                                            <strong class="text-warning"><i class="fas fa-lightbulb mr-1"></i> Rekomendasi:</strong> <?= htmlspecialchars($r['rekomendasi']) ?>
+                                                        </div>
+                                                    <?php endif; ?>
+                                                    <div class="text-dark" style="font-size: 12px;">
+                                                        <strong class="text-primary"><i class="fas fa-clipboard-list mr-1"></i> Rencana Tindakan:</strong>
+                                                        <div class="mt-1" style="line-height: 1.35;"><?= nl2br(htmlspecialchars((string)$r['rencana_tindakan'])) ?></div>
+                                                    </div>
+                                                </div>
+
+                                                <!-- Realisasi & Bukti Box -->
+                                                <div class="p-2 mb-2 rounded" style="background: #f8fafc; border: 1px solid #e2e8f0; font-size: 11.5px; line-height: 1.4;">
+                                                    <div class="d-flex justify-content-between align-items-center mb-1">
+                                                        <span class="text-muted">Realisasi:</span>
+                                                        <strong class="text-dark"><?= $r['realisasi'] ? date('d/m/Y', strtotime($r['realisasi'])) : '-' ?></strong>
+                                                    </div>
+                                                    <?php if (!empty($r['tanggal_selesai'])): ?>
+                                                    <div class="d-flex justify-content-between align-items-center mb-1 text-success font-weight-bold">
+                                                        <span>Tgl Selesai:</span>
+                                                        <span><?= date('d/m/Y', strtotime($r['tanggal_selesai'])) ?></span>
+                                                    </div>
+                                                    <?php endif; ?>
+                                                    <?php if (!empty($r['bukti']) || !empty($r['bukti_file']) || !empty($r['tautan_dokumen'])): ?>
+                                                        <div class="pt-1 mt-1 border-top d-flex flex-wrap align-items-center" style="gap: 6px;">
+                                                            <span class="text-muted small">Bukti:</span>
+                                                            <?php if (!empty($r['bukti_file'])): ?>
+                                                                <a href="<?= htmlspecialchars(sv_upload_url($r['bukti_file']), ENT_QUOTES) ?>" target="_blank" class="badge badge-light border text-primary" style="font-size: 10.5px;">
+                                                                    <i class="fas fa-file-download mr-1"></i> File
+                                                                </a>
+                                                            <?php endif; ?>
+                                                            <?php if (!empty($r['tautan_dokumen'])): ?>
+                                                                <a href="<?= htmlspecialchars($r['tautan_dokumen'], ENT_QUOTES) ?>" target="_blank" class="badge badge-light border text-info" style="font-size: 10.5px;">
+                                                                    <i class="fas fa-link mr-1"></i> Tautan
+                                                                </a>
+                                                            <?php endif; ?>
+                                                            <?php if (!empty($r['bukti'])): ?>
+                                                                <span class="text-truncate text-muted" style="max-width: 140px;" title="<?= htmlspecialchars($r['bukti']) ?>"><?= htmlspecialchars($r['bukti']) ?></span>
+                                                            <?php endif; ?>
+                                                        </div>
+                                                    <?php endif; ?>
+                                                </div>
+
+                                                <!-- Catatan -->
+                                                <?php if (!empty($r['catatan'])): ?>
+                                                    <div class="p-2 rounded mb-2" style="background: #fffdf5; border: 1px solid #fef08a; font-size: 11px; line-height: 1.35;">
+                                                        <strong class="text-muted"><i class="far fa-comment-dots mr-1"></i> Catatan:</strong> <?= htmlspecialchars($r['catatan']) ?>
+                                                    </div>
+                                                <?php endif; ?>
                                             </div>
-                                        </td>
-                                        <?php endif; ?>
-                                    </tr>
-                                <?php endforeach; ?>
-                            </tbody>
-                        </table>
-                    </div>
+
+                                            <!-- Footer Aksi -->
+                                            <?php if ($can_manage): ?>
+                                            <div class="pt-2 mt-2 border-top d-flex justify-content-end" style="gap: 6px;">
+                                                <button class="btn btn-outline-warning btn-sm btn-edit px-3" type="button"
+                                                    data-row='<?= htmlspecialchars(json_encode($r, JSON_HEX_APOS | JSON_HEX_QUOT), ENT_QUOTES) ?>' style="border-radius: 6px; font-size: 12px;">
+                                                    <i class="fas fa-edit mr-1"></i> Edit
+                                                </button>
+                                                <button class="btn btn-outline-info btn-sm btn-ulang px-2" type="button" data-id="<?= (int)$r['id_tindak_lanjut'] ?>" title="Jadwalkan Supervisi Ulang" style="border-radius: 6px; font-size: 12px;">
+                                                    <i class="fas fa-redo"></i> Ulang
+                                                </button>
+                                                <button class="btn btn-outline-danger btn-sm btn-hapus px-3" type="button" data-id="<?= (int)$r['id_tindak_lanjut'] ?>" style="border-radius: 6px; font-size: 12px;">
+                                                    <i class="fas fa-trash mr-1"></i> Hapus
+                                                </button>
+                                            </div>
+                                            <?php endif; ?>
+                                        </div>
+                                    </div>
+                                </div>
+                            <?php endforeach; ?>
+                        </div>
+                    <?php endif; ?>
+
+                    <!-- Hidden table for Excel export -->
+                    <table class="d-none" id="table-tl">
+                         <thead>
+                             <tr>
+                                 <th>No</th>
+                                 <th>Guru/Unit</th>
+                                 <th>Rekomendasi</th>
+                                 <th>Bentuk</th>
+                                 <th>Rencana Tindakan</th>
+                                 <th>Penanggung Jawab</th>
+                                 <th>Target Selesai</th>
+                                 <th>Realisasi</th>
+                                 <th>Bukti</th>
+                                 <th>Status</th>
+                                 <th>Tanggal Selesai</th>
+                                 <th>Catatan</th>
+                             </tr>
+                         </thead>
+                         <tbody>
+                             <?php foreach ($rows as $idx => $r): ?>
+                                 <tr>
+                                     <td><?= $idx + 1 ?></td>
+                                     <td><?= htmlspecialchars($r['nama_guru'] ?: ($r['unit_bagian'] ?: '-')) ?></td>
+                                     <td><?= htmlspecialchars((string)$r['rekomendasi']) ?></td>
+                                     <td><?= htmlspecialchars((string)$r['bentuk_tindak_lanjut']) ?></td>
+                                     <td><?= htmlspecialchars((string)$r['rencana_tindakan']) ?></td>
+                                     <td><?= htmlspecialchars((string)$r['penanggung_jawab']) ?></td>
+                                     <td><?= $r['target_selesai'] ? date('d/m/Y', strtotime($r['target_selesai'])) : '-' ?></td>
+                                     <td><?= $r['realisasi'] ? date('d/m/Y', strtotime($r['realisasi'])) : '-' ?></td>
+                                     <td><?= htmlspecialchars((string)$r['bukti']) ?></td>
+                                     <td><?= htmlspecialchars($r['status']) ?></td>
+                                     <td><?= $r['tanggal_selesai'] ? date('d/m/Y', strtotime($r['tanggal_selesai'])) : '-' ?></td>
+                                     <td><?= htmlspecialchars((string)$r['catatan']) ?></td>
+                                 </tr>
+                             <?php endforeach; ?>
+                         </tbody>
+                    </table>
                 </div>
             </div>
         </div>

@@ -168,12 +168,22 @@ foreach ($rows as $r) {
     $predikat = $r['predikat'] ?: ($nilai !== null ? sv_predikat($nilai) : '-');
 
     $kelompok[] = [
+        'id_pelaksanaan' => (int)($r['id_pelaksanaan'] ?? 0),
+        'id_guru' => $idG,
         'label' => $label,
         'mapel' => $mapelAktif,
         'kelas' => $kelasAktif,
         'jenis' => $jenis,
         'rata' => $nilai,
         'predikat' => $predikat,
+        'tanggal' => $r['tanggal'] ?? null,
+        'supervisor' => $r['supervisor'] ?? '-',
+        'nama_instrumen' => $r['nama_instrumen'] ?? '-',
+        'status' => $r['status'] ?? 'Draft',
+        'fokus' => $r['fokus'] ?? '',
+        'rekomendasi' => $r['rekomendasi'] ?? '',
+        'prioritas_perbaikan' => $r['prioritas_perbaikan'] ?? '',
+        'raw' => $r,
     ];
 }
 usort($kelompok, function($a, $b) { return strcasecmp($a['label'], $b['label']); });
@@ -181,10 +191,50 @@ usort($kelompok, function($a, $b) { return strcasecmp($a['label'], $b['label']);
 $js_page = [];
 $js_page[] = <<<'JS'
 $(document).ready(function () {
-    document.querySelectorAll('form[method="GET"]').forEach(function(f){f.querySelectorAll('select, input[type="date"]').forEach(function(el){el.addEventListener('change',function(){f.submit();});});});
-    var dttablerekap=$('#table-rekap').DataTable({language:{search:'Cari:',lengthMenu:'Tampilkan _MENU_ data',info:'Menampilkan _START_ sampai _END_ dari _TOTAL_ data',infoEmpty:'Tidak ada data',zeroRecords:'Data tidak ditemukan',paginate:{first:'Awal',last:'Akhir',next:'Berikutnya',previous:'Sebelumnya'}},pageLength:10,order:[],columnDefs:[],responsive:false});dttablerekap.on('order.dt search.dt draw.dt',function(){var info=dttablerekap.page.info();dttablerekap.column(0,{search:'applied',order:'applied'}).nodes().each(function(cell,i){if(cell) cell.innerHTML=info.page*info.length+i+1;});}).draw();
-    $('#btn-excel').on('click', function () { var table=document.getElementById('table-rekap');if(!table) return;if(typeof XLSX!=='undefined'){var clone=table.cloneNode(true);for(var i=0;i<clone.rows.length;i++){if(clone.rows[i].cells.length>0) clone.rows[i].deleteCell(-1);}var wb=XLSX.utils.table_to_book(clone,{sheet:"Sheet1"});XLSX.writeFile(wb,'rekapitulasi_supervisi.xlsx');}else{var clone=table.cloneNode(true);for(var i=0;i<clone.rows.length;i++){if(clone.rows[i].cells.length>0) clone.rows[i].deleteCell(-1);}var html='<table border="1">'+clone.innerHTML+'</table>';var a=document.createElement('a');a.href='data:application/vnd.ms-excel;charset=utf-8,'+encodeURIComponent(html);a.download='rekapitulasi_supervisi.xls';a.click();}; });
-    $('#btn-pdf').on('click', function () { var q = $('form[method=GET]').serialize(); window.open('cetak_supervisi.php?page=rekapitulasi&' + q, '_blank'); });
+    document.querySelectorAll('form[method="GET"]').forEach(function(f){
+        f.querySelectorAll('select, input[type="date"]').forEach(function(el){
+            el.addEventListener('change',function(){f.submit();});
+        });
+    });
+    
+    function svFilterRekapCards() {
+        var q = $.trim($('#filter-search-rekap').val() || '').toLowerCase();
+        var visible = 0;
+        $('.rekap-card-col').each(function () {
+            var searchData = $(this).data('search') || '';
+            var matchSearch = !q || searchData.indexOf(q) !== -1;
+            if (matchSearch) {
+                $(this).removeClass('d-none');
+                visible++;
+            } else {
+                $(this).addClass('d-none');
+            }
+        });
+        $('#empty-search-msg').toggle(visible === 0);
+        $('#rekap-count-badge').text(visible + ' Supervisi');
+    }
+    $('#filter-search-rekap').on('input', svFilterRekapCards);
+
+    $('#btn-excel').on('click', function () {
+        var table = document.getElementById('table-rekap');
+        if (!table) return;
+        if (typeof XLSX !== 'undefined') {
+            var clone = table.cloneNode(true);
+            var wb = XLSX.utils.table_to_book(clone, { sheet: "Rekapitulasi" });
+            XLSX.writeFile(wb, 'rekapitulasi_supervisi.xlsx');
+        } else {
+            var html = '<table border="1">' + table.innerHTML + '</table>';
+            var a = document.createElement('a');
+            a.href = 'data:application/vnd.ms-excel;charset=utf-8,' + encodeURIComponent(html);
+            a.download = 'rekapitulasi_supervisi.xls';
+            a.click();
+        }
+    });
+
+    $('#btn-pdf').on('click', function () {
+        var q = $('form[method=GET]').serialize();
+        window.open('cetak_supervisi.php?page=rekapitulasi&' + q, '_blank');
+    });
 });
 JS;
 
@@ -192,6 +242,11 @@ include '../templates/header.php';
 include '../templates/sidebar.php';
 ?>
 <div class="main-content">
+    <style>
+    .hover-shadow { transition: all 0.2s ease-in-out; }
+    .hover-shadow:hover { box-shadow: 0 0.5rem 1.5rem rgba(0,0,0,0.1) !important; transform: translateY(-2px); }
+    .transition { transition: all 0.2s ease-in-out; }
+    </style>
     <section class="section">
         <div class="section-header">
             <h1>Rekapitulasi Supervisi</h1>
@@ -207,131 +262,295 @@ include '../templates/sidebar.php';
             <input type="hidden" id="svPrintPlace" value="<?= htmlspecialchars($school_profile['tempat_jadwal'] ?? 'Padang', ENT_QUOTES) ?>">
             <input type="hidden" id="svPrintDate" value="<?= date('d F Y') ?>">
 
-            <div class="card">
-                <div class="card-body">
+            <div class="card mb-3">
+                <div class="card-body py-3">
                     <form method="GET" class="form-row align-items-end">
                         <div class="form-group col-md-3 mb-2">
                             <label class="small font-weight-bold">Tahun Ajaran</label>
-                            <select class="form-control" name="tahun_ajaran">
+                            <select class="form-control form-control-sm" name="tahun_ajaran">
                                 <?php foreach (sv_tahun_ajaran_options($pdo) as $ta): ?><option value="<?= htmlspecialchars($ta, ENT_QUOTES) ?>" <?= $ta === $f['tahun_ajaran'] ? 'selected' : '' ?>><?= htmlspecialchars($ta) ?></option><?php endforeach; ?>
                             </select>
                         </div>
                         <div class="form-group col-md-3 mb-2">
                             <label class="small font-weight-bold">Semester</label>
-                            <select class="form-control" name="semester">
-                                <option value="">Semua</option>
+                            <select class="form-control form-control-sm" name="semester">
+                                <option value="">Semua Semester</option>
                                 <?php foreach (sv_semester_options() as $s): ?><option value="<?= htmlspecialchars($s, ENT_QUOTES) ?>" <?= $s === $f['semester'] ? 'selected' : '' ?>><?= htmlspecialchars($s) ?></option><?php endforeach; ?>
                             </select>
                         </div>
                         <div class="form-group col-md-3 mb-2">
                             <label class="small font-weight-bold">Guru</label>
-                            <select class="form-control" name="guru">
-                                <option value="">Semua</option>
+                            <select class="form-control form-control-sm" name="guru">
+                                <option value="">Semua Guru</option>
                                 <?php foreach ($guru_list as $g): ?><option value="<?= (int)$g['id_guru'] ?>" <?= (string)$g['id_guru'] === $f['guru'] ? 'selected' : '' ?>><?= htmlspecialchars($g['nama_guru']) ?></option><?php endforeach; ?>
                             </select>
                         </div>
                         <div class="form-group col-md-3 mb-2">
                             <label class="small font-weight-bold">Jenis</label>
-                            <select class="form-control" name="jenis">
-                                <option value="">Semua</option>
+                            <select class="form-control form-control-sm" name="jenis">
+                                <option value="">Semua Jenis</option>
                                 <?php foreach (sv_jenis_list() as $j): ?><option value="<?= $j ?>" <?= $j === $f['jenis'] ? 'selected' : '' ?>><?= $j ?></option><?php endforeach; ?>
                             </select>
                         </div>
                         <div class="form-group col-md-3 mb-2">
-                            <label class="small font-weight-bold">Predikat</label>
-                            <select class="form-control" name="predikat">
-                                <option value="">Semua</option>
-                                <?php foreach (['A - Amat Baik', 'B - Baik', 'C - Cukup', 'D - Kurang'] as $p): ?><option value="<?= $p ?>" <?= $p === $f['predikat'] ? 'selected' : '' ?>><?= $p ?></option><?php endforeach; ?>
-                            </select>
-                        </div>
-                        <div class="form-group col-md-3 mb-2">
-                            <label class="small font-weight-bold">Status</label>
-                            <select class="form-control" name="status">
-                                <option value="">Semua</option>
-                                <option value="Selesai" <?= $f['status'] === 'Selesai' ? 'selected' : '' ?>>Selesai</option>
-                                <option value="Draft" <?= $f['status'] === 'Draft' ? 'selected' : '' ?>>Draft</option>
-                            </select>
-                        </div>
-                        <div class="form-group col-md-3 mb-2">
                             <label class="small font-weight-bold">Kelas</label>
-                            <select class="form-control" name="kelas">
-                                <option value="">Semua</option>
+                            <select class="form-control form-control-sm" name="kelas">
+                                <option value="">Semua Kelas</option>
                                 <?php foreach ($kelas_list as $kls): ?>
                                     <option value="<?= htmlspecialchars($kls['nama_kelas'], ENT_QUOTES) ?>" <?= $kls['nama_kelas'] === $f['kelas'] ? 'selected' : '' ?>><?= htmlspecialchars($kls['nama_kelas']) ?></option>
                                 <?php endforeach; ?>
                             </select>
                         </div>
-                        <div class="form-group col-md-3 mb-2 d-flex align-items-end">
-                            <div>
-                                <a href="rekapitulasi_supervisi.php" class="btn btn-light"><i class="fas fa-undo"></i> Reset</a>
+                        <div class="form-group col-md-3 mb-2">
+                            <label class="small font-weight-bold">Predikat</label>
+                            <select class="form-control form-control-sm" name="predikat">
+                                <option value="">Semua Predikat</option>
+                                <?php foreach (['A - Amat Baik', 'B - Baik', 'C - Cukup', 'D - Kurang'] as $p): ?>
+                                    <option value="<?= $p ?>" <?= $p === $f['predikat'] ? 'selected' : '' ?>><?= $p ?></option>
+                                <?php endforeach; ?>
+                            </select>
+                        </div>
+                        <div class="form-group col-md-3 mb-2">
+                            <label class="small font-weight-bold">Status</label>
+                            <select class="form-control form-control-sm" name="status">
+                                <option value="">Semua Status</option>
+                                <option value="Selesai" <?= $f['status'] === 'Selesai' ? 'selected' : '' ?>>Selesai</option>
+                                <option value="Draft" <?= $f['status'] === 'Draft' ? 'selected' : '' ?>>Draft</option>
+                            </select>
+                        </div>
+                        <div class="form-group col-md-3 mb-2">
+                            <label class="small font-weight-bold">Cari Rekapitulasi</label>
+                            <div class="input-group input-group-sm">
+                                <input type="text" class="form-control" id="filter-search-rekap" placeholder="Cari guru, mapel, kelas...">
+                                <div class="input-group-append">
+                                    <a href="rekapitulasi_supervisi.php" class="btn btn-light border" title="Reset Filter"><i class="fas fa-undo"></i></a>
+                                </div>
                             </div>
                         </div>
                     </form>
                 </div>
             </div>
 
-            <div class="card mb-3">
-                <div class="card-body p-3">
-                    <div class="d-flex flex-wrap align-items-center" style="gap: 8px;">
-                        <span class="text-dark font-weight-bold mr-2"><i class="fas fa-chart-pie mr-1 text-primary"></i> Ringkasan:</span>
-                        <?php
-                        $badges = [
-                            ['Guru', $ringkas['jumlah_guru'], 'secondary'],
-                            ['Sudah', $ringkas['sudah'], 'success'],
-                            ['Belum', $ringkas['belum'], 'warning'],
-                            ['Supervisi', $ringkas['jumlah_supervisi'], 'info'],
-                            ['Tertinggi', $ringkas['tertinggi'] !== null ? number_format($ringkas['tertinggi'], 2) : '-', 'success'],
-                            ['Terendah', $ringkas['terendah'] !== null ? number_format($ringkas['terendah'], 2) : '-', 'danger'],
-                            ['Rata-rata', $ringkas['rata'] !== null ? number_format($ringkas['rata'], 2) : '-', 'primary'],
-                            ['TL Selesai', $ringkas['tl_selesai'], 'success'],
-                            ['TL Belum', $ringkas['tl_belum'], 'warning'],
-                        ];
-                        foreach ($badges as $b): ?>
-                            <span class="badge badge-<?= $b[2] ?> px-3 py-2" style="font-size: 14px; font-weight: 700; letter-spacing: 0.3px;">
-                                <?= htmlspecialchars($b[0]) ?>: <strong style="font-size: 15px;"><?= htmlspecialchars((string)$b[1]) ?></strong>
-                            </span>
-                        <?php endforeach; ?>
-                    </div>
-                </div>
+            <!-- Stats Chips -->
+            <div class="d-flex flex-wrap align-items-center mb-3" style="gap: 8px;">
+                <span class="badge badge-light border text-dark px-3 py-2" style="border-radius: 8px; font-size: 12px;">
+                    <i class="fas fa-users text-secondary mr-1"></i> Total Guru: <strong><?= (int)$ringkas['jumlah_guru'] ?></strong>
+                </span>
+                <span class="badge badge-light border text-dark px-3 py-2" style="border-radius: 8px; font-size: 12px;">
+                    <i class="fas fa-user-check text-success mr-1"></i> Sudah: <strong><?= (int)$ringkas['sudah'] ?></strong>
+                </span>
+                <span class="badge badge-light border text-dark px-3 py-2" style="border-radius: 8px; font-size: 12px;">
+                    <i class="fas fa-user-clock text-warning mr-1"></i> Belum: <strong><?= (int)$ringkas['belum'] ?></strong>
+                </span>
+                <span class="badge badge-light border text-dark px-3 py-2" style="border-radius: 8px; font-size: 12px;">
+                    <i class="fas fa-clipboard-list text-info mr-1"></i> Supervisi: <strong id="rekap-count-badge"><?= count($kelompok) ?></strong>
+                </span>
+                <?php if ($ringkas['rata'] !== null): ?>
+                <span class="badge badge-light border text-dark px-3 py-2" style="border-radius: 8px; font-size: 12px;">
+                    <i class="fas fa-chart-line text-primary mr-1"></i> Rata-rata: <strong><?= number_format($ringkas['rata'], 2) ?></strong>
+                </span>
+                <span class="badge badge-light border text-dark px-3 py-2" style="border-radius: 8px; font-size: 12px;">
+                    <i class="fas fa-arrow-up text-success mr-1"></i> Tertinggi: <strong><?= number_format($ringkas['tertinggi'], 2) ?></strong>
+                </span>
+                <span class="badge badge-light border text-dark px-3 py-2" style="border-radius: 8px; font-size: 12px;">
+                    <i class="fas fa-arrow-down text-danger mr-1"></i> Terendah: <strong><?= number_format($ringkas['terendah'], 2) ?></strong>
+                </span>
+                <?php endif; ?>
+                <span class="badge badge-light border text-dark px-3 py-2" style="border-radius: 8px; font-size: 12px;">
+                    <i class="fas fa-check-double text-success mr-1"></i> TL Selesai: <strong><?= (int)$ringkas['tl_selesai'] ?></strong>
+                </span>
+                <span class="badge badge-light border text-dark px-3 py-2" style="border-radius: 8px; font-size: 12px;">
+                    <i class="fas fa-hourglass-half text-warning mr-1"></i> TL Belum: <strong><?= (int)$ringkas['tl_belum'] ?></strong>
+                </span>
             </div>
 
             <div class="card">
                 <div class="card-header">
-                    <h4>Daftar Rekapitulasi Supervisi</h4>
+                    <h4>Daftar Rekapitulasi Supervisi <small class="text-muted"><?= htmlspecialchars($f['tahun_ajaran']) ?><?= $f['semester'] ? ' - Semester ' . htmlspecialchars($f['semester']) : '' ?></small></h4>
                     <div class="card-header-action">
                         <button class="btn btn-success" id="btn-excel" type="button"><i class="fas fa-file-excel"></i> Excel</button>
                         <button class="btn btn-warning" id="btn-pdf" type="button"><i class="fas fa-file-pdf"></i> PDF</button>
                     </div>
                 </div>
                 <div class="card-body">
-                    <div class="table-responsive">
-                        <table class="table table-striped" id="table-rekap">
-                            <thead>
+                    <?php if (empty($kelompok)): ?>
+                        <div class="alert alert-info text-center py-4">
+                            <i class="fas fa-info-circle fa-2x mb-2 d-block text-info"></i>
+                            Belum ada data rekapitulasi supervisi pada filter ini.
+                        </div>
+                    <?php else: ?>
+                        <div id="empty-search-msg" class="alert alert-warning text-center" style="display:none;">
+                            <i class="fas fa-search mr-1"></i> Tidak ada data rekapitulasi supervisi yang cocok dengan pencarian Anda.
+                        </div>
+                        <div class="row" id="rekap-cards-container">
+                            <?php foreach ($kelompok as $k): ?>
+                                <?php
+                                $pred = (string)($k['predikat'] ?? '');
+                                $predColor = 'secondary';
+                                if (stripos($pred, 'Amat Baik') !== false || stripos($pred, 'Sangat Baik') !== false || stripos($pred, 'A') === 0) {
+                                    $predColor = 'success';
+                                } elseif (stripos($pred, 'Baik') !== false || stripos($pred, 'B') === 0) {
+                                    $predColor = 'primary';
+                                } elseif (stripos($pred, 'Cukup') !== false || stripos($pred, 'C') === 0) {
+                                    $predColor = 'warning';
+                                } elseif (stripos($pred, 'Kurang') !== false || stripos($pred, 'D') === 0 || stripos($pred, 'E') === 0) {
+                                    $predColor = 'danger';
+                                }
+
+                                $isDone = ($k['status'] === 'Selesai');
+                                $statusBadge = $isDone ? 'success' : 'secondary';
+
+                                $searchBlob = strtolower(implode(' ', [
+                                    $k['label'],
+                                    $k['mapel'],
+                                    $k['kelas'],
+                                    $k['jenis'],
+                                    $k['supervisor'],
+                                    $k['nama_instrumen'],
+                                    $pred,
+                                    $k['status'],
+                                    $k['rekomendasi'],
+                                    $k['prioritas_perbaikan']
+                                ]));
+                                ?>
+                                <div class="col-12 col-md-6 col-lg-4 d-flex align-items-stretch mb-4 rekap-card-col"
+                                     data-search="<?= htmlspecialchars($searchBlob, ENT_QUOTES) ?>"
+                                     data-predikat="<?= htmlspecialchars($pred, ENT_QUOTES) ?>"
+                                     data-status="<?= htmlspecialchars($k['status'] ?? '', ENT_QUOTES) ?>">
+                                    <div class="card w-100 border-0 shadow-sm hover-shadow transition" style="border-radius: 12px; overflow: hidden; background: #fff; border: 1px solid #e2e8f0 !important;">
+                                        <div class="card-body p-3 d-flex flex-column justify-content-between">
+                                            <div>
+                                                <!-- Top Bar: Jenis & Status -->
+                                                <div class="d-flex justify-content-between align-items-center mb-2">
+                                                    <span class="badge badge-info px-2 py-1 font-weight-bold" style="font-size: 11.5px; border-radius: 6px;">
+                                                        <i class="fas fa-clipboard-check mr-1"></i> <?= htmlspecialchars($k['jenis']) ?>
+                                                    </span>
+                                                    <span class="badge badge-<?= $statusBadge ?> px-2 py-1 font-weight-bold" style="font-size: 11px; border-radius: 6px;">
+                                                        <i class="fas <?= $isDone ? 'fa-check-circle' : 'fa-pencil-ruler' ?> mr-1"></i> <?= htmlspecialchars($k['status']) ?>
+                                                    </span>
+                                                </div>
+
+                                                <!-- Target Guru/Unit -->
+                                                <h6 class="font-weight-bold text-dark mb-1" style="font-size: 15px; line-height: 1.4;">
+                                                    <?= htmlspecialchars($k['label']) ?>
+                                                </h6>
+
+                                                <!-- Mapel, Kelas, Tanggal -->
+                                                <div class="text-muted small mb-2 d-flex flex-wrap align-items-center" style="gap: 6px; font-size: 11.5px;">
+                                                    <?php if (!empty($k['mapel']) && $k['mapel'] !== '-'): ?>
+                                                        <span class="badge badge-light border text-dark font-weight-normal"><i class="fas fa-book text-muted mr-1"></i> <?= htmlspecialchars($k['mapel']) ?></span>
+                                                        <span>&bull;</span>
+                                                    <?php endif; ?>
+                                                    <?php if (!empty($k['kelas']) && $k['kelas'] !== '-'): ?>
+                                                        <span class="badge badge-light border text-dark font-weight-normal"><i class="fas fa-chalkboard text-muted mr-1"></i> Kls <?= htmlspecialchars($k['kelas']) ?></span>
+                                                        <span>&bull;</span>
+                                                    <?php endif; ?>
+                                                    <span><i class="far fa-calendar-alt text-muted mr-1"></i> <?= $k['tanggal'] ? date('d/m/Y', strtotime($k['tanggal'])) : '-' ?></span>
+                                                </div>
+
+                                                <!-- Supervisor & Instrumen Info Box -->
+                                                <div class="p-2 mb-2 rounded" style="background: #f8fafc; font-size: 11.5px; border: 1px dashed #cbd5e1; line-height: 1.4;">
+                                                    <div class="d-flex justify-content-between align-items-center">
+                                                        <span class="text-muted"><i class="fas fa-user-tie mr-1 text-primary"></i> Supervisor:</span>
+                                                        <strong class="text-dark"><?= htmlspecialchars((string)$k['supervisor']) ?></strong>
+                                                    </div>
+                                                    <?php if (!empty($k['nama_instrumen']) && $k['nama_instrumen'] !== '-'): ?>
+                                                    <div class="mt-1 pt-1 border-top text-truncate text-muted" title="<?= htmlspecialchars((string)$k['nama_instrumen']) ?>">
+                                                        <i class="fas fa-tasks mr-1 text-info"></i> <?= htmlspecialchars((string)$k['nama_instrumen']) ?>
+                                                    </div>
+                                                    <?php endif; ?>
+                                                </div>
+
+                                                <!-- Metrik Nilai & Predikat -->
+                                                <div class="p-2 mb-2 rounded d-flex justify-content-between align-items-center" style="background: #f8fafc; border: 1px solid #e2e8f0;">
+                                                    <div>
+                                                        <small class="text-muted d-block" style="font-size: 10.5px;">Nilai Supervisi</small>
+                                                        <h5 class="mb-0 text-primary font-weight-bold" style="font-size: 20px;">
+                                                            <?= $k['rata'] !== null ? number_format((float)$k['rata'], 2) : '-' ?>
+                                                        </h5>
+                                                    </div>
+                                                    <div class="text-right">
+                                                        <small class="text-muted d-block" style="font-size: 10.5px;">Predikat</small>
+                                                        <?php if (!empty($pred) && $pred !== '-'): ?>
+                                                            <span class="badge badge-<?= $predColor ?> font-weight-bold" style="font-size: 11px; padding: 4px 10px; border-radius: 6px;">
+                                                                <?= htmlspecialchars($pred) ?>
+                                                            </span>
+                                                        <?php else: ?>
+                                                            <span class="text-muted font-italic" style="font-size: 11px;">Belum dinilai</span>
+                                                        <?php endif; ?>
+                                                    </div>
+                                                </div>
+
+                                                <!-- Highlight Rekomendasi/Prioritas -->
+                                                <?php if (!empty($k['rekomendasi']) || !empty($k['prioritas_perbaikan'])): ?>
+                                                    <div class="p-2 rounded mb-2" style="background: #fffdf5; border: 1px solid #fef08a; font-size: 11.5px; line-height: 1.35;">
+                                                        <?php if (!empty($k['rekomendasi'])): ?>
+                                                            <div class="text-truncate text-dark mb-1">
+                                                                <strong class="text-warning"><i class="fas fa-lightbulb mr-1"></i> Rekomendasi:</strong> <?= htmlspecialchars($k['rekomendasi']) ?>
+                                                            </div>
+                                                        <?php endif; ?>
+                                                        <?php if (!empty($k['prioritas_perbaikan'])): ?>
+                                                            <div class="text-truncate text-muted">
+                                                                <strong><i class="fas fa-flag mr-1 text-danger"></i> Prioritas:</strong> <?= htmlspecialchars($k['prioritas_perbaikan']) ?>
+                                                            </div>
+                                                        <?php endif; ?>
+                                                    </div>
+                                                <?php endif; ?>
+                                            </div>
+
+                                            <!-- Footer Aksi -->
+                                            <?php if ($k['id_pelaksanaan'] > 0): ?>
+                                            <div class="pt-2 mt-2 border-top d-flex justify-content-end" style="gap: 6px;">
+                                                <a class="btn btn-outline-primary btn-sm px-3" href="hasil_supervisi_detail.php?id=<?= $k['id_pelaksanaan'] ?>" style="border-radius: 6px; font-size: 12px;">
+                                                    <i class="fas fa-eye mr-1"></i> Detail
+                                                </a>
+                                                <a class="btn btn-outline-info btn-sm px-3" href="cetak_detail_hasil_supervisi.php?id=<?= $k['id_pelaksanaan'] ?>" target="_blank" style="border-radius: 6px; font-size: 12px;">
+                                                    <i class="fas fa-print mr-1"></i> Cetak
+                                                </a>
+                                            </div>
+                                            <?php endif; ?>
+                                        </div>
+                                    </div>
+                                </div>
+                            <?php endforeach; ?>
+                        </div>
+                    <?php endif; ?>
+
+                    <!-- Hidden table for Excel export -->
+                    <table class="d-none" id="table-rekap">
+                        <thead>
+                            <tr>
+                                <th width="5%">No</th>
+                                <th>Guru / Unit</th>
+                                <th>Mata Pelajaran</th>
+                                <th>Kelas</th>
+                                <th>Jenis Supervisi</th>
+                                <th>Tanggal</th>
+                                <th>Supervisor</th>
+                                <th>Nilai Rata-rata</th>
+                                <th>Predikat</th>
+                                <th>Status</th>
+                                <th>Rekomendasi</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <?php foreach ($kelompok as $idx => $k): ?>
                                 <tr>
-                                    <th width="5%">No</th>
-                                    <th>Guru / Unit</th>
-                                    <th>Mata Pelajaran</th>
-                                    <th>Kelas</th>
-                                    <th>Jenis Supervisi</th>
-                                    <th>Nilai Rata-rata</th>
-                                    <th>Predikat</th>
+                                    <td><?= $idx + 1 ?></td>
+                                    <td><?= htmlspecialchars($k['label']) ?></td>
+                                    <td><?= htmlspecialchars($k['mapel'] ?? '-') ?></td>
+                                    <td><?= htmlspecialchars($k['kelas'] ?? '-') ?></td>
+                                    <td><?= htmlspecialchars($k['jenis'] ?? '-') ?></td>
+                                    <td><?= $k['tanggal'] ? date('d/m/Y', strtotime($k['tanggal'])) : '-' ?></td>
+                                    <td><?= htmlspecialchars((string)($k['supervisor'] ?? '-')) ?></td>
+                                    <td><?= $k['rata'] !== null ? htmlspecialchars(number_format((float)$k['rata'], 2)) : '-' ?></td>
+                                    <td><?= htmlspecialchars($k['predikat']) ?></td>
+                                    <td><?= htmlspecialchars($k['status']) ?></td>
+                                    <td><?= htmlspecialchars((string)($k['rekomendasi'] ?? '')) ?></td>
                                 </tr>
-                            </thead>
-                            <tbody>
-                                <?php foreach ($kelompok as $k): ?>
-                                    <tr>
-                                        <td class="text-center"></td>
-                                        <td><?= htmlspecialchars($k['label']) ?></td>
-                                        <td><?= htmlspecialchars($k['mapel'] ?? '-') ?></td>
-                                        <td><?= htmlspecialchars($k['kelas'] ?? '-') ?></td>
-                                        <td><span class="badge badge-info"><?= htmlspecialchars($k['jenis'] ?? '-') ?></span></td>
-                                        <td><?= $k['rata'] !== null ? htmlspecialchars(number_format((float)$k['rata'], 2)) : '-' ?></td>
-                                        <td><span class="badge badge-primary"><?= htmlspecialchars($k['predikat']) ?></span></td>
-                                    </tr>
-                                <?php endforeach; ?>
-                            </tbody>
-                        </table>
-                    </div>
+                            <?php endforeach; ?>
+                        </tbody>
+                    </table>
                 </div>
             </div>
         </div>
