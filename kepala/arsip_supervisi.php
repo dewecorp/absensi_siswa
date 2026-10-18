@@ -13,11 +13,8 @@ $can_manage = sv_is_supervisor($pdo);
 $school_profile = getSchoolProfile($pdo);
 $periode = sv_periode($pdo);
 
-$css_libs = ['https://cdn.datatables.net/1.10.25/css/dataTables.bootstrap4.min.css'];
+$css_libs = [];
 $js_libs = [
-
-    'https://cdn.datatables.net/1.10.25/js/jquery.dataTables.min.js',
-    'https://cdn.datatables.net/1.10.25/js/dataTables.bootstrap4.min.js',
     'https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js',
 ];
 
@@ -186,7 +183,6 @@ if ($flash !== '') {
 $js_page[] = <<<'JS'
 $(document).ready(function () {
     document.querySelectorAll('form[method="GET"]').forEach(function(f){f.querySelectorAll('select, input[type="date"]').forEach(function(el){el.addEventListener('change',function(){f.submit();});});});
-    var dttablearsip=$('#table-arsip').DataTable({language:{search:'Cari:',lengthMenu:'Tampilkan _MENU_ data',info:'Menampilkan _START_ sampai _END_ dari _TOTAL_ data',infoEmpty:'Tidak ada data',zeroRecords:'Data tidak ditemukan',paginate:{first:'Awal',last:'Akhir',next:'Berikutnya',previous:'Sebelumnya'}},pageLength:10,order:[],columnDefs:[],responsive:false});dttablearsip.on('order.dt search.dt draw.dt',function(){var info=dttablearsip.page.info();dttablearsip.column(0,{search:'applied',order:'applied'}).nodes().each(function(cell,i){if(cell) cell.innerHTML=info.page*info.length+i+1;});}).draw();
     $('#btn-tambah').on('click', function () {
         $('#form-arsip')[0].reset();
         $('#sv-file-preview').empty();
@@ -232,7 +228,12 @@ $(document).ready(function () {
         if (form) { form.reset(); }
         Object.keys(d).forEach(function (k) {
             var el = $('#form-arsip-edit [name="' + k + '"]');
-            if (el.length && k !== 'file') { el.val(d[k]); }
+            if (el.length && k !== 'file') { 
+                el.val(d[k]);
+                if (el.is('select')) {
+                    el.trigger('change');
+                }
+            }
         });
         var prev = document.getElementById('sv-edit-file-preview');
         if (prev) prev.innerHTML = '';
@@ -293,7 +294,31 @@ $(document).ready(function () {
         var id = $(this).data('id');
         Swal.fire({title:'Konfirmasi Hapus',text:'Dokumen arsip akan dihapus permanen.',icon:'warning',showCancelButton:true,confirmButtonColor:'#d33',cancelButtonColor:'#6c757d',confirmButtonText:'Ya, Hapus!',cancelButtonText:'Batal'}).then(function(r){if(r.isConfirmed){var f=document.createElement('form');f.method='POST';f.action='arsip_supervisi.php';var fields={aksi: 'hapus', id_arsip: id};Object.keys(fields).forEach(function(k){var i=document.createElement('input');i.type='hidden';i.name=k;i.value=fields[k];f.appendChild(i);});document.body.appendChild(f);f.submit();}})
     });
-    $('#btn-excel').on('click', function () { var table=document.getElementById('table-arsip');if(!table) return;if(typeof XLSX!=='undefined'){var clone=table.cloneNode(true);for(var i=0;i<clone.rows.length;i++){if(clone.rows[i].cells.length>0) clone.rows[i].deleteCell(-1);}var wb=XLSX.utils.table_to_book(clone,{sheet:"Sheet1"});XLSX.writeFile(wb,'arsip_supervisi.xlsx');}else{var clone=table.cloneNode(true);for(var i=0;i<clone.rows.length;i++){if(clone.rows[i].cells.length>0) clone.rows[i].deleteCell(-1);}var html='<table border="1">'+clone.innerHTML+'</table>';var a=document.createElement('a');a.href='data:application/vnd.ms-excel;charset=utf-8,'+encodeURIComponent(html);a.download='arsip_supervisi.xls';a.click();}; });
+    $('#btn-excel').on('click', function () {
+        var data = [];
+        data.push(['No', 'Guru', 'Jenis Dokumen', 'Nama Dokumen', 'Jumlah File', 'Tanggal Upload', 'Pengunggah']);
+        
+        $('.col-12.col-md-6.col-lg-4').each(function(i) {
+            var card = $(this);
+            var guru = card.find('h6.font-weight-bold').text().trim();
+            var jenisDok = card.find('.badge-info').first().text().trim();
+            var namaDok = card.find('.fa-file-alt').parent().next().text().trim();
+            var jumlahFile = card.find('.badge-light.border').first().text().trim();
+            var tanggal = card.find('.far.fa-calendar-alt').parent().text().trim();
+            var pengunggah = card.find('.fa-user').parent().next().text().trim();
+            
+            data.push([i+1, guru, jenisDok, namaDok, jumlahFile, tanggal, pengunggah]);
+        });
+        
+        if(typeof XLSX !== 'undefined') {
+            var ws = XLSX.utils.aoa_to_sheet(data);
+            var wb = XLSX.utils.book_new();
+            XLSX.utils.book_append_sheet(wb, ws, "Arsip Supervisi");
+            XLSX.writeFile(wb, 'arsip_supervisi.xlsx');
+        } else {
+            alert('Library XLSX tidak tersedia');
+        }
+    });
     $('#btn-pdf').on('click', function () { window.open('cetak_supervisi.php?page=arsip', '_blank'); });
 });
 JS;
@@ -303,8 +328,16 @@ include '../templates/sidebar.php';
 ?>
 <div class="main-content">
     <style>
-    #table-arsip th:last-child,#table-arsip td:last-child{white-space:nowrap;text-align:center}
-    #table-arsip td:last-child .btn{margin:1px 2px}
+    .hover-shadow {
+        transition: all 0.2s ease-in-out;
+    }
+    .hover-shadow:hover {
+        box-shadow: 0 0.5rem 1.5rem rgba(0,0,0,0.1) !important;
+        transform: translateY(-2px);
+    }
+    .transition {
+        transition: all 0.2s ease-in-out;
+    }
     </style>
     <section class="section">
         <div class="section-header">
@@ -351,67 +384,115 @@ include '../templates/sidebar.php';
                     </div>
                 </div>
                 <div class="card-body">
-                    <div class="table-responsive">
-                        <table class="table table-striped" id="table-arsip">
-                            <thead>
-                                <tr>
-                                    <th width="5%">No</th>
-                                    <th>Guru yang Disupervisi</th>
-                                    <th>Jenis Dokumen</th>
-                                    <th>Nama Dokumen</th>
-                                    <th style="min-width:200px">File</th>
-                                    <th>Tautan Dokumen</th>
-                                    <th>Tanggal Upload</th>
-                                    <th>Pengunggah</th>
-                                    <?php if ($can_manage): ?><th width="10%">Aksi</th><?php endif; ?>
-                                </tr>
-                            </thead>
-                                <tbody>
-                                    <?php 
-                                    // Grup foto berdasarkan id_pelaksanaan menjadi 1 baris per supervisi
-                                    $groups = [];
-                                    foreach ($rows as $r) {
-                                        $k = $r['id_pelaksanaan'] ?: 'umum';
-                                        if (!isset($groups[$k])) {
-                                            $groups[$k] = ['info' => $r, 'files' => []];
-                                        }
-                                        $groups[$k]['files'][] = $r;
-                                    }
-                                    $seq = 0;
-                                    foreach ($groups as $k => $g): $row =& $g['info']; $namaSup = ($row['jenis_supervisi'] === 'Manajerial') ? ($row['unit_bagian'] ?? '-') : ($row['nama_guru'] ?? '-'); $fileList = []; foreach ($g['files'] as $fr) { if (!empty($fr['file'])) $fileList[] = $fr['file']; }
-                                    ?>
-                                    <tr>
-                                        <td class="text-center"><?= ++$seq ?></td>
-                                        <td><?= htmlspecialchars((string)$namaSup) ?></td>
-                                        <td><?= htmlspecialchars((string)$row['jenis_dokumen']) ?></td>
-                                        <td><?= htmlspecialchars((string)$row['nama_dokumen']) ?></td>
-                                        <td>
-                                            <?php foreach ($g['files'] as $i => $fr):
-                                                $ext = strtolower(pathinfo((string)$fr['file'], PATHINFO_EXTENSION));
-                                                $isImg = in_array($ext, ['jpg', 'jpeg', 'png', 'gif', 'webp', 'bmp'], true);
-                                                $url = sv_upload_url($fr['file']);
-                                            ?>
-                                                <a class="btn btn-sm mr-1 mb-1 btn-outline-<?= $isImg ? 'primary' : 'secondary' ?>" href="<?= htmlspecialchars($url, ENT_QUOTES) ?>" target="_blank" title="Lihat <?= $isImg ? 'foto' : 'dokumen' ?>">
-                                                    <i class="fas <?= $isImg ? 'fa-image' : 'fa-file' ?>"></i> <?= $i + 1 ?>
-                                                </a>
-                                            <?php endforeach; ?>
-                                        </td>
-                                        <td><?php if (!empty($row['tautan_dokumen'])): ?><a href="<?= htmlspecialchars($row['tautan_dokumen'], ENT_QUOTES) ?>" target="_blank"><i class="fas fa-link"></i> <?= htmlspecialchars($row['tautan_dokumen']) ?></a><?php else: ?>-<?php endif; ?></td>
-                                        <td><?= $row['tanggal_upload'] ? date('d/m/Y H:i', strtotime($row['tanggal_upload'])) : '-' ?></td>
-                                        <td><?= htmlspecialchars((string)$row['pengunggah']) ?></td>
-                                        <?php if ($can_manage): ?>
-                                        <td style="white-space:nowrap">
-                                            <div class="d-inline-flex align-items-center">
-                                            <button class="btn btn-warning btn-sm btn-edit mr-1" type="button" data-row='<?= htmlspecialchars(json_encode(['id_arsip'=>$row['id_arsip'],'id_pelaksanaan'=>$row['id_pelaksanaan'],'jenis_dokumen'=>$row['jenis_dokumen'],'nama_dokumen'=>$row['nama_dokumen'],'file'=>$row['file'],'files'=>$fileList,'tautan_dokumen'=>$row['tautan_dokumen'],'keterangan'=>$row['keterangan']], JSON_HEX_APOS | JSON_HEX_QUOT | JSON_INVALID_UTF8_SUBSTITUTE), ENT_QUOTES) ?>'><i class="fas fa-edit"></i></button>
-                                            <button class="btn btn-danger btn-sm btn-hapus" type="button" data-id="<?= (int)$row['id_arsip'] ?>"><i class="fas fa-trash"></i></button>
+                    <?php if (empty($rows)): ?>
+                        <div class="alert alert-info">Tidak ada data arsip supervisi.</div>
+                    <?php else: ?>
+                        <?php 
+                        // Grup foto berdasarkan id_pelaksanaan menjadi 1 baris per supervisi
+                        $groups = [];
+                        foreach ($rows as $r) {
+                            $k = $r['id_pelaksanaan'] ?: 'umum';
+                            if (!isset($groups[$k])) {
+                                $groups[$k] = ['info' => $r, 'files' => []];
+                            }
+                            $groups[$k]['files'][] = $r;
+                        }
+                        ?>
+                        <div class="row">
+                            <?php foreach ($groups as $k => $g): 
+                                $row = $g['info']; 
+                                $namaSup = ($row['jenis_supervisi'] === 'Manajerial') ? ($row['unit_bagian'] ?? '-') : ($row['nama_guru'] ?? '-'); 
+                                $fileList = []; 
+                                foreach ($g['files'] as $fr) { 
+                                    if (!empty($fr['file'])) $fileList[] = $fr['file']; 
+                                }
+                            ?>
+                                <div class="col-12 col-md-6 col-lg-4 d-flex align-items-stretch">
+                                    <div class="card w-100 border-0 shadow-sm hover-shadow transition" style="border-radius: 12px; overflow: hidden; background: #fff; border: 1px solid #e2e8f0 !important;">
+                                        <div class="card-body p-3 d-flex flex-column justify-content-between">
+                                            <div>
+                                                <!-- Top Bar: Jenis Dokumen -->
+                                                <div class="d-flex justify-content-between align-items-center mb-2">
+                                                    <span class="badge badge-info px-2 py-1 font-weight-bold" style="font-size: 12px; border-radius: 6px;">
+                                                        <i class="fas fa-folder-open mr-1"></i> <?= htmlspecialchars((string)$row['jenis_dokumen']) ?>
+                                                    </span>
+                                                    <span class="badge badge-light border text-dark font-weight-bold px-2 py-1" style="border-radius: 4px; font-size: 11px;">
+                                                        <i class="fas fa-images mr-1"></i> <?= count($fileList) ?> file
+                                                    </span>
+                                                </div>
+
+                                                <!-- Nama Guru/Unit -->
+                                                <h6 class="font-weight-bold text-dark mb-2" style="font-size: 15px; line-height: 1.4; min-height: 42px;">
+                                                    <?= htmlspecialchars((string)$namaSup) ?>
+                                                </h6>
+
+                                                <!-- Nama Dokumen -->
+                                                <div class="p-2 mb-2 rounded border-0" style="background: #f8fafc; font-size: 12px; line-height: 1.5;">
+                                                    <i class="fas fa-file-alt mr-1 text-primary"></i> <strong>Nama Dokumen:</strong><br>
+                                                    <span class="text-dark"><?= htmlspecialchars((string)$row['nama_dokumen']) ?></span>
+                                                </div>
+
+                                                <!-- Preview File/Foto -->
+                                                <?php if ($fileList): ?>
+                                                    <div class="mb-2">
+                                                        <small class="text-muted d-block mb-2" style="font-size: 11px;">File/Foto:</small>
+                                                        <div class="d-flex flex-wrap" style="gap: 6px;">
+                                                            <?php foreach ($g['files'] as $i => $fr):
+                                                                if (empty($fr['file'])) continue;
+                                                                $ext = strtolower(pathinfo((string)$fr['file'], PATHINFO_EXTENSION));
+                                                                $isImg = in_array($ext, ['jpg', 'jpeg', 'png', 'gif', 'webp', 'bmp'], true);
+                                                                $url = sv_upload_url($fr['file']);
+                                                            ?>
+                                                                <a href="<?= htmlspecialchars($url, ENT_QUOTES) ?>" target="_blank" class="border rounded" style="width: 60px; height: 60px; display: flex; align-items: center; justify-content: center; overflow: hidden; background: #f8fafc;">
+                                                                    <?php if ($isImg): ?>
+                                                                        <img src="<?= htmlspecialchars($url, ENT_QUOTES) ?>" alt="Foto" style="width: 100%; height: 100%; object-fit: cover;">
+                                                                    <?php else: ?>
+                                                                        <i class="fas fa-file text-secondary" style="font-size: 24px;"></i>
+                                                                    <?php endif; ?>
+                                                                </a>
+                                                            <?php endforeach; ?>
+                                                        </div>
+                                                    </div>
+                                                <?php endif; ?>
+
+                                                <!-- Tautan Dokumen -->
+                                                <?php if (!empty($row['tautan_dokumen'])): ?>
+                                                    <div class="mb-2">
+                                                        <a href="<?= htmlspecialchars($row['tautan_dokumen'], ENT_QUOTES) ?>" target="_blank" class="btn btn-sm btn-outline-info w-100" style="font-size: 11px; border-radius: 6px;">
+                                                            <i class="fas fa-link mr-1"></i> Buka Tautan Dokumen
+                                                        </a>
+                                                    </div>
+                                                <?php endif; ?>
+
+                                                <!-- Info Upload -->
+                                                <div class="small text-muted mb-2" style="font-size: 11px;">
+                                                    <div class="d-flex justify-content-between mb-1">
+                                                        <span><i class="far fa-calendar-alt mr-1"></i> <?= $row['tanggal_upload'] ? date('d/m/Y H:i', strtotime($row['tanggal_upload'])) : '-' ?></span>
+                                                    </div>
+                                                    <div>
+                                                        <i class="fas fa-user mr-1"></i> <strong>Pengunggah:</strong><br>
+                                                        <span class="text-dark"><?= htmlspecialchars((string)$row['pengunggah']) ?></span>
+                                                    </div>
+                                                </div>
                                             </div>
-                                        </td>
-                                        <?php endif; ?>
-                                    </tr>
-                                <?php endforeach; ?>
-                                </tbody>
-                        </table>
-                    </div>
+
+                                            <!-- Card Actions Footer -->
+                                            <?php if ($can_manage): ?>
+                                                <div class="pt-2 border-top d-flex align-items-center justify-content-between" style="border-color: #f1f5f9 !important;">
+                                                    <button type="button" class="btn btn-warning btn-sm px-3 font-weight-bold btn-edit" style="border-radius: 6px; font-size: 12px;" data-row='<?= htmlspecialchars(json_encode(['id_arsip'=>$row['id_arsip'],'id_pelaksanaan'=>$row['id_pelaksanaan'],'jenis_dokumen'=>$row['jenis_dokumen'],'nama_dokumen'=>$row['nama_dokumen'],'file'=>$row['file'],'files'=>$fileList,'tautan_dokumen'=>$row['tautan_dokumen'],'keterangan'=>$row['keterangan']], JSON_HEX_APOS | JSON_HEX_QUOT | JSON_INVALID_UTF8_SUBSTITUTE), ENT_QUOTES) ?>'>
+                                                        <i class="fas fa-edit mr-1"></i> Edit
+                                                    </button>
+                                                    <button type="button" class="btn btn-danger btn-sm px-3 font-weight-bold btn-hapus" style="border-radius: 6px; font-size: 12px;" data-id="<?= (int)$row['id_arsip'] ?>">
+                                                        <i class="fas fa-trash mr-1"></i> Hapus
+                                                    </button>
+                                                </div>
+                                            <?php endif; ?>
+                                        </div>
+                                    </div>
+                                </div>
+                            <?php endforeach; ?>
+                        </div>
+                    <?php endif; ?>
                 </div>
             </div>
         </div>

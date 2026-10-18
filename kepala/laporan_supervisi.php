@@ -113,11 +113,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && $can_manage) {
     }
 }
 
-$css_libs = ['https://cdn.datatables.net/1.10.25/css/dataTables.bootstrap4.min.css'];
+$css_libs = [];
 $js_libs = [
-
-    'https://cdn.datatables.net/1.10.25/js/jquery.dataTables.min.js',
-    'https://cdn.datatables.net/1.10.25/js/dataTables.bootstrap4.min.js',
     'https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js',
 ];
 
@@ -170,10 +167,56 @@ $js_page = [];
 $js_page[] = <<<'JS'
 $(document).ready(function () {
     document.querySelectorAll('form[method="GET"]').forEach(function(f){f.querySelectorAll('select, input[type="date"]').forEach(function(el){el.addEventListener('change',function(){f.submit();});});});
-    var dttablelaporan=$('#table-laporan').DataTable({language:{search:'Cari:',lengthMenu:'Tampilkan _MENU_ data',info:'Menampilkan _START_ sampai _END_ dari _TOTAL_ data',infoEmpty:'Tidak ada data',zeroRecords:'Data tidak ditemukan',paginate:{first:'Awal',last:'Akhir',next:'Berikutnya',previous:'Sebelumnya'}},pageLength:10,order:[],columnDefs:[],responsive:false});dttablelaporan.on('order.dt search.dt draw.dt',function(){var info=dttablelaporan.page.info();dttablelaporan.column(0,{search:'applied',order:'applied'}).nodes().each(function(cell,i){if(cell) cell.innerHTML=info.page*info.length+i+1;});}).draw();
-    $('#btn-excel').on('click', function () { var table=document.getElementById('table-laporan');if(!table) return;if(typeof XLSX!=='undefined'){var clone=table.cloneNode(true);for(var i=0;i<clone.rows.length;i++){if(clone.rows[i].cells.length>0) clone.rows[i].deleteCell(-1);}var wb=XLSX.utils.table_to_book(clone,{sheet:"Sheet1"});XLSX.writeFile(wb,'laporan_supervisi.xlsx');}else{var clone=table.cloneNode(true);for(var i=0;i<clone.rows.length;i++){if(clone.rows[i].cells.length>0) clone.rows[i].deleteCell(-1);}var html='<table border="1">'+clone.innerHTML+'</table>';var a=document.createElement('a');a.href='data:application/vnd.ms-excel;charset=utf-8,'+encodeURIComponent(html);a.download='laporan_supervisi.xls';a.click();}; });
-    $('#btn-pdf').on('click', function () { var q = $('form[method=GET]').serialize(); window.open('cetak_supervisi.php?page=laporan&' + q, '_blank'); });
-    $('#table-laporan').on('click', '.btn-cetak-perguru', function(e){ e.preventDefault(); var id=$(this).data('id'); if(id) window.open('cetak_detail_hasil_supervisi.php?id='+id, '_blank'); });
+    
+    $('#btn-excel').on('click', function () { 
+        var data = [];
+        data.push(['No', 'Guru/Unit', 'Mapel', 'Jenis', 'Tanggal', 'Supervisor', 'Nilai', 'Predikat', 'Kekuatan', 'Kelemahan', 'Rekomendasi', 'Prioritas', 'Status TL']);
+        
+        $('.col-12.col-md-6.col-lg-4').each(function(i) {
+            var card = $(this);
+            var jenis = card.find('.badge-info').first().text().trim().replace(/.*\s+/, '');
+            var tanggal = card.find('.far.fa-calendar-alt').parent().text().trim();
+            var nama = card.find('h6.font-weight-bold').text().trim();
+            var badges = card.find('.badge-light.border');
+            var mapel = badges.length > 0 && badges.eq(0).text().includes('📚') ? badges.eq(0).text().replace(/.*📚\s*/, '').trim() : '-';
+            var supervisor = badges.length > 1 ? badges.eq(badges.length > 1 ? 1 : 0).text().replace(/.*👔\s*/, '').trim() : badges.eq(0).text().replace(/.*👔\s*/, '').trim();
+            var nilai = card.find('h4.text-primary').text().trim();
+            var predikat = card.find('.col-6:last .badge').text().trim();
+            var kekuatan = card.find('.fa-check-circle').closest('.p-2').text().replace(/.*Kekuatan:\s*/, '').trim() || '-';
+            var kelemahan = card.find('.fa-exclamation-circle').closest('.p-2').text().replace(/.*Kelemahan:\s*/, '').trim() || '-';
+            var rekomendasi = card.find('.fa-lightbulb').closest('.p-2').text().replace(/.*Rekomendasi:\s*/, '').trim() || '-';
+            var statusTL = card.find('.small.text-muted .badge').first().text().trim();
+            var prioritas = card.find('.text-right .badge-secondary').text().trim() || '-';
+            
+            data.push([i+1, nama, mapel, jenis, tanggal, supervisor, nilai, predikat, kekuatan, kelemahan, rekomendasi, prioritas, statusTL]);
+        });
+        
+        if(typeof XLSX !== 'undefined') {
+            var ws = XLSX.utils.aoa_to_sheet(data);
+            var wb = XLSX.utils.book_new();
+            XLSX.utils.book_append_sheet(wb, ws, "Laporan Supervisi");
+            XLSX.writeFile(wb, 'laporan_supervisi.xlsx');
+        } else {
+            alert('Library XLSX tidak tersedia');
+        }
+    });
+    
+    $('#btn-pdf').on('click', function () { 
+        var q = $('form[method=GET]').serialize(); 
+        window.open('cetak_supervisi.php?page=laporan&' + q, '_blank'); 
+    });
+    
+    $('.btn-pdf-single').on('click', function(e) {
+        e.preventDefault();
+        var id = $(this).data('id');
+        if(id) {
+            var form = $('<form method="POST" action="laporan_supervisi.php"></form>');
+            form.append('<input type="hidden" name="aksi" value="pdf">');
+            form.append('<input type="hidden" name="id_pelaksanaan" value="' + id + '">');
+            $('body').append(form);
+            form.submit();
+        }
+    });
 });
 JS;
 
@@ -182,8 +225,22 @@ include '../templates/sidebar.php';
 ?>
 <div class="main-content">
     <style>
-    #table-laporan th:last-child,#table-laporan td:last-child{white-space:nowrap;text-align:center}
-    #table-laporan td:last-child .btn{margin:1px 2px}
+    .hover-shadow {
+        transition: all 0.2s ease-in-out;
+    }
+    .hover-shadow:hover {
+        box-shadow: 0 0.5rem 1.5rem rgba(0,0,0,0.1) !important;
+        transform: translateY(-2px);
+    }
+    .transition {
+        transition: all 0.2s ease-in-out;
+    }
+    .text-truncate-2 {
+        display: -webkit-box;
+        -webkit-line-clamp: 2;
+        -webkit-box-orient: vertical;
+        overflow: hidden;
+    }
     </style>
     <section class="section">
         <div class="section-header">
@@ -249,76 +306,141 @@ include '../templates/sidebar.php';
                     </div>
                 </div>
                 <div class="card-body">
-                    <div class="table-responsive">
-                        <table class="table table-striped" id="table-laporan">
-                            <thead>
-                                <tr>
-                                    <th width="5%">No</th>
-                                    <th>Guru/Unit</th>
-                                    <th>Mapel yang Disupervisi</th>
-                                    <th>Jenis</th>
-                                    <th>Tanggal</th>
-                                    <th>Supervisor</th>
-                                    <th>Nilai</th>
-                                    <th>Predikat</th>
-                                    <th>Kekuatan</th>
-                                    <th>Kelemahan</th>
-                                    <th>Rekomendasi</th>
-                                    <th>Prioritas</th>
-                                    <th>Status Tindak Lanjut</th>
-                                    <th>Keterangan</th>
-                                    <th width="12%">Aksi</th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                <?php foreach ($rows as $r): ?>
-                                    <?php
-                                    $tlLabel = 'Belum Ada';
-                                    $tlBadge = 'secondary';
-                                    if ((int)$r['jml_tl'] > 0) {
-                                        if ((int)$r['jml_tl_selesai'] >= (int)$r['jml_tl']) {
-                                            $tlLabel = 'Selesai';
-                                            $tlBadge = 'success';
-                                        } else {
-                                            $tlLabel = 'Dalam Proses';
-                                            $tlBadge = 'warning';
-                                        }
+                    <?php if (empty($rows)): ?>
+                        <div class="alert alert-info">Tidak ada data laporan supervisi.</div>
+                    <?php else: ?>
+                        <div class="row">
+                            <?php foreach ($rows as $r): ?>
+                                <?php
+                                $tlLabel = 'Belum Ada';
+                                $tlBadge = 'secondary';
+                                if ((int)$r['jml_tl'] > 0) {
+                                    if ((int)$r['jml_tl_selesai'] >= (int)$r['jml_tl']) {
+                                        $tlLabel = 'Selesai';
+                                        $tlBadge = 'success';
+                                    } else {
+                                        $tlLabel = 'Dalam Proses';
+                                        $tlBadge = 'warning';
                                     }
-                                    $nama = $r['jenis_supervisi'] === 'Manajerial' ? ($r['unit_bagian'] ?: '-') : ($r['nama_guru'] ?: '-');
-                                    ?>
-                                    <tr>
-                                        <td class="text-center"></td>
-                                        <td><?= htmlspecialchars($nama) ?></td>
-                                        <td><?= htmlspecialchars((string)($r['mapel_di_supervisi'] ?? '')) ?></td>
-                                        <td><span class="badge badge-info"><?= htmlspecialchars($r['jenis_supervisi']) ?></span></td>
-                                        <td><?= $r['tanggal'] ? date('d/m/Y', strtotime($r['tanggal'])) : '-' ?></td>
-                                        <td><?= htmlspecialchars((string)$r['supervisor']) ?></td>
-                                        <td><?= $r['nilai'] !== null ? htmlspecialchars(number_format((float)$r['nilai'], 2)) : '-' ?></td>
-                                        <td><?= htmlspecialchars((string)$r['predikat']) ?></td>
-                                        <td><?= htmlspecialchars((string)$r['kekuatan']) ?></td>
-                                        <td><?= htmlspecialchars((string)$r['kelemahan']) ?></td>
-                                        <td><?= htmlspecialchars((string)$r['rekomendasi']) ?></td>
-                                        <td><?= htmlspecialchars((string)$r['prioritas_perbaikan']) ?></td>
-                                        <td><span class="badge badge-<?= $tlBadge ?>"><?= $tlLabel ?></span></td>
-                                        <td><?= htmlspecialchars((string)$r['keterangan']) ?></td>
-                                        <td style="white-space:nowrap">
-                                            <div class="d-inline-flex align-items-center">
-                                            <a class="btn btn-sm btn-outline-primary mr-1" href="hasil_supervisi_detail.php?id=<?= (int)$r['id_pelaksanaan'] ?>&from=laporan" title="Detail"><i class="fas fa-eye"></i></a>
-                                            <a class="btn btn-sm btn-outline-secondary mr-1" href="cetak_detail_hasil_supervisi.php?id=<?= (int)$r['id_pelaksanaan'] ?>" target="_blank" title="Cetak"><i class="fas fa-print"></i></a>
-                                            <?php if ($can_manage): ?>
-                                            <form method="POST" action="laporan_supervisi.php" class="d-inline m-0">
-                                                <input type="hidden" name="aksi" value="pdf">
-                                                <input type="hidden" name="id_pelaksanaan" value="<?= (int)$r['id_pelaksanaan'] ?>">
-                                                <button type="submit" class="btn btn-sm btn-outline-danger" title="PDF"><i class="fas fa-file-pdf"></i></button>
-                                            </form>
-                                            <?php endif; ?>
+                                }
+                                $nama = $r['jenis_supervisi'] === 'Manajerial' ? ($r['unit_bagian'] ?: '-') : ($r['nama_guru'] ?: '-');
+                                $pred = (string)$r['predikat'];
+                                $predikatColor = 'info';
+                                if (stripos($pred, 'Sangat Baik') !== false || stripos($pred, 'A') === 0) $predikatColor = 'success';
+                                elseif (stripos($pred, 'Baik') !== false || stripos($pred, 'B') === 0) $predikatColor = 'primary';
+                                elseif (stripos($pred, 'Cukup') !== false || stripos($pred, 'C') === 0) $predikatColor = 'warning';
+                                elseif (stripos($pred, 'Kurang') !== false || stripos($pred, 'D') === 0 || stripos($pred, 'E') === 0) $predikatColor = 'danger';
+                                ?>
+                                <div class="col-12 col-md-6 col-lg-4 d-flex align-items-stretch">
+                                    <div class="card w-100 border-0 shadow-sm hover-shadow transition" style="border-radius: 12px; overflow: hidden; background: #fff; border: 1px solid #e2e8f0 !important;">
+                                        <div class="card-body p-3 d-flex flex-column justify-content-between">
+                                            <div>
+                                                <!-- Top Bar: Jenis & Tanggal -->
+                                                <div class="d-flex justify-content-between align-items-center mb-2">
+                                                    <span class="badge badge-info px-2 py-1 font-weight-bold" style="font-size: 12px; border-radius: 6px;">
+                                                        <i class="fas fa-clipboard-check mr-1"></i> <?= htmlspecialchars($r['jenis_supervisi']) ?>
+                                                    </span>
+                                                    <span class="text-muted" style="font-size: 12px;">
+                                                        <i class="far fa-calendar-alt mr-1"></i> <?= $r['tanggal'] ? date('d/m/Y', strtotime($r['tanggal'])) : '-' ?>
+                                                    </span>
+                                                </div>
+
+                                                <!-- Nama Guru/Unit -->
+                                                <h6 class="font-weight-bold text-dark mb-2" style="font-size: 15px; line-height: 1.4; min-height: 42px;">
+                                                    <?= htmlspecialchars($nama) ?>
+                                                </h6>
+
+                                                <!-- Info Mapel & Supervisor -->
+                                                <div class="d-flex flex-wrap align-items-center mb-3" style="gap: 6px;">
+                                                    <?php if ($r['mapel_di_supervisi']): ?>
+                                                        <span class="badge badge-light border text-dark font-weight-bold px-2 py-1" style="border-radius: 4px; font-size: 12px;">
+                                                            <i class="fas fa-book text-muted mr-1"></i> <?= htmlspecialchars($r['mapel_di_supervisi']) ?>
+                                                        </span>
+                                                    <?php endif; ?>
+                                                    <span class="badge badge-light border text-dark font-weight-bold px-2 py-1" style="border-radius: 4px; font-size: 12px;">
+                                                        <i class="fas fa-user-tie text-muted mr-1"></i> <?= htmlspecialchars((string)$r['supervisor']) ?>
+                                                    </span>
+                                                </div>
+
+                                                <!-- Nilai & Predikat -->
+                                                <div class="row mb-3">
+                                                    <div class="col-6">
+                                                        <div class="text-center p-2 rounded" style="background: #f8fafc;">
+                                                            <small class="text-muted d-block mb-1" style="font-size: 11px;">Nilai</small>
+                                                            <h4 class="mb-0 text-primary font-weight-bold" style="font-size: 24px;"><?= $r['nilai'] !== null ? number_format((float)$r['nilai'], 2) : '-' ?></h4>
+                                                        </div>
+                                                    </div>
+                                                    <div class="col-6">
+                                                        <div class="text-center p-2 rounded" style="background: #f8fafc;">
+                                                            <small class="text-muted d-block mb-1" style="font-size: 11px;">Predikat</small>
+                                                            <span class="badge badge-<?= $predikatColor ?> font-weight-bold mt-1" style="font-size: 12px; padding: 5px 14px; border-radius: 6px;"><?= htmlspecialchars((string)$r['predikat']) ?></span>
+                                                        </div>
+                                                    </div>
+                                                </div>
+
+                                                <!-- Kekuatan -->
+                                                <?php if ($r['kekuatan']): ?>
+                                                    <div class="p-2 mb-2 rounded border-0" style="background: #d1fae5; font-size: 12px; line-height: 1.5;">
+                                                        <i class="fas fa-check-circle mr-1 text-success"></i> <strong>Kekuatan:</strong><br>
+                                                        <span class="text-dark"><?= htmlspecialchars(mb_strimwidth($r['kekuatan'], 0, 90, '...')) ?></span>
+                                                    </div>
+                                                <?php endif; ?>
+
+                                                <!-- Kelemahan -->
+                                                <?php if ($r['kelemahan']): ?>
+                                                    <div class="p-2 mb-2 rounded border-0" style="background: #fef3c7; font-size: 12px; line-height: 1.5;">
+                                                        <i class="fas fa-exclamation-circle mr-1 text-warning"></i> <strong>Kelemahan:</strong><br>
+                                                        <span class="text-dark"><?= htmlspecialchars(mb_strimwidth($r['kelemahan'], 0, 90, '...')) ?></span>
+                                                    </div>
+                                                <?php endif; ?>
+
+                                                <!-- Rekomendasi -->
+                                                <?php if ($r['rekomendasi']): ?>
+                                                    <div class="p-2 mb-3 rounded border-0" style="background: #dbeafe; font-size: 12px; line-height: 1.5;">
+                                                        <i class="fas fa-lightbulb mr-1 text-info"></i> <strong>Rekomendasi:</strong><br>
+                                                        <span class="text-dark"><?= htmlspecialchars(mb_strimwidth($r['rekomendasi'], 0, 90, '...')) ?></span>
+                                                    </div>
+                                                <?php endif; ?>
+
+                                                <!-- Prioritas -->
+                                                <?php if ($r['prioritas_perbaikan']): ?>
+                                                    <div class="p-2 mb-2 rounded border-0" style="background: #ede9fe; font-size: 12px; line-height: 1.5;">
+                                                        <i class="fas fa-flag mr-1" style="color: #8b5cf6;"></i> <strong>Prioritas:</strong><br>
+                                                        <span class="text-dark"><?= htmlspecialchars($r['prioritas_perbaikan']) ?></span>
+                                                    </div>
+                                                <?php endif; ?>
+
+                                                <!-- Status Tindak Lanjut -->
+                                                <div class="mb-2">
+                                                    <span class="d-block mb-1 text-muted font-weight-bold" style="font-size: 11px;">Status Tindak Lanjut:</span>
+                                                    <span class="badge badge-<?= $tlBadge ?> font-weight-bold py-1 px-3" style="border-radius: 6px; font-size: 11px;"><?= $tlLabel ?></span>
+                                                </div>
                                             </div>
-                                        </td>
-                                    </tr>
-                                <?php endforeach; ?>
-                            </tbody>
-                        </table>
-                    </div>
+
+                                            <!-- Card Actions Footer -->
+                                            <div class="pt-2 border-top d-flex align-items-center justify-content-between" style="border-color: #f1f5f9 !important;">
+                                                <div>
+                                                    <a href="hasil_supervisi_detail.php?id=<?= (int)$r['id_pelaksanaan'] ?>&from=laporan" class="btn btn-outline-primary btn-sm px-3 font-weight-bold" style="border-radius: 6px; font-size: 12px;">
+                                                        <i class="fas fa-eye mr-1"></i> Detail
+                                                    </a>
+                                                </div>
+                                                <div class="btn-group" role="group">
+                                                    <a href="cetak_detail_hasil_supervisi.php?id=<?= (int)$r['id_pelaksanaan'] ?>" target="_blank" class="btn btn-outline-secondary btn-sm px-2" title="Cetak" style="border-radius: 6px 0 0 6px; font-size: 12px;">
+                                                        <i class="fas fa-print"></i> Cetak
+                                                    </a>
+                                                    <?php if ($can_manage): ?>
+                                                        <button type="button" class="btn btn-outline-danger btn-sm px-2 btn-pdf-single" data-id="<?= (int)$r['id_pelaksanaan'] ?>" title="PDF" style="border-radius: 0 6px 6px 0; font-size: 12px;">
+                                                            <i class="fas fa-file-pdf"></i> PDF
+                                                        </button>
+                                                    <?php endif; ?>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            <?php endforeach; ?>
+                        </div>
+                    <?php endif; ?>
                 </div>
             </div>
         </div>
