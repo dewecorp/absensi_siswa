@@ -3063,19 +3063,22 @@ function renderDashboardAgendaBulanBerjalan(PDO $pdo, ?string $date = null): str
     <div class="row">
         <div class="col-12">
             <div class="card dashboard-agenda-card">
-                <div class="card-header">
-                    <h4><i class="fas fa-calendar-alt mr-2 text-primary"></i>Agenda Bulan <?php echo htmlspecialchars($monthName, ENT_QUOTES, 'UTF-8'); ?></h4>
-                    <div class="card-header-action">
-                        <span class="badge badge-primary"><?php echo htmlspecialchars($monthTitle, ENT_QUOTES, 'UTF-8'); ?></span>
+                <div class="dash-agenda-head">
+                    <div class="dash-agenda-headicon"><i class="fas fa-calendar-alt"></i></div>
+                    <div class="dash-agenda-headtext">
+                        <div class="dash-agenda-headtitle">Agenda Bulan <?php echo htmlspecialchars($monthName, ENT_QUOTES, 'UTF-8'); ?></div>
+                        <div class="dash-agenda-headsub"><?php echo htmlspecialchars($monthTitle, ENT_QUOTES, 'UTF-8'); ?></div>
                     </div>
+                    <?php if (!empty($agenda)): ?>
+                        <span class="dash-agenda-count"><?php echo count($agenda); ?> kegiatan</span>
+                    <?php endif; ?>
                 </div>
-                <div class="card-body">
+                <div class="dash-agenda-body">
                     <?php if (empty($agenda)): ?>
-                        <div class="empty-state py-3" data-height="140">
-                            <div class="empty-state-icon bg-light text-muted">
-                                <i class="fas fa-calendar-check"></i>
-                            </div>
-                            <h2 class="mt-3">Belum ada agenda bulan ini</h2>
+                        <div class="dash-agenda-empty">
+                            <div class="ico"><i class="fas fa-calendar-check"></i></div>
+                            <div class="ttl">Belum ada agenda bulan ini</div>
+                            <div class="sub">Agenda sekolah akan tampil di sini.</div>
                         </div>
                     <?php else: ?>
                         <?php
@@ -3114,22 +3117,22 @@ function renderDashboardAgendaBulanBerjalan(PDO $pdo, ?string $date = null): str
                                 $itemWarna = (string)($item['warna'] ?? 'info');
                                 $itemColor = $warnaMap[$itemWarna] ?? $warnaMap['info'];
                                 ?>
-                                <div class="dashboard-agenda-item <?php echo $isToday ? 'is-today' : ''; ?>">
-                                    <div class="agenda-date-box" style="border-color: <?php echo htmlspecialchars($itemColor, ENT_QUOTES, 'UTF-8'); ?>;">
+                                <div class="dashboard-agenda-item <?php echo $isToday ? 'is-today' : ''; ?>" style="--tone: <?php echo htmlspecialchars($itemColor, ENT_QUOTES, 'UTF-8'); ?>;">
+                                    <div class="agenda-date-box" style="background: <?php echo htmlspecialchars($itemColor, ENT_QUOTES, 'UTF-8'); ?>14; border-color: <?php echo htmlspecialchars($itemColor, ENT_QUOTES, 'UTF-8'); ?>40;">
                                         <div class="agenda-day"><?php echo htmlspecialchars(date('d', strtotime($dateBoxDate)), ENT_QUOTES, 'UTF-8'); ?></div>
                                         <div class="agenda-month" style="background: <?php echo htmlspecialchars($itemColor, ENT_QUOTES, 'UTF-8'); ?>; color: #fff;"><?php echo htmlspecialchars($monthShort, ENT_QUOTES, 'UTF-8'); ?></div>
                                     </div>
                                     <div class="agenda-content">
-                                        <div class="d-flex flex-wrap align-items-center mb-1">
-                                            <h6 class="mb-0 mr-2"><?php echo htmlspecialchars((string)$item['nama_kegiatan'], ENT_QUOTES, 'UTF-8'); ?></h6>
+                                        <div class="agenda-title">
+                                            <span class="agenda-title-text"><?php echo htmlspecialchars((string)$item['nama_kegiatan'], ENT_QUOTES, 'UTF-8'); ?></span>
                                             <?php if ($isToday): ?>
-                                                <span class="badge badge-success">Hari ini</span>
+                                                <span class="agenda-today-chip">Hari ini</span>
                                             <?php endif; ?>
                                         </div>
-                                        <div class="agenda-meta" style="border-left-color: <?php echo htmlspecialchars($itemColor, ENT_QUOTES, 'UTF-8'); ?>; background: <?php echo htmlspecialchars($itemColor, ENT_QUOTES, 'UTF-8'); ?>14; box-shadow: inset 0 0 0 1px <?php echo htmlspecialchars($itemColor, ENT_QUOTES, 'UTF-8'); ?>26;">
-                                            <i class="far fa-clock mr-1" style="color: <?php echo htmlspecialchars($itemColor, ENT_QUOTES, 'UTF-8'); ?>;"></i><?php echo htmlspecialchars($dateLabel, ENT_QUOTES, 'UTF-8'); ?>
+                                        <div class="agenda-meta">
+                                            <span class="agenda-chip"><i class="far fa-clock"></i> <?php echo htmlspecialchars($dateLabel, ENT_QUOTES, 'UTF-8'); ?></span>
                                             <?php if (!empty($item['tahun_ajaran'])): ?>
-                                                <span class="mx-2" style="color: <?php echo htmlspecialchars($itemColor, ENT_QUOTES, 'UTF-8'); ?>;">&bull;</span>Tahun Ajaran <?php echo htmlspecialchars((string)$item['tahun_ajaran'], ENT_QUOTES, 'UTF-8'); ?>
+                                                <span class="agenda-chip"><i class="fas fa-graduation-cap"></i> Tahun Ajaran <?php echo htmlspecialchars((string)$item['tahun_ajaran'], ENT_QUOTES, 'UTF-8'); ?></span>
                                             <?php endif; ?>
                                         </div>
                                     </div>
@@ -3142,24 +3145,42 @@ function renderDashboardAgendaBulanBerjalan(PDO $pdo, ?string $date = null): str
         </div>
     </div>
     <style>
-        .dashboard-agenda-card .card-body { padding-top: 10px; }
-        .dashboard-agenda-list { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 12px; }
-        .dashboard-agenda-item { display: flex; align-items: flex-start; gap: 12px; padding: 12px; border: 1px solid #f0f1f5; border-radius: 8px; background: #fff; }
-        .dashboard-agenda-item.is-today { border-color: #47c363; background: #f8fff9; }
-        .agenda-date-box { width: 52px; min-width: 52px; border-radius: 8px; overflow: hidden; text-align: center; border: 1px solid #e9ecef; }
-        .agenda-day { font-size: 20px; line-height: 1.25; font-weight: 700; padding-top: 5px; color: #34395e; }
-        .agenda-month { font-size: 10px; font-weight: 700; padding: 3px 0 5px; background: #f4f6f9; color: #6777ef; }
-        .agenda-content { min-width: 0; flex: 1; }
-        .agenda-content h6 { font-size: 14px; line-height: 1.35; }
-        .agenda-meta { display: inline-block; color: #40506a; font-size: 12px; line-height: 1.45; font-weight: 700; margin-top: 6px; padding: 5px 8px; border-left: 3px solid #6777ef; border-radius: 6px; background: #f0f4ff; box-shadow: inset 0 0 0 1px rgba(103, 119, 239, .08); }
-        .agenda-meta i { color: #6777ef; }
-        .agenda-meta .mx-2 { color: #6777ef; font-weight: 800; }
-        .dashboard-agenda-item.is-today .agenda-meta { background: #edfdf2; border-left-color: #47c363; box-shadow: inset 0 0 0 1px rgba(71, 195, 99, .12); }
-        .dashboard-agenda-item.is-today .agenda-meta i,
-        .dashboard-agenda-item.is-today .agenda-meta .mx-2 { color: #28a745; }
+        .dashboard-agenda-card { border-radius: 18px !important; border: 1px solid #edf2f7 !important; box-shadow: 0 4px 18px rgba(15, 23, 42, .04) !important; overflow: hidden; position: relative; }
+        .dashboard-agenda-card::before { content: ''; position: absolute; top: 0; left: 0; right: 0; height: 4px; background: linear-gradient(90deg, #f59e0b, #f97316, #ef4444); }
+        .dash-agenda-head { display: flex; align-items: center; gap: 12px; padding: 16px 18px 12px; }
+        .dash-agenda-headicon { width: 44px; height: 44px; flex: 0 0 44px; border-radius: 13px; background: linear-gradient(135deg, #f59e0b, #d97706); color: #fff; display: flex; align-items: center; justify-content: center; font-size: 18px; box-shadow: 0 4px 12px rgba(217, 119, 6, .25); }
+        .dash-agenda-headtext { flex: 1 1 auto; min-width: 0; }
+        .dash-agenda-headtitle { font-size: 15px; font-weight: 800; color: #0f172a; line-height: 1.25; }
+        .dash-agenda-headsub { font-size: 11.5px; color: #64748b; margin-top: 2px; line-height: 1.3; }
+        .dash-agenda-count { flex: 0 0 auto; font-size: 10.5px; font-weight: 800; color: #b45309; background: #fffbeb; border: 1px solid #fde68a; border-radius: 999px; padding: 5px 10px; white-space: nowrap; }
+        .dash-agenda-body { padding: 0 18px 16px; }
+        .dashboard-agenda-list { display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 10px; }
+        .dashboard-agenda-item { display: flex; align-items: center; gap: 12px; background: #fff; border: 1px solid #edf2f7; border-left: 4px solid var(--tone, #3b82f6); border-radius: 14px; padding: 10px 12px; box-shadow: 0 2px 6px rgba(15, 23, 42, .03); transition: transform .2s ease, box-shadow .2s ease; }
+        .dashboard-agenda-item:hover { transform: translateY(-2px); box-shadow: 0 8px 18px rgba(15, 23, 42, .07); }
+        .dashboard-agenda-item.is-today { background: #f8fff9; border-color: #bbf7d0; border-left-color: #10b981; }
+        .agenda-date-box { flex: 0 0 56px; min-width: 56px; border-radius: 13px; overflow: hidden; text-align: center; border: 1.5px solid #e2e8f0; }
+        .agenda-day { font-size: 19px; line-height: 1.25; font-weight: 900; padding-top: 5px; color: #0f172a; letter-spacing: -0.5px; }
+        .agenda-month { font-size: 9.5px; font-weight: 800; letter-spacing: .5px; padding: 3px 0 4px; }
+        .agenda-content { min-width: 0; flex: 1 1 auto; }
+        .agenda-title { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; }
+        .agenda-title-text { font-size: 13.5px; font-weight: 800; color: #0f172a; line-height: 1.3; }
+        .agenda-today-chip { font-size: 9.5px; font-weight: 800; text-transform: uppercase; letter-spacing: .4px; color: #047857; background: #ecfdf5; border: 1px solid #a7f3d0; border-radius: 999px; padding: 2px 8px; line-height: 1.4; }
+        .agenda-meta { display: flex; flex-wrap: wrap; gap: 5px; margin-top: 5px; }
+        .agenda-chip { display: inline-flex; align-items: center; gap: 4px; font-size: 10px; font-weight: 700; color: #475569; background: #f1f5f9; border: 1px solid #e2e8f0; border-radius: 8px; padding: 2.5px 8px; line-height: 1.4; }
+        .agenda-chip i { font-size: 9.5px; color: var(--tone, #3b82f6); }
+        .dash-agenda-empty { text-align: center; padding: 24px 16px; background: #f8fafc; border: 1.5px dashed #cbd5e1; border-radius: 14px; }
+        .dash-agenda-empty .ico { width: 48px; height: 48px; margin: 0 auto 10px; border-radius: 14px; background: #fff7ed; color: #f59e0b; display: flex; align-items: center; justify-content: center; font-size: 22px; }
+        .dash-agenda-empty .ttl { font-size: 13px; font-weight: 800; color: #0f172a; }
+        .dash-agenda-empty .sub { font-size: 11.5px; color: #64748b; margin-top: 3px; }
+        @media (max-width: 767.98px) {
+            .dash-agenda-head { padding: 12px 14px 10px; }
+            .dash-agenda-headicon { width: 38px; height: 38px; flex: 0 0 38px; border-radius: 11px; font-size: 16px; }
+            .dash-agenda-headtitle { font-size: 13.5px; }
+            .dash-agenda-body { padding: 0 14px 14px; }
+            .agenda-title-text { font-size: 12.5px; }
+        }
         @media (max-width: 575.98px) {
             .dashboard-agenda-list { grid-template-columns: 1fr; }
-            .dashboard-agenda-item { padding: 10px; }
         }
     </style>
     <?php
