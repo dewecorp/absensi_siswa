@@ -24,6 +24,15 @@ $school_profile = getSchoolProfile($pdo);
 $school_name = strtoupper($school_profile['nama_madrasah'] ?? 'Sistem Informasi Madrasah');
 $tahun_ajaran = $school_profile['tahun_ajaran'] ?? date('Y');
 
+// Jumlah siswa aktif untuk sumber dana Iuran Ekstra
+$jumlah_siswa = (int)$pdo->query("SELECT COUNT(*) FROM tb_siswa WHERE id_kelas IS NOT NULL")->fetchColumn();
+if ($jumlah_siswa > 0) {
+    try {
+        $stmtSyncIuran = $pdo->prepare("UPDATE tb_sumber_ekstra SET volume = ? WHERE LOWER(uraian) LIKE '%iuran%' AND volume <> ?");
+        $stmtSyncIuran->execute([$jumlah_siswa, $jumlah_siswa]);
+    } catch (Throwable $e) {}
+}
+
 // --- DATABASE MIGRATION START ---
 try {
     // Tabel Sumber Anggaran Ekstra
@@ -99,7 +108,7 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
     // --- SUMBER ANGGARAN CRUD ---
     if (isset($_POST['add_sumber'])) {
         $uraian = trim($_POST['uraian']);
-        $volume = (int)$_POST['volume'];
+        $volume = (stripos($uraian, 'iuran') !== false && $jumlah_siswa > 0) ? $jumlah_siswa : (int)$_POST['volume'];
         $satuan = (float)str_replace(['Rp', '.', ' '], '', $_POST['satuan']); 
         $jumlah = (int)$_POST['jumlah'];
 
@@ -115,7 +124,7 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
     } elseif (isset($_POST['update_sumber'])) {
         $id = $_POST['id_sumber'];
         $uraian = trim($_POST['uraian']);
-        $volume = (int)$_POST['volume'];
+        $volume = (stripos($uraian, 'iuran') !== false && $jumlah_siswa > 0) ? $jumlah_siswa : (int)$_POST['volume'];
         $satuan = (float)str_replace(['Rp', '.', ' '], '', $_POST['satuan']);
         $jumlah = (int)$_POST['jumlah'];
 
@@ -461,7 +470,12 @@ include '../templates/sidebar.php';
                                 <tr>
                                     <td class="cell-no text-center" data-label="No"><?= $i + 1 ?></td>
                                     <td class="cell-uraian font-weight-bold" data-label="Uraian"><?= htmlspecialchars($row['uraian']) ?></td>
-                                    <td class="cell-calc cell-volume text-center" data-label="Volume"><span class="cell-val"><?= number_format($row['volume'], 0, ',', '.') ?></span></td>
+                                    <td class="cell-calc cell-volume text-center" data-label="Volume">
+                                        <span class="cell-val"><?= number_format($row['volume'], 0, ',', '.') ?></span>
+                                        <?php if (stripos($row['uraian'], 'iuran') !== false): ?>
+                                            <br><span class="badge badge-light border text-info" style="font-size: 10px;" title="Otomatis dari Data Siswa"><i class="fas fa-users mr-1"></i>Siswa</span>
+                                        <?php endif; ?>
+                                    </td>
                                     <td class="cell-calc cell-satuan text-right" data-label="Satuan (Rp)"><span class="cell-val"><?= number_format($row['satuan'], 0, ',', '.') ?></span></td>
                                     <td class="cell-calc cell-jumlah text-center" data-label="Jumlah"><span class="cell-val"><?= number_format($row['jumlah'], 0, ',', '.') ?></span></td>
                                     <td class="cell-total text-right font-weight-bold" data-label="Total (Rp)"><span class="cell-val font-weight-bold"><?= number_format($row['total'], 0, ',', '.') ?></span></td>
@@ -598,7 +612,7 @@ include '../templates/sidebar.php';
                 <div class="modal-body">
                     <div class="form-group">
                         <label>Uraian</label>
-                        <input type="text" class="form-control" name="uraian" required>
+                        <input type="text" class="form-control" name="uraian" id="add_sumber_uraian" required placeholder="Contoh: Iuran Ekstrakurikuler, Donasi, dll">
                     </div>
                     <div class="form-group">
                         <label>Kategori (Manual)</label>
@@ -608,7 +622,8 @@ include '../templates/sidebar.php';
                         <div class="col-md-3">
                             <div class="form-group">
                                 <label>Volume</label>
-                                <input type="number" class="form-control input-volume" name="volume" required>
+                                <input type="number" class="form-control input-volume" name="volume" id="add_sumber_volume" required>
+                                <small id="add_sumber_volume_note" class="form-text text-muted" style="display:none;"></small>
                             </div>
                         </div>
                         <div class="col-md-3">
@@ -666,6 +681,7 @@ include '../templates/sidebar.php';
                             <div class="form-group">
                                 <label>Volume</label>
                                 <input type="number" class="form-control input-volume" name="volume" id="edit_sumber_volume" required>
+                                <small id="edit_sumber_volume_note" class="form-text text-muted" style="display:none;"></small>
                             </div>
                         </div>
                         <div class="col-md-4">
@@ -972,6 +988,42 @@ $(document).ready(function() {
         calculateTotal($(this).closest('.modal-body'));
     });
 
+    // --- AUTO DETECT IURAN UNTUK SUMBER ANGGARAN (VOLUME = JUMLAH SISWA) ---
+    var jumlahSiswaAktif = <?= (int)$jumlah_siswa ?>;
+
+    function applyIuranVolumeLogic(uraianVal, volumeInput, noteEl) {
+        var isIuran = uraianVal && uraianVal.toLowerCase().indexOf('iuran') !== -1;
+        if (isIuran && jumlahSiswaAktif > 0) {
+            volumeInput.val(jumlahSiswaAktif).prop('readonly', true).css({
+                'background-color': '#e9ecef',
+                'font-weight': 'bold'
+            });
+            noteEl.html('<i class="fas fa-check-circle text-success mr-1"></i> Otomatis dari Data Siswa (' + jumlahSiswaAktif + ' siswa)').show();
+        } else {
+            volumeInput.prop('readonly', false).css({
+                'background-color': '',
+                'font-weight': ''
+            });
+            noteEl.hide();
+        }
+        calculateTotal(volumeInput.closest('.modal-body'));
+    }
+
+    // Modal Tambah: listen uraian
+    $('#add_sumber_uraian').on('input change', function() {
+        applyIuranVolumeLogic($(this).val(), $('#add_sumber_volume'), $('#add_sumber_volume_note'));
+    });
+
+    // Modal Edit: listen uraian
+    $('#edit_sumber_uraian').on('input change', function() {
+        applyIuranVolumeLogic($(this).val(), $('#edit_sumber_volume'), $('#edit_sumber_volume_note'));
+    });
+
+    // Reset Modal Tambah saat dibuka
+    $('#addSumberModal').on('show.bs.modal', function() {
+        applyIuranVolumeLogic($('#add_sumber_uraian').val(), $('#add_sumber_volume'), $('#add_sumber_volume_note'));
+    });
+
     // --- SUMBER ANGGARAN EVENTS ---
     $('#table-sumber').on('click', '.edit-sumber-btn', function() {
         var id = $(this).data('id');
@@ -986,6 +1038,8 @@ $(document).ready(function() {
         $('#edit_sumber_satuan').val(satuan).mask('000.000.000.000', {reverse: true});
         $('#edit_sumber_jumlah_qty').val(jumlah);
         
+        applyIuranVolumeLogic(uraian, $('#edit_sumber_volume'), $('#edit_sumber_volume_note'));
+
         calculateTotal($('#editSumberModal .modal-body'));
         $('#editSumberModal').modal('show');
     });
