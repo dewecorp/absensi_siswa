@@ -155,6 +155,24 @@ $(document).ready(function() {
         }
     });
 
+    // Tampilkan tombol hanya jika teks benar-benar terpotong
+    function dpCheckClamp() {
+        $('.dp-card-desc').each(function() {
+            var $p = $(this).find('p.dp-tujuan.clamped');
+            var $btn = $(this).find('.dp-more');
+            if ($p.length && $btn.length) {
+                var el = $p[0];
+                if (el.scrollHeight > el.clientHeight + 2) {
+                    $btn.show();
+                } else {
+                    $btn.hide();
+                }
+            }
+        });
+    }
+    dpCheckClamp();
+    $(window).on('resize', dpCheckClamp);
+
     $('#btnTambahDataProjek').on('click', function() {
         $('#formDataProjekAction').val('tambah');
         $('#dataProjekId').val('');
@@ -381,6 +399,7 @@ include '../templates/sidebar.php';
     font-weight: 700;
     color: #4f46e5;
     cursor: pointer;
+    display: none;
 }
 .dp-more:hover { text-decoration: underline; }
 .dp-more i { font-size: 10px; }
