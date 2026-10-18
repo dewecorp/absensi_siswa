@@ -369,7 +369,7 @@ h1, h2, h3, h4 { font-family: Arial, Helvetica, sans-serif; }
 h1.bab { font-size: 14pt; text-align: center; text-transform: uppercase; margin: 26px 0 10px; }
 h2.sub { font-size: 12pt; margin: 18px 0 6px; }
 h3.subsub { font-size: 11.5pt; margin: 14px 0 5px; font-weight: bold; padding-left: var(--cx); }
-p { text-align: justify; margin: 6px 0; text-indent: 0; }
+p { text-align: justify; margin: 6px 0; text-indent: 1.25cm; }
 ol, ul { margin: 6px 0 6px var(--cx); padding: 0; list-style: none; counter-reset: cxli; }
 li { margin: 3px 0; text-align: justify; position: relative; padding-left: var(--cx); }
 ol > li { counter-increment: cxli; }
@@ -382,10 +382,10 @@ td.r { text-align: right; }
 /* Isi tiap sub sejajar dengan teks judul (setelah angka/huruf) */
 .sub .mk, .subsub .mk { display: inline-block; width: var(--cx); }
 p, table, .muted-box { margin-left: var(--cx); }
-table { max-width: calc(100% - var(--cx)); }
-.cover p, .ttd p, .page-header p, p.no-indent, p.center, .muted-box p { margin-left: 0; }
+table { max-width: calc(100% - var(--cx)); margin-left: var(--cx) !important; }
+.cover p, .ttd p, .page-header p, p.no-indent, p.center, .muted-box p { text-indent: 0; }
+.cover p, .ttd p, .page-header p, p.no-indent, p.center, .muted-box p, .p-pengantar { margin-left: 0; }
 .ind3 { margin-left: calc(2 * var(--cx)); }
-table.ind3 { max-width: calc(100% - 2 * var(--cx)); }
 .toc { margin-left: 4px; }
 .toc div { display: flex; align-items: baseline; margin: 3px 0; }
 .toc .txt { }
@@ -431,9 +431,9 @@ table.ind3 { max-width: calc(100% - 2 * var(--cx)); }
 <!-- ================= KATA PENGANTAR ================= -->
 <div class="page-break"></div>
 <h1 class="bab" data-sec="kata-pengantar">Kata Pengantar</h1>
-<p>Puji syukur kami panjatkan ke hadirat Allah SWT atas rahmat dan karunia-Nya sehingga Laporan Pelaksanaan Supervisi Akademik Kepala Madrasah <?= h($school_name) ?> Tahun Ajaran <?= h($judulTA) ?> ini dapat diselesaikan dengan baik.</p>
-<p>Supervisi akademik merupakan salah satu fungsi manajerial dan kepemimpinan kepala madrasah yang bertujuan membantu pendidik mengembangkan kemampuannya dalam mencapai tujuan pembelajaran, meningkatkan kualitas proses pembelajaran, serta memfasilitasi ketercapaian kompetensi peserta didik. Laporan ini disusun sebagai bentuk akuntabilitas kinerja manajerial kepala madrasah serta pemenuhan bukti fisik standar pengelolaan dan proses pembelajaran untuk akreditasi madrasah.</p>
-<p>Terima kasih kami sampaikan kepada seluruh dewan guru dan tenaga kependidikan yang telah bekerja sama secara terbuka dan profesional selama kegiatan supervisi berlangsung. Kritik dan saran yang membangun senantiasa kami harapkan demi kesempurnaan pelaksanaan supervisi di masa mendatang.</p>
+<p class="p-pengantar">Puji syukur kami panjatkan ke hadirat Allah SWT atas rahmat dan karunia-Nya sehingga Laporan Pelaksanaan Supervisi Akademik Kepala Madrasah <?= h($school_name) ?> Tahun Ajaran <?= h($judulTA) ?> ini dapat diselesaikan dengan baik.</p>
+<p class="p-pengantar">Supervisi akademik merupakan salah satu fungsi manajerial dan kepemimpinan kepala madrasah yang bertujuan membantu pendidik mengembangkan kemampuannya dalam mencapai tujuan pembelajaran, meningkatkan kualitas proses pembelajaran, serta memfasilitasi ketercapaian kompetensi peserta didik. Laporan ini disusun sebagai bentuk akuntabilitas kinerja manajerial kepala madrasah serta pemenuhan bukti fisik standar pengelolaan dan proses pembelajaran untuk akreditasi madrasah.</p>
+<p class="p-pengantar">Terima kasih kami sampaikan kepada seluruh dewan guru dan tenaga kependidikan yang telah bekerja sama secara terbuka dan profesional selama kegiatan supervisi berlangsung. Kritik dan saran yang membangun senantiasa kami harapkan demi kesempurnaan pelaksanaan supervisi di masa mendatang.</p>
 <div class="ttd">
     <div class="col"></div>
     <div class="col">
@@ -495,24 +495,26 @@ table.ind3 { max-width: calc(100% - 2 * var(--cx)); }
     <tr><td>Pelaksanaan supervisi (Akademik/Administrasi) TA Sebelumnya (<?= h($judulTALalu) ?>)</td><td class="c"><?= (int)$nPelaksanaan ?> kegiatan</td></tr>
     <tr><td>Instrumen yang digunakan (TA <?= h($judulTALalu) ?>)</td><td class="c"><?= count($instrumen_used) ?> instrumen</td></tr>
 </table>
-<?php if ($sasaran): ?>
 <h3 class="subsub">Daftar Guru Sasaran Supervisi</h3>
 <table>
     <thead><tr><th style="width:6%">No</th><th>Nama Guru/PTK</th><th>Jabatan</th><th>Mata Pelajaran</th><th>Kelas</th><th>Status</th></tr></thead>
     <tbody>
-    <?php foreach ($sasaran as $i => $s): ?>
-        <tr>
-            <td class="c"><?= $i + 1 ?></td>
-            <td><?= h($s['nama_guru']) ?></td>
-            <td><?= h($s['jabatan'] ?: '-') ?></td>
-            <td><?= h($s['mata_pelajaran'] ?: '-') ?></td>
-            <td><?= h($s['kelas'] ?: '-') ?></td>
-            <td class="c"><?= h($s['status_supervisi'] ?: '-') ?></td>
-        </tr>
-    <?php endforeach; ?>
+    <?php if ($sasaran): ?>
+        <?php foreach ($sasaran as $i => $s): ?>
+            <tr>
+                <td class="c"><?= $i + 1 ?></td>
+                <td><?= h($s['nama_guru']) ?></td>
+                <td><?= h($s['jabatan'] ?: '-') ?></td>
+                <td><?= h($s['mata_pelajaran'] ?: '-') ?></td>
+                <td><?= h($s['kelas'] ?: '-') ?></td>
+                <td class="c"><?= h($s['status_supervisi'] ?: '-') ?></td>
+            </tr>
+        <?php endforeach; ?>
+    <?php else: ?>
+        <tr><td colspan="6" class="c text-muted" style="padding:12px;font-style:italic">Belum ada data guru sasaran supervisi pada periode ini.</td></tr>
+    <?php endif; ?>
     </tbody>
 </table>
-<?php endif; ?>
 
 <!-- ================= BAB II ================= -->
 <div class="page-break"></div>
@@ -520,24 +522,26 @@ table.ind3 { max-width: calc(100% - 2 * var(--cx)); }
 
 <h2 class="sub" data-sec="bab2a">A. Pendekatan dan Metode Supervisi</h2>
 <p>Supervisi dilaksanakan dengan pendekatan klinis bersahabat (<strong>collegial clinical supervision</strong>) yang menekankan kemitraan, keterbukaan, dan fokus pada perbaikan pembelajaran, bukan penilaian yang bersifat menghukum.</p>
-<?php if ($jenisPrograms): ?>
 <h3 class="subsub">Program Kerja Supervisi</h3>
 <table>
     <thead><tr><th style="width:5%">No</th><th>Jenis</th><th>Nama Program</th><th>Tujuan</th><th>Penanggung Jawab</th><th class="c">Status</th></tr></thead>
     <tbody>
-    <?php foreach ($jenisPrograms as $i => $pr): ?>
-        <tr>
-            <td class="c"><?= $i + 1 ?></td>
-            <td><?= h($pr['jenis_supervisi']) ?></td>
-            <td><?= h($pr['nama_program']) ?></td>
-            <td><?= nl2br(h($pr['tujuan'] ?? '')) ?></td>
-            <td><?= h($pr['penanggung_jawab'] ?: '-') ?></td>
-            <td class="c"><?= h($pr['status'] ?: '-') ?></td>
-        </tr>
-    <?php endforeach; ?>
+    <?php if ($jenisPrograms): ?>
+        <?php foreach ($jenisPrograms as $i => $pr): ?>
+            <tr>
+                <td class="c"><?= $i + 1 ?></td>
+                <td><?= h($pr['jenis_supervisi']) ?></td>
+                <td><?= h($pr['nama_program']) ?></td>
+                <td><?= nl2br(h($pr['tujuan'] ?? '')) ?></td>
+                <td><?= h($pr['penanggung_jawab'] ?: '-') ?></td>
+                <td class="c"><?= h($pr['status'] ?: '-') ?></td>
+            </tr>
+        <?php endforeach; ?>
+    <?php else: ?>
+        <tr><td colspan="6" class="c text-muted" style="padding:12px;font-style:italic">Belum ada data program kerja supervisi pada periode ini.</td></tr>
+    <?php endif; ?>
     </tbody>
 </table>
-<?php endif; ?>
 
 <h2 class="sub" data-sec="bab2b">B. Tahapan / Siklus Supervisi</h2>
 <ol>
@@ -547,30 +551,30 @@ table.ind3 { max-width: calc(100% - 2 * var(--cx)); }
 </ol>
 
 <h2 class="sub" data-sec="bab2c">C. Jadwal Pelaksanaan Supervisi</h2>
-<?php if ($jadwal): ?>
 <table>
     <thead><tr><th style="width:5%">No</th><th>Nama Guru</th><th>Jenis</th><th>Hari, Tanggal</th><th>Waktu</th><th>Supervisor</th><th>Tempat</th></tr></thead>
     <tbody>
-    <?php foreach ($jadwal as $i => $j):
-        $tgl = $j['tanggal'] ? date('d/m/Y', strtotime($j['tanggal'])) : '-';
-        $hari = $j['tanggal'] ? ($hari_indo[date('l', strtotime($j['tanggal']))] ?? '') : '';
-        $waktu = ($j['jam_mulai'] ? substr($j['jam_mulai'], 0, 5) : '-') . ' - ' . ($j['jam_selesai'] ? substr($j['jam_selesai'], 0, 5) : '-');
-    ?>
-        <tr>
-            <td class="c"><?= $i + 1 ?></td>
-            <td><?= h($j['nama_guru'] ?: '-') ?></td>
-            <td><?= h($j['jenis_supervisi'] ?: '-') ?></td>
-            <td><?= h(($hari !== '' ? $hari . ', ' : '') . $tgl) ?></td>
-            <td class="c"><?= h($waktu) ?></td>
-            <td><?= h($j['supervisor'] ?: '-') ?></td>
-            <td><?= h($j['tempat'] ?: '-') ?></td>
-        </tr>
-    <?php endforeach; ?>
+    <?php if ($jadwal): ?>
+        <?php foreach ($jadwal as $i => $j):
+            $tgl = $j['tanggal'] ? date('d/m/Y', strtotime($j['tanggal'])) : '-';
+            $hari = $j['tanggal'] ? ($hari_indo[date('l', strtotime($j['tanggal']))] ?? '') : '';
+            $waktu = ($j['jam_mulai'] ? substr($j['jam_mulai'], 0, 5) : '-') . ' - ' . ($j['jam_selesai'] ? substr($j['jam_selesai'], 0, 5) : '-');
+        ?>
+            <tr>
+                <td class="c"><?= $i + 1 ?></td>
+                <td><?= h($j['nama_guru'] ?: '-') ?></td>
+                <td><?= h($j['jenis_supervisi'] ?: '-') ?></td>
+                <td><?= h(($hari !== '' ? $hari . ', ' : '') . $tgl) ?></td>
+                <td class="c"><?= h($waktu) ?></td>
+                <td><?= h($j['supervisor'] ?: '-') ?></td>
+                <td><?= h($j['tempat'] ?: '-') ?></td>
+            </tr>
+        <?php endforeach; ?>
+    <?php else: ?>
+        <tr><td colspan="7" class="c text-muted" style="padding:12px;font-style:italic">Belum ada data jadwal supervisi pada periode ini.</td></tr>
+    <?php endif; ?>
     </tbody>
 </table>
-<?php else: ?>
-<p class="small">Belum ada data jadwal supervisi pada periode ini.</p>
-<?php endif; ?>
 
 <!-- ================= BAB III ================= -->
 <div class="page-break"></div>
@@ -578,7 +582,6 @@ table.ind3 { max-width: calc(100% - 2 * var(--cx)); }
 
 <h2 class="sub" data-sec="bab3a">A. Rekapitulasi Nilai Supervisi</h2>
 <p class="small">Data evaluasi hasil supervisi Tahun Ajaran <?= h($judulTALalu) ?> sebagai dasar refleksi perencanaan. Kriteria Penilaian: 91&ndash;100 = Amat Baik (A); 81&ndash;90 = Baik (B); 71&ndash;80 = Cukup (C); &lt; 70 = Kurang (D). Kolom perencanaan, pelaksanaan, dan asesmen merupakan rata-rata capaian tiap fase (dihitung dari indikator).</p>
-<?php if ($rekap): ?>
 <table>
     <thead>
         <tr>
@@ -592,69 +595,73 @@ table.ind3 { max-width: calc(100% - 2 * var(--cx)); }
         </tr>
     </thead>
     <tbody>
-    <?php foreach ($rekap as $i => $r): ?>
-        <tr>
-            <td class="c"><?= $i + 1 ?></td>
-            <td><?= h($r['nama']) ?><?= $r['mapel'] !== '' ? '<br><span class="small">' . h($r['mapel']) . '</span>' : '' ?></td>
-            <td class="c"><?= nf($r['perencanaan']) ?></td>
-            <td class="c"><?= nf($r['pelaksanaan']) ?></td>
-            <td class="c"><?= nf($r['asesmen']) ?></td>
-            <td class="c"><strong><?= nf($r['akhir']) ?></strong></td>
-            <td class="c"><?= h($r['predikat']) ?></td>
-        </tr>
-    <?php endforeach; ?>
-        <tr style="background:#f2f2f2;font-weight:bold">
-            <td class="c" colspan="2">Rata-Rata Satuan</td>
-            <td class="c"><?= nf($avgCol['perencanaan']) ?></td>
-            <td class="c"><?= nf($avgCol['pelaksanaan']) ?></td>
-            <td class="c"><?= nf($avgCol['asesmen']) ?></td>
-            <td class="c"><?= nf($rataSatuan) ?></td>
-            <td class="c"><?= h($rataSatuan !== null ? sv_predikat($rataSatuan) : '-') ?></td>
-        </tr>
+    <?php if ($rekap): ?>
+        <?php foreach ($rekap as $i => $r): ?>
+            <tr>
+                <td class="c"><?= $i + 1 ?></td>
+                <td><?= h($r['nama']) ?><?= $r['mapel'] !== '' ? '<br><span class="small">' . h($r['mapel']) . '</span>' : '' ?></td>
+                <td class="c"><?= nf($r['perencanaan']) ?></td>
+                <td class="c"><?= nf($r['pelaksanaan']) ?></td>
+                <td class="c"><?= nf($r['asesmen']) ?></td>
+                <td class="c"><strong><?= nf($r['akhir']) ?></strong></td>
+                <td class="c"><?= h($r['predikat']) ?></td>
+            </tr>
+        <?php endforeach; ?>
+            <tr style="background:#f2f2f2;font-weight:bold">
+                <td class="c" colspan="2">Rata-Rata Satuan</td>
+                <td class="c"><?= nf($avgCol['perencanaan']) ?></td>
+                <td class="c"><?= nf($avgCol['pelaksanaan']) ?></td>
+                <td class="c"><?= nf($avgCol['asesmen']) ?></td>
+                <td class="c"><?= nf($rataSatuan) ?></td>
+                <td class="c"><?= h($rataSatuan !== null ? sv_predikat($rataSatuan) : '-') ?></td>
+            </tr>
+    <?php else: ?>
+        <tr><td colspan="7" class="c text-muted" style="padding:12px;font-style:italic">Belum ada data pelaksanaan supervisi akademik/administrasi pada Tahun Ajaran sebelumnya (<?= h($judulTALalu) ?>).</td></tr>
+    <?php endif; ?>
     </tbody>
 </table>
-<?php else: ?>
-<p class="small">Belum ada data pelaksanaan supervisi akademik/administrasi pada Tahun Ajaran sebelumnya (<?= h($judulTALalu) ?>).</p>
-<?php endif; ?>
 
 <h2 class="sub" data-sec="bab3b">B. Rekapitulasi Kategori / Predikat</h2>
-<?php if ($predikatCount): ?>
 <table class="avoid-break">
     <thead><tr><th style="width:10%">No</th><th>Kategori</th><th>Jumlah Guru/Supervisi</th><th>Persentase</th></tr></thead>
     <tbody>
-    <?php $no = 1; foreach ($predikatCount as $kat => $jml): ?>
-        <tr>
-            <td class="c"><?= $no++ ?></td>
-            <td><?= h($kat) ?></td>
-            <td class="c"><?= (int)$jml ?></td>
-            <td class="c"><?= $nPelaksanaan > 0 ? nf($jml / $nPelaksanaan * 100, 1) : '0' ?>%</td>
-        </tr>
-    <?php endforeach; ?>
+    <?php if ($predikatCount): ?>
+        <?php $no = 1; foreach ($predikatCount as $kat => $jml): ?>
+            <tr>
+                <td class="c"><?= $no++ ?></td>
+                <td><?= h($kat) ?></td>
+                <td class="c"><?= (int)$jml ?></td>
+                <td class="c"><?= $nPelaksanaan > 0 ? nf($jml / $nPelaksanaan * 100, 1) : '0' ?>%</td>
+            </tr>
+        <?php endforeach; ?>
+    <?php else: ?>
+        <tr><td class="c">1</td><td>Amat Baik (A)</td><td class="c">0</td><td class="c">0%</td></tr>
+        <tr><td class="c">2</td><td>Baik (B)</td><td class="c">0</td><td class="c">0%</td></tr>
+        <tr><td class="c">3</td><td>Cukup (C)</td><td class="c">0</td><td class="c">0%</td></tr>
+        <tr><td class="c">4</td><td>Kurang (D)</td><td class="c">0</td><td class="c">0%</td></tr>
+    <?php endif; ?>
     </tbody>
 </table>
-<?php else: ?>
-<p class="small">Belum ada data kategori.</p>
-<?php endif; ?>
 
 <h2 class="sub" data-sec="bab3c">C. Rincian Instrumen yang Digunakan</h2>
-<?php if ($instrumen_used): ?>
 <table>
     <thead><tr><th style="width:5%">No</th><th>Kode</th><th>Nama Instrumen</th><th>Jenis</th><th>Skala</th></tr></thead>
     <tbody>
-    <?php foreach ($instrumen_used as $i => $ins): ?>
-        <tr>
-            <td class="c"><?= $i + 1 ?></td>
-            <td><?= h($ins['kode_instrumen']) ?></td>
-            <td><?= h($ins['nama_instrumen']) ?></td>
-            <td class="c"><?= h($ins['jenis_supervisi']) ?></td>
-            <td class="c"><?= h($ins['skala_penilaian']) ?></td>
-        </tr>
-    <?php endforeach; ?>
+    <?php if ($instrumen_used): ?>
+        <?php foreach ($instrumen_used as $i => $ins): ?>
+            <tr>
+                <td class="c"><?= $i + 1 ?></td>
+                <td><?= h($ins['kode_instrumen']) ?></td>
+                <td><?= h($ins['nama_instrumen']) ?></td>
+                <td class="c"><?= h($ins['jenis_supervisi']) ?></td>
+                <td class="c"><?= h($ins['skala_penilaian']) ?></td>
+            </tr>
+        <?php endforeach; ?>
+    <?php else: ?>
+        <tr><td colspan="5" class="c text-muted" style="padding:12px;font-style:italic">Belum ada data instrumen yang digunakan pada Tahun Ajaran sebelumnya (<?= h($judulTALalu) ?>).</td></tr>
+    <?php endif; ?>
     </tbody>
 </table>
-<?php else: ?>
-<p class="small">Belum ada data instrumen yang digunakan.</p>
-<?php endif; ?>
 
 <!-- ================= BAB IV ================= -->
 <div class="page-break"></div>
@@ -662,86 +669,86 @@ table.ind3 { max-width: calc(100% - 2 * var(--cx)); }
 
 <h2 class="sub" data-sec="bab4a">A. Analisis Temuan</h2>
 <h3 class="subsub">1. Kekuatan</h3>
-<?php if ($kekuatanFreq): ?>
 <table>
     <thead><tr><th style="width:6%">No</th><th>Aspek Kekuatan</th><th style="width:16%">Frekuensi</th><th style="width:16%">Persentase</th></tr></thead>
     <tbody>
-    <?php $no = 1; foreach ($kekuatanFreq as $item => $jml): ?>
-        <tr>
-            <td class="c"><?= $no++ ?></td>
-            <td><?= h($item) ?></td>
-            <td class="c"><?= (int)$jml ?></td>
-            <td class="c"><?= $nPelaksanaan > 0 ? nf($jml / $nPelaksanaan * 100, 1) : '0' ?>%</td>
-        </tr>
-    <?php endforeach; ?>
+    <?php if ($kekuatanFreq): ?>
+        <?php $no = 1; foreach ($kekuatanFreq as $item => $jml): ?>
+            <tr>
+                <td class="c"><?= $no++ ?></td>
+                <td><?= h($item) ?></td>
+                <td class="c"><?= (int)$jml ?></td>
+                <td class="c"><?= $nPelaksanaan > 0 ? nf($jml / $nPelaksanaan * 100, 1) : '0' ?>%</td>
+            </tr>
+        <?php endforeach; ?>
+    <?php else: ?>
+        <tr><td colspan="4" class="c text-muted" style="padding:12px;font-style:italic">Belum ada catatan kekuatan pada data supervisi Tahun Ajaran sebelumnya (<?= h($judulTALalu) ?>).</td></tr>
+    <?php endif; ?>
     </tbody>
 </table>
-<?php else: ?>
-<p class="small">Belum ada catatan kekuatan pada data supervisi.</p>
-<?php endif; ?>
 
 <h3 class="subsub">2. Area yang Memerlukan Peningkatan</h3>
-<?php if ($kelemahanFreq): ?>
 <table>
     <thead><tr><th style="width:6%">No</th><th>Aspek Kelemahan / Kendala</th><th style="width:16%">Frekuensi</th><th style="width:16%">Persentase</th></tr></thead>
     <tbody>
-    <?php $no = 1; foreach ($kelemahanFreq as $item => $jml): ?>
-        <tr>
-            <td class="c"><?= $no++ ?></td>
-            <td><?= h($item) ?></td>
-            <td class="c"><?= (int)$jml ?></td>
-            <td class="c"><?= $nPelaksanaan > 0 ? nf($jml / $nPelaksanaan * 100, 1) : '0' ?>%</td>
-        </tr>
-    <?php endforeach; ?>
+    <?php if ($kelemahanFreq): ?>
+        <?php $no = 1; foreach ($kelemahanFreq as $item => $jml): ?>
+            <tr>
+                <td class="c"><?= $no++ ?></td>
+                <td><?= h($item) ?></td>
+                <td class="c"><?= (int)$jml ?></td>
+                <td class="c"><?= $nPelaksanaan > 0 ? nf($jml / $nPelaksanaan * 100, 1) : '0' ?>%</td>
+            </tr>
+        <?php endforeach; ?>
+    <?php else: ?>
+        <tr><td colspan="4" class="c text-muted" style="padding:12px;font-style:italic">Belum ada catatan kelemahan / kendala pada data supervisi Tahun Ajaran sebelumnya (<?= h($judulTALalu) ?>).</td></tr>
+    <?php endif; ?>
     </tbody>
 </table>
-<?php else: ?>
-<p class="small">Belum ada catatan kelemahan pada data supervisi.</p>
-<?php endif; ?>
 
 <h3 class="subsub">3. Prioritas Perbaikan</h3>
-<?php if ($prioritasFreq): ?>
 <table>
     <thead><tr><th style="width:6%">No</th><th>Prioritas Perbaikan</th><th style="width:16%">Frekuensi</th><th style="width:16%">Persentase</th></tr></thead>
     <tbody>
-    <?php $no = 1; foreach ($prioritasFreq as $item => $jml): ?>
-        <tr>
-            <td class="c"><?= $no++ ?></td>
-            <td><?= h($item) ?></td>
-            <td class="c"><?= (int)$jml ?></td>
-            <td class="c"><?= $nPelaksanaan > 0 ? nf($jml / $nPelaksanaan * 100, 1) : '0' ?>%</td>
-        </tr>
-    <?php endforeach; ?>
+    <?php if ($prioritasFreq): ?>
+        <?php $no = 1; foreach ($prioritasFreq as $item => $jml): ?>
+            <tr>
+                <td class="c"><?= $no++ ?></td>
+                <td><?= h($item) ?></td>
+                <td class="c"><?= (int)$jml ?></td>
+                <td class="c"><?= $nPelaksanaan > 0 ? nf($jml / $nPelaksanaan * 100, 1) : '0' ?>%</td>
+            </tr>
+        <?php endforeach; ?>
+    <?php else: ?>
+        <tr><td colspan="4" class="c text-muted" style="padding:12px;font-style:italic">Belum ada data prioritas perbaikan pada Tahun Ajaran sebelumnya (<?= h($judulTALalu) ?>).</td></tr>
+    <?php endif; ?>
     </tbody>
 </table>
-<?php else: ?>
-<p class="small">Belum ada data prioritas perbaikan.</p>
-<?php endif; ?>
 
 <h2 class="sub" data-sec="bab4b">B. Rencana Tindak Lanjut (RTL) Pembinaan</h2>
-<?php if ($tindak): ?>
 <table>
     <thead>
         <tr><th style="width:5%">No</th><th>Guru/Unit</th><th>Masalah / Temuan</th><th>Bentuk Kegiatan</th><th>Rencana Tindakan</th><th>Target Selesai</th><th>Penanggung Jawab</th><th>Status</th></tr>
     </thead>
     <tbody>
-    <?php foreach ($tindak as $i => $t): ?>
-        <tr>
-            <td class="c"><?= $i + 1 ?></td>
-            <td><?= h($t['nama_guru'] ?: ($t['unit_bagian'] ?: '-')) ?></td>
-            <td><?= h($t['temuan'] ?: '-') ?></td>
-            <td><?= h($t['bentuk_tindak_lanjut'] ?: '-') ?></td>
-            <td><?= h($t['rencana_tindakan'] ?: '-') ?></td>
-            <td class="c"><?= $t['target_selesai'] ? date('d/m/Y', strtotime($t['target_selesai'])) : '-' ?></td>
-            <td><?= h($t['penanggung_jawab'] ?: '-') ?></td>
-            <td class="c"><?= h($t['status'] ?: '-') ?></td>
-        </tr>
-    <?php endforeach; ?>
+    <?php if ($tindak): ?>
+        <?php foreach ($tindak as $i => $t): ?>
+            <tr>
+                <td class="c"><?= $i + 1 ?></td>
+                <td><?= h($t['nama_guru'] ?: ($t['unit_bagian'] ?: '-')) ?></td>
+                <td><?= h($t['temuan'] ?: '-') ?></td>
+                <td><?= h($t['bentuk_tindak_lanjut'] ?: '-') ?></td>
+                <td><?= h($t['rencana_tindakan'] ?: '-') ?></td>
+                <td class="c"><?= $t['target_selesai'] ? date('d/m/Y', strtotime($t['target_selesai'])) : '-' ?></td>
+                <td><?= h($t['penanggung_jawab'] ?: '-') ?></td>
+                <td class="c"><?= h($t['status'] ?: '-') ?></td>
+            </tr>
+        <?php endforeach; ?>
+    <?php else: ?>
+        <tr><td colspan="8" class="c text-muted" style="padding:12px;font-style:italic">Belum ada data rencana tindak lanjut pembinaan. Tindak lanjut disusun berdasarkan temuan evaluasi.</td></tr>
+    <?php endif; ?>
     </tbody>
 </table>
-<?php else: ?>
-<p class="small">Belum ada data rencana tindak lanjut. Tindak lanjut disusun berdasarkan temuan pada Bab IV.A dan dijadwalkan pada periode berikutnya.</p>
-<?php endif; ?>
 
 <!-- ================= BAB V ================= -->
 <div class="page-break"></div>
@@ -756,7 +763,7 @@ table.ind3 { max-width: calc(100% - 2 * var(--cx)); }
 <!-- ================= LAMPIRAN ================= -->
 <div class="page-break"></div>
 <h1 class="bab" data-sec="lampiran">Lampiran</h1>
-<p>Dokumen pendukung yang menyertai laporan ini:</p>
+<p class="no-indent">Dokumen pendukung yang menyertai laporan ini:</p>
 <ol>
     <li>Instrumen Pra-Observasi, Observasi Kelas, dan Pasca-Observasi.</li>
     <li>Rekapitulasi nilai supervisi per guru.</li>
@@ -764,23 +771,25 @@ table.ind3 { max-width: calc(100% - 2 * var(--cx)); }
     <li>Dokumentasi kegiatan supervisi (foto/dokumen).</li>
 </ol>
 
-<?php if ($instrumen_used): ?>
 <h2 class="sub" data-sec="lampiran-instrumen">Daftar Instrumen Supervisi</h2>
 <table>
     <thead><tr><th style="width:5%">No</th><th>Kode</th><th>Nama Instrumen</th><th>Jenis</th><th>Tujuan</th></tr></thead>
     <tbody>
-    <?php foreach ($instrumen_used as $i => $ins): ?>
-        <tr>
-            <td class="c"><?= $i + 1 ?></td>
-            <td><?= h($ins['kode_instrumen']) ?></td>
-            <td><?= h($ins['nama_instrumen']) ?></td>
-            <td class="c"><?= h($ins['jenis_supervisi']) ?></td>
-            <td><?= h($ins['tujuan'] ?? '-') ?></td>
-        </tr>
-    <?php endforeach; ?>
+    <?php if ($instrumen_used): ?>
+        <?php foreach ($instrumen_used as $i => $ins): ?>
+            <tr>
+                <td class="c"><?= $i + 1 ?></td>
+                <td><?= h($ins['kode_instrumen']) ?></td>
+                <td><?= h($ins['nama_instrumen']) ?></td>
+                <td class="c"><?= h($ins['jenis_supervisi']) ?></td>
+                <td><?= h($ins['tujuan'] ?? '-') ?></td>
+            </tr>
+        <?php endforeach; ?>
+    <?php else: ?>
+        <tr><td colspan="5" class="c text-muted" style="padding:12px;font-style:italic">Belum ada data instrumen supervisi.</td></tr>
+    <?php endif; ?>
     </tbody>
 </table>
-<?php endif; ?>
 
 <!-- ================= PENGESAHAN ================= -->
 <div class="ttd avoid-break" style="margin-top:30px">
@@ -844,6 +853,31 @@ table.ind3 { max-width: calc(100% - 2 * var(--cx)); }
         return t;
     }
 
+    function isHeading(el) {
+        if (!el || el.nodeType !== 1) return false;
+        return /^H[1-6]$/i.test(el.tagName);
+    }
+
+    function pullTrailingHeadings(flow) {
+        if (!flow) return [];
+        var hasNonHeading = false;
+        for (var i = 0; i < flow.children.length; i++) {
+            if (!isHeading(flow.children[i])) {
+                hasNonHeading = true;
+                break;
+            }
+        }
+        if (!hasNonHeading) return [];
+
+        var pulled = [];
+        while (flow.lastElementChild && isHeading(flow.lastElementChild)) {
+            var h = flow.lastElementChild;
+            flow.removeChild(h);
+            pulled.unshift(h);
+        }
+        return pulled;
+    }
+
     function splitTableInto(table, rows) {
         var idx = 0;
         while (idx < rows.length) {
@@ -853,21 +887,69 @@ table.ind3 { max-width: calc(100% - 2 * var(--cx)); }
             var placed = 0;
             while (idx < rows.length) {
                 body.appendChild(rows[idx]);
-                if (overflows(cur.flow) && body.rows.length > 1) {
-                    var last = body.rows[body.rows.length - 1];
-                    body.removeChild(last);
-                    rows[idx] = last;
-                    break;
+                if (overflows(cur.flow)) {
+                    if (body.rows.length > 1) {
+                        body.removeChild(rows[idx]);
+                        break;
+                    } else {
+                        idx++;
+                        placed++;
+                        break;
+                    }
                 }
                 idx++;
                 placed++;
             }
-            if (placed === 0 && idx < rows.length) {
+            if (idx < rows.length) {
+                newSheet();
+            }
+        }
+    }
+
+    function appendTableSplitting(table) {
+        var tbody = table.tBodies[0];
+        var rows = tbody ? Array.prototype.slice.call(tbody.rows) : [];
+
+        if (rows.length === 0 || table.classList.contains('avoid-break')) {
+            cur.flow.appendChild(table);
+            if (!overflows(cur.flow)) return;
+
+            cur.flow.removeChild(table);
+            var pulled = pullTrailingHeadings(cur.flow);
+            newSheet();
+            pulled.forEach(function (h) { cur.flow.appendChild(h); });
+            cur.flow.appendChild(table);
+            if (overflows(cur.flow)) {
+                cur.flow.style.height = 'auto';
+            }
+            return;
+        }
+
+        var t = cloneTableWithHead(table);
+        cur.flow.appendChild(t);
+        var body = t.tBodies[0];
+        body.appendChild(rows[0]);
+
+        if (overflows(cur.flow)) {
+            cur.flow.removeChild(t);
+            var pulledHeadings = pullTrailingHeadings(cur.flow);
+            newSheet();
+            pulledHeadings.forEach(function (h) { cur.flow.appendChild(h); });
+            splitTableInto(table, rows);
+        } else {
+            var idx = 1;
+            while (idx < rows.length) {
                 body.appendChild(rows[idx]);
+                if (overflows(cur.flow)) {
+                    body.removeChild(rows[idx]);
+                    break;
+                }
                 idx++;
             }
             if (idx < rows.length) {
                 newSheet();
+                var remainingRows = rows.slice(idx);
+                splitTableInto(table, remainingRows);
             }
         }
     }
@@ -879,7 +961,7 @@ table.ind3 { max-width: calc(100% - 2 * var(--cx)); }
         if (tg === 'H1') { lvl = 1; return; }
         if (tg === 'H2') { lvl = 2; return; }
         if (tg === 'H3') { lvl = 3; return; }
-        if (lvl === 3 && (tg === 'P' || tg === 'TABLE' || tg === 'OL' || tg === 'UL')) {
+        if (lvl === 3 && (tg === 'P' || tg === 'OL' || tg === 'UL')) {
             el.classList.add('ind3');
         }
     });
@@ -904,40 +986,43 @@ table.ind3 { max-width: calc(100% - 2 * var(--cx)); }
     nodes.forEach(function (node) {
         if (node.nodeType !== 1) return;
         if (node.classList && node.classList.contains('page-break')) {
+            if (cur && cur.flow.children.length === 0) return;
             newSheet();
             return;
         }
         var clone = node.cloneNode(true);
 
-        cur.flow.appendChild(clone);
-        if (!overflows(cur.flow)) return;
-
-        if (cur.flow.children.length === 1) {
-            if (clone.tagName === 'TABLE') {
-                cur.flow.removeChild(clone);
-                var rows = Array.prototype.slice.call(clone.tBodies[0] ? clone.tBodies[0].rows : []);
-                splitTableInto(clone, rows);
-            } else {
-                cur.flow.style.height = 'auto';
-            }
+        if (clone.tagName === 'TABLE') {
+            appendTableSplitting(clone);
             return;
         }
 
+        cur.flow.appendChild(clone);
+        if (!overflows(cur.flow)) return;
+
         cur.flow.removeChild(clone);
-        newSheet();
-        if (clone.tagName === 'TABLE') {
+
+        if (cur.flow.children.length === 0) {
             cur.flow.appendChild(clone);
-            if (overflows(cur.flow)) {
-                cur.flow.removeChild(clone);
-                var rows2 = Array.prototype.slice.call(clone.tBodies[0] ? clone.tBodies[0].rows : []);
-                splitTableInto(clone, rows2);
-            }
-        } else {
-            cur.flow.appendChild(clone);
-            if (overflows(cur.flow)) {
-                cur.flow.style.height = 'auto';
-            }
+            cur.flow.style.height = 'auto';
+            return;
         }
+
+        var pulled = pullTrailingHeadings(cur.flow);
+        newSheet();
+        pulled.forEach(function (h) { cur.flow.appendChild(h); });
+        cur.flow.appendChild(clone);
+        if (overflows(cur.flow)) {
+            cur.flow.style.height = 'auto';
+        }
+    });
+
+    sheets = sheets.filter(function (s) {
+        if (s.flow.children.length === 0) {
+            if (s.sheet.parentNode) s.sheet.parentNode.removeChild(s.sheet);
+            return false;
+        }
+        return true;
     });
 
     sheets.forEach(function (s, i) {
