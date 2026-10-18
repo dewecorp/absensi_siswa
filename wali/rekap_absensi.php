@@ -375,57 +375,54 @@ include '../templates/user_header.php';
                                         </div>
                                         <div class="card-body pt-0">
                                             <?php if (!empty($absent_summary)): ?>
-                                                <div class="row mt-3">
-                                                    <?php 
-                                                    $counts = ['Sakit' => 0, 'Izin' => 0, 'Alpa' => 0];
-                                                    foreach ($absent_summary as $abs) $counts[$abs['keterangan']]++;
-                                                    $total_absent = array_sum($counts);
-                                                    
-                                                    $summary_items = [
-                                                        ['label' => 'Total Tidak Hadir', 'count' => $total_absent, 'color' => 'dark'],
-                                                        ['label' => 'Sakit', 'count' => $counts['Sakit'], 'color' => '#ffa426'],
-                                                        ['label' => 'Izin', 'count' => $counts['Izin'], 'color' => '#3abaf4'],
-                                                        ['label' => 'Alpa', 'count' => $counts['Alpa'], 'color' => '#fc544b']
-                                                    ];
+                                                <?php
+                                                $counts = ['Sakit' => 0, 'Izin' => 0, 'Alpa' => 0];
+                                                foreach ($absent_summary as $abs) $counts[$abs['keterangan']]++;
+                                                $total_absent = array_sum($counts);
+                                                ?>
+                                                <div class="att-monthly-stats mt-3">
+                                                    <div class="att-monthly-stat-box stat-total">
+                                                        <div class="att-monthly-stat-val"><?php echo $total_absent; ?></div>
+                                                        <div class="att-monthly-stat-lbl">Total Tidak Hadir</div>
+                                                    </div>
+                                                    <div class="att-monthly-stat-box stat-sakit">
+                                                        <div class="att-monthly-stat-val"><?php echo $counts['Sakit']; ?></div>
+                                                        <div class="att-monthly-stat-lbl">Sakit</div>
+                                                    </div>
+                                                    <div class="att-monthly-stat-box stat-izin">
+                                                        <div class="att-monthly-stat-val"><?php echo $counts['Izin']; ?></div>
+                                                        <div class="att-monthly-stat-lbl">Izin</div>
+                                                    </div>
+                                                    <div class="att-monthly-stat-box stat-alpa">
+                                                        <div class="att-monthly-stat-val"><?php echo $counts['Alpa']; ?></div>
+                                                        <div class="att-monthly-stat-lbl">Alpa</div>
+                                                    </div>
+                                                </div>
+                                                <div class="att-rekap-timeline mt-2">
+                                                    <?php
+                                                    $no_abs = 1;
+                                                    foreach ($absent_summary as $abs):
+                                                        $abs_tone = $abs['keterangan'] == 'Sakit' ? '#f59e0b' : ($abs['keterangan'] == 'Izin' ? '#0ea5e9' : '#ef4444');
+                                                        $abs_badge = $abs['keterangan'] == 'Sakit' ? 'badge-warning' : ($abs['keterangan'] == 'Izin' ? 'badge-info' : 'badge-danger');
                                                     ?>
-                                                    <?php foreach ($summary_items as $item): ?>
-                                                    <div class="col-md-3">
-                                                        <div class="card mb-3" style="background-color: <?php echo $item['color'] == 'dark' ? '#343a40' : $item['color']; ?>; color: #ffffff !important;">
-                                                            <div class="card-body p-3 text-center">
-                                                                <div class="text-small font-weight-bold" style="color: #ffffff !important; margin-bottom: 2px;"><?php echo $item['label']; ?></div>
-                                                                <div class="h5 mb-0 font-weight-bold" style="color: #ffffff !important;"><?php echo $item['count']; ?> Siswa</div>
+                                                        <div class="att-rekap-item" style="--att-tone-color: <?php echo $abs_tone; ?>;">
+                                                            <div class="att-rekap-num">
+                                                                <span class="seq"><?php echo $no_abs++; ?></span>
+                                                                <span class="sub"><?php echo htmlspecialchars($abs['nama_kelas']); ?></span>
+                                                            </div>
+                                                            <div class="att-rekap-card">
+                                                                <div class="att-rekap-main">
+                                                                    <div class="att-rekap-name"><?php echo htmlspecialchars($abs['nama_siswa']); ?></div>
+                                                                    <div class="att-rekap-meta">
+                                                                        <span><i class="fas fa-school"></i> <?php echo htmlspecialchars($abs['nama_kelas']); ?></span>
+                                                                    </div>
+                                                                </div>
+                                                                <div class="att-rekap-badge">
+                                                                    <span class="badge <?php echo $abs_badge; ?>"><?php echo htmlspecialchars($abs['keterangan']); ?></span>
+                                                                </div>
                                                             </div>
                                                         </div>
-                                                    </div>
                                                     <?php endforeach; ?>
-                                                </div>
-                                                <div class="table-responsive mt-2">
-                                                    <table class="table table-sm table-bordered" style="font-size: 13px;">
-                                                        <thead class="bg-light">
-                                                            <tr>
-                                                                <th class="py-1 text-center" style="width: 50px;">No</th>
-                                                                <th class="py-1">Nama Siswa</th>
-                                                                <th class="py-1">Kelas</th>
-                                                                <th class="py-1">Keterangan</th>
-                                                            </tr>
-                                                        </thead>
-                                                        <tbody>
-                                                            <?php $no_abs = 1; foreach ($absent_summary as $abs): ?>
-                                                                <tr>
-                                                                    <td class="py-1 text-center"><?php echo $no_abs++; ?></td>
-                                                                    <td class="py-1"><?php echo htmlspecialchars($abs['nama_siswa']); ?></td>
-                                                                    <td class="py-1"><?php echo htmlspecialchars($abs['nama_kelas']); ?></td>
-                                                                    <td class="py-1">
-                                                                        <span class="badge <?php 
-                                                                            echo $abs['keterangan'] == 'Sakit' ? 'badge-warning' : ($abs['keterangan'] == 'Izin' ? 'badge-info' : 'badge-danger'); 
-                                                                        ?>">
-                                                                            <?php echo $abs['keterangan']; ?>
-                                                                        </span>
-                                                                    </td>
-                                                                </tr>
-                                                            <?php endforeach; ?>
-                                                        </tbody>
-                                                    </table>
                                                 </div>
                                             <?php else: ?>
                                                 <div class="alert alert-light mt-3 text-center">
