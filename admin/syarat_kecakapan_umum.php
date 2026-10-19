@@ -747,6 +747,20 @@ try {
 } catch (Exception $e) {
 }
 
+$tingkat_counts = [];
+try {
+    $stCount = $pdo->query('
+        SELECT id_tingkat_barung, COUNT(*) as jml
+        FROM tb_peserta_didik_barung
+        WHERE IFNULL(status, "aktif") = "aktif"
+        GROUP BY id_tingkat_barung
+    ');
+    while ($rc = $stCount->fetch(PDO::FETCH_ASSOC)) {
+        $tingkat_counts[(int)$rc['id_tingkat_barung']] = (int)$rc['jml'];
+    }
+} catch (Exception $e) {
+}
+
 $selected_tingkat_id = (int)($_GET['tingkat'] ?? 0);
 if (!$can_manage_sku && !empty($assigned_tingkat_ids)) {
     if ($selected_tingkat_id <= 0 || !in_array($selected_tingkat_id, $assigned_tingkat_ids)) {
@@ -788,7 +802,8 @@ if ($selected_tingkat_id > 0) {
         $sku_butir_rows = $b->fetchAll(PDO::FETCH_ASSOC);
 
         $stP = $pdo->prepare('
-            SELECT p.id_peserta_didik_barung, p.nama_peserta_didik
+            SELECT p.id_peserta_didik_barung, p.nama_peserta_didik, p.nta,
+                   s.id_siswa, s.nisn, s.foto, k.nama_kelas
             FROM tb_peserta_didik_barung p
             LEFT JOIN tb_siswa s ON (
                 s.id_siswa = p.id_siswa
@@ -1242,26 +1257,50 @@ $(function(){
         notifyPromotedAndReload();
         return;
       }
-      var key = '[data-peserta="' + $cb.data('peserta') + '"][data-butir="' + $cb.data('butir') + '"]';
-      var $date = $('.sku-date' + key);
-      if ($date.length) {
-        if ($cb.is(':checked')) {
-          if (resp.tanggal_ujian) $date.val(resp.tanggal_ujian);
-        } else {
-          $date.val('');
+    var key = '[data-peserta="' + $cb.data('peserta') + '"][data-butir="' + $cb.data('butir') + '"]';
+    var $date = $('.sku-date' + key);
+    if ($date.length) {
+      if ($cb.is(':checked')) {
+        if (resp.tanggal_ujian) $date.val(resp.tanggal_ujian);
+      } else {
+        $date.val('');
+      }
+    }
+    // Sync all checkboxes with same peserta & butir (card and table)
+    $('.sku-check' + key).prop('checked', $cb.is(':checked'));
+    $('.sku-item-row' + key).toggleClass('border-success', $cb.is(':checked'));
+
+    // Sync status badges
+    var $statusCells = $('.sku-status-cell[data-peserta="' + $cb.data('peserta') + '"]');
+    $statusCells.each(function() {
+      var $el = $(this);
+      if ($el.hasClass('badge')) {
+        $el.toggleClass('badge-success', !!resp.status_ok).toggleClass('badge-danger', !resp.status_ok);
+      } else {
+        $el.toggleClass('text-success', !!resp.status_ok).toggleClass('text-danger', !resp.status_ok);
+      }
+      $el.text(resp.status_label || '—');
+    });
+    
+    if (typeof resp.percentage !== 'undefined') {
+      var $pctCells = $('.sku-pct-cell[data-peserta="' + $cb.data('peserta') + '"]');
+      $pctCells.each(function() {
+        var $bar = $(this).find('.progress-bar');
+        if ($bar.length) {
+          $bar.css('width', resp.percentage + '%').attr('aria-valuenow', resp.percentage);
+          if ($bar.parent().height() > 15) {
+            $bar.text(resp.percentage + '%');
+          }
+          $bar.toggleClass('bg-success', resp.percentage >= 100).toggleClass('bg-primary', resp.percentage < 100);
         }
+        $(this).find('small').text(resp.done + ' / ' + resp.total + ' butir');
+      });
+      var $pctText = $('.sku-pct-text[data-peserta="' + $cb.data('peserta') + '"]');
+      if ($pctText.length) {
+        $pctText.find('.sku-pct-val').text(resp.percentage + '%');
+        $pctText.html('<span class="sku-pct-val">' + resp.percentage + '%</span> (' + resp.done + '/' + resp.total + ')');
       }
-      $('.sku-status-cell[data-peserta="' + $cb.data('peserta') + '"]')
-        .toggleClass('text-success', !!resp.status_ok).toggleClass('text-danger', !resp.status_ok)
-        .text(resp.status_label || '—');
-      
-      if (typeof resp.percentage !== 'undefined') {
-        var $pctCell = $('.sku-pct-cell[data-peserta="' + $cb.data('peserta') + '"]');
-        var $bar = $pctCell.find('.progress-bar');
-        $bar.css('width', resp.percentage + '%').attr('aria-valuenow', resp.percentage).text(resp.percentage + '%');
-        $bar.toggleClass('bg-success', resp.percentage >= 100).toggleClass('bg-primary', resp.percentage < 100);
-        $pctCell.find('small').text(resp.done + ' / ' + resp.total + ' butir');
-      }
+    }
     }).fail(function(){ Swal.fire('Error', 'Permintaan gagal', 'error'); $cb.prop('checked', !$cb.is(':checked')); });
   });
 
@@ -1285,17 +1324,43 @@ $(function(){
         return;
       }
       var key = '[data-peserta="' + peserta + '"][data-butir="' + butir + '"]';
-      if (resp.checked) $('.sku-check' + key).prop('checked', true);
-      $('.sku-status-cell[data-peserta="' + peserta + '"]')
-        .toggleClass('text-success', !!resp.status_ok).toggleClass('text-danger', !resp.status_ok)
-        .text(resp.status_label || '—');
+      if (resp.checked) {
+        $('.sku-check' + key).prop('checked', true);
+        $('.sku-item-row' + key).addClass('border-success');
+      } else {
+        $('.sku-check' + key).prop('checked', false);
+        $('.sku-item-row' + key).removeClass('border-success');
+      }
+      $('.sku-date' + key).val($dt.val() || '');
+
+      var $statusCells = $('.sku-status-cell[data-peserta="' + peserta + '"]');
+      $statusCells.each(function() {
+        var $el = $(this);
+        if ($el.hasClass('badge')) {
+          $el.toggleClass('badge-success', !!resp.status_ok).toggleClass('badge-danger', !resp.status_ok);
+        } else {
+          $el.toggleClass('text-success', !!resp.status_ok).toggleClass('text-danger', !resp.status_ok);
+        }
+        $el.text(resp.status_label || '—');
+      });
       
       if (typeof resp.percentage !== 'undefined') {
-        var $pctCell = $('.sku-pct-cell[data-peserta="' + peserta + '"]');
-        var $bar = $pctCell.find('.progress-bar');
-        $bar.css('width', resp.percentage + '%').attr('aria-valuenow', resp.percentage).text(resp.percentage + '%');
-        $bar.toggleClass('bg-success', resp.percentage >= 100).toggleClass('bg-primary', resp.percentage < 100);
-        $pctCell.find('small').text(resp.done + ' / ' + resp.total + ' butir');
+        var $pctCells = $('.sku-pct-cell[data-peserta="' + peserta + '"]');
+        $pctCells.each(function() {
+          var $bar = $(this).find('.progress-bar');
+          if ($bar.length) {
+            $bar.css('width', resp.percentage + '%').attr('aria-valuenow', resp.percentage);
+            if ($bar.parent().height() > 15) {
+              $bar.text(resp.percentage + '%');
+            }
+            $bar.toggleClass('bg-success', resp.percentage >= 100).toggleClass('bg-primary', resp.percentage < 100);
+          }
+          $(this).find('small').text(resp.done + ' / ' + resp.total + ' butir');
+        });
+        var $pctText = $('.sku-pct-text[data-peserta="' + peserta + '"]');
+        if ($pctText.length) {
+          $pctText.html('<span class="sku-pct-val">' + resp.percentage + '%</span> (' + resp.done + '/' + resp.total + ')');
+        }
       }
     }).fail(function(){
       Swal.fire('Error', 'Permintaan gagal', 'error');
@@ -1340,16 +1405,60 @@ $(function(){
     });
   });
 
+  // Quick today date fill
+  $(document).on('click', '.btn-today', function() {
+    var $btn = $(this);
+    var p = $btn.data('peserta');
+    var b = $btn.data('butir');
+    var today = new Date().toISOString().split('T')[0];
+    var $dateInput = $('.sku-date[data-peserta="' + p + '"][data-butir="' + b + '"]');
+    if ($dateInput.length) {
+      $dateInput.val(today).trigger('change');
+    }
+  });
+
+  // Switch between Cards and Table View
+  var currentSkuView = localStorage.getItem('simad_sku_view') || 'cards';
+  function applySkuView(view) {
+    if (view === 'table') {
+      $('#skuCardsView').addClass('d-none');
+      $('#skuTableView').removeClass('d-none');
+      $('#btnViewTable').addClass('btn-primary active').removeClass('btn-outline-primary');
+      $('#btnViewCards').addClass('btn-outline-primary').removeClass('btn-primary active');
+    } else {
+      $('#skuTableView').addClass('d-none');
+      $('#skuCardsView').removeClass('d-none');
+      $('#btnViewCards').addClass('btn-primary active').removeClass('btn-outline-primary');
+      $('#btnViewTable').addClass('btn-outline-primary').removeClass('btn-primary active');
+    }
+    localStorage.setItem('simad_sku_view', view);
+  }
+  $('#btnViewCards').on('click', function() { applySkuView('cards'); });
+  $('#btnViewTable').on('click', function() { applySkuView('table'); });
+  applySkuView(currentSkuView);
+
+  // Chevron animation for card collapse
+  $('.sku-btn-expand').on('click', function() {
+    var $icon = $(this).find('.sku-expand-icon i');
+    setTimeout(function() {
+      var isExpanded = $(this).attr('aria-expanded') === 'true';
+      $icon.toggleClass('fa-chevron-up', isExpanded).toggleClass('fa-chevron-down', !isExpanded);
+    }.bind(this), 20);
+  });
+
   var $filterNama = $('#skuFilterNama');
   if ($filterNama.length) {
     function skuApplyNamaFilter() {
       var q = ($filterNama.val() || '').trim().toLowerCase();
+      
+      // Filter Table View
       var $rows = $('#skuMainTable tbody tr.sku-data-row');
       var seq = 1;
       $rows.each(function() {
         var $tr = $(this);
         var nama = String($tr.attr('data-nama-normal') || '');
-        var show = !q || nama.indexOf(q) !== -1;
+        var nisn = String($tr.attr('data-nisn-normal') || '');
+        var show = !q || (nama.indexOf(q) !== -1) || (nisn.indexOf(q) !== -1);
         $tr.toggle(show);
         if (show) {
           var $no = $tr.find('td.sku-row-no');
@@ -1359,6 +1468,16 @@ $(function(){
             $no.text($tr.attr('data-urut-asli') || '');
           }
         }
+      });
+
+      // Filter Cards View
+      var $cards = $('#skuCardsContainer .sku-card-item');
+      $cards.each(function() {
+        var $card = $(this);
+        var nama = String($card.attr('data-nama-normal') || '');
+        var nisn = String($card.attr('data-nisn-normal') || '');
+        var show = !q || (nama.indexOf(q) !== -1) || (nisn.indexOf(q) !== -1);
+        $card.toggle(show);
       });
     }
     $filterNama.on('input', skuApplyNamaFilter);
@@ -1433,6 +1552,26 @@ SKUJS;
 require_once '../templates/header.php';
 require_once '../templates/sidebar.php';
 ?>
+<style>
+/* Prevent FOUC (Flash of Unstyled Content) on SKU pill tabs */
+.sku-tab-pill {
+    display: inline-flex !important;
+    align-items: center !important;
+    gap: 8px !important;
+    padding: 8px 16px !important;
+    border-radius: 999px !important;
+    font-size: 0.88rem !important;
+    font-weight: 700 !important;
+    text-decoration: none !important;
+    white-space: nowrap !important;
+    outline: none !important;
+    box-shadow: 0 2px 6px rgba(15, 23, 42, 0.04) !important;
+}
+.sku-tab-pill:focus, .sku-tab-pill:active {
+    outline: none !important;
+    box-shadow: none !important;
+}
+</style>
 
 <div class="main-content">
     <section class="section">
@@ -1475,37 +1614,34 @@ require_once '../templates/sidebar.php';
                         <div class="alert alert-warning mb-0">Belum ada data tingkat Pramuka. Tambahkan di menu <strong>Data Tingkat Barung</strong>.</div>
                     <?php else: ?>
                         <?php if ($can_manage_sku || count($assigned_tingkat_ids) > 1): ?>
-                        <ul class="nav nav-pills flex-wrap mb-4" role="tablist">
-                            <?php 
-                                $filtered_tingkat = [];
-                                foreach ($tingkat_list as $t) {
-                                    if (!$can_manage_sku && !in_array((int)($t['id_tingkat_barung'] ?? 0), $assigned_tingkat_ids)) continue;
-                                    $filtered_tingkat[] = $t;
-                                }
-                                foreach ($filtered_tingkat as $index => $t):
-                                ?>
-                                <?php
-                                    $tid = (int)($t['id_tingkat_barung'] ?? 0);
-                                    $active = ($tid === $selected_tingkat_id);
-                                    $golongan = $t['golongan'] ?? 'Siaga';
-                                    if ($golongan === 'Penggalang') {
-                                        $pill_class = $active ? 'nav-link active bg-danger border-danger' : 'nav-link border border-danger text-danger';
-                                    } else {
-                                        $pill_class = $active ? 'nav-link active bg-success border-success' : 'nav-link border border-success text-success';
+                        <div class="sku-tingkat-tabs-wrapper mb-4">
+                            <div class="sku-tingkat-tabs-scroll">
+                                <?php 
+                                    $filtered_tingkat = [];
+                                    foreach ($tingkat_list as $t) {
+                                        if (!$can_manage_sku && !in_array((int)($t['id_tingkat_barung'] ?? 0), $assigned_tingkat_ids)) continue;
+                                        $filtered_tingkat[] = $t;
                                     }
-                                    $is_first = $index === 0;
-                                    $is_last = $index === count($filtered_tingkat) - 1;
-                                ?>
-                                <li class="nav-item" style="margin: 0;">
+                                    foreach ($filtered_tingkat as $index => $t):
+                                    ?>
+                                    <?php
+                                        $tid = (int)($t['id_tingkat_barung'] ?? 0);
+                                        $active = ($tid === $selected_tingkat_id);
+                                        $golongan = $t['golongan'] ?? 'Siaga';
+                                        $count_siswa = (int)($tingkat_counts[$tid] ?? 0);
+                                        $is_penggalang = ($golongan === 'Penggalang');
+                                    ?>
                                     <a href="?tingkat=<?= $tid ?>" 
-                                       class="nav-link py-1 px-3 <?= $pill_class ?>" 
-                                       role="tab" 
-                                       style="transition: none; <?= !$is_first ? 'border-left: 0; margin-left: -1px;' : '' ?> <?= !$is_last ? 'border-right: 0;' : '' ?> border-radius: 0;<?= $is_first ? ' border-top-left-radius: 4px; border-bottom-left-radius: 4px;' : '' ?><?= $is_last ? ' border-top-right-radius: 4px; border-bottom-right-radius: 4px;' : '' ?>">
-                                        <?= htmlspecialchars((string)($t['nama_tingkat'] ?? '')) ?>
+                                       class="sku-tab-pill <?= $active ? 'active' : '' ?> <?= $is_penggalang ? 'sku-tab-penggalang' : 'sku-tab-siaga' ?>">
+                                        <span class="sku-tab-icon">
+                                            <i class="fas <?= $is_penggalang ? 'fa-compass' : 'fa-seedling' ?>"></i>
+                                        </span>
+                                        <span class="sku-tab-text"><?= htmlspecialchars((string)($t['nama_tingkat'] ?? '')) ?></span>
+                                        <span class="sku-tab-count"><?= $count_siswa ?></span>
                                     </a>
-                                </li>
-                            <?php endforeach; ?>
-                        </ul>
+                                <?php endforeach; ?>
+                            </div>
+                        </div>
                         <?php endif; ?>
 
                         <?php if ($sku_assignment_missing): ?>
@@ -1515,21 +1651,196 @@ require_once '../templates/sidebar.php';
                         <?php endif; ?>
 
                         <?php if ($selected_tingkat_id > 0): ?>
-                            <?php if (!empty($peserta_rows)): ?>
-                                <div class="form-row align-items-center mb-3">
-                                    <div class="col-auto">
-                                        <label for="skuFilterNama" class="sr-only">Cari nama peserta didik</label>
-                                        <div class="input-group input-group-sm sku-name-filter">
-                                            <div class="input-group-prepend">
-                                                <span class="input-group-text"><i class="fas fa-search"></i></span>
+                            <div class="d-flex flex-wrap align-items-center justify-content-between mb-3 gap-2">
+                                <div class="d-flex align-items-center flex-wrap gap-2 flex-grow-1">
+                                    <?php if (!empty($peserta_rows)): ?>
+                                        <div style="min-width: 260px; max-width: 320px;">
+                                            <div class="input-group input-group-sm w-100">
+                                                <div class="input-group-prepend">
+                                                    <span class="input-group-text bg-white border-right-0"><i class="fas fa-search text-muted"></i></span>
+                                                </div>
+                                                <input type="search" id="skuFilterNama" class="form-control border-left-0 pl-0"
+                                                       placeholder="Cari siswa atau NISN…" autocomplete="off">
                                             </div>
-                                            <input type="search" id="skuFilterNama" class="form-control"
-                                                   placeholder="Cari nama peserta didik…" autocomplete="off">
                                         </div>
+                                    <?php endif; ?>
+                                    <div class="sku-summary-badge">
+                                        <i class="fas fa-user-graduate text-primary mr-1"></i>
+                                        Total: <strong class="text-dark ml-1"><?= count($peserta_rows) ?> Siswa</strong>
                                     </div>
                                 </div>
-                            <?php endif; ?>
-                            <div class="sku-table-wrap mb-3">
+                                <div class="btn-group btn-group-sm ml-auto sku-view-switch" role="group">
+                                    <button type="button" class="btn btn-primary active" id="btnViewCards" title="Tampilan Kartu Cepat">
+                                        <i class="fas fa-th-large mr-1"></i> Mode Kartu
+                                    </button>
+                                    <button type="button" class="btn btn-outline-primary" id="btnViewTable" title="Tampilan Matriks Tabel">
+                                        <i class="fas fa-table mr-1"></i> Mode Tabel
+                                    </button>
+                                </div>
+                            </div>
+
+                            <!-- SKU Cards View (Mobile & Desktop Friendly - Tanpa Geser Horizontal) -->
+                            <div id="skuCardsView" class="mb-4">
+                                <?php if (empty($peserta_rows)): ?>
+                                    <div class="alert alert-light text-center py-5 border">
+                                        <i class="fas fa-users-slash fa-3x text-muted mb-3 d-block"></i>
+                                        Tidak ada anggota aktif untuk tingkat ini. Tambahkan di <strong>Data Anggota Pramuka</strong>.
+                                    </div>
+                                <?php else: ?>
+                                    <div class="row" id="skuCardsContainer">
+                                        <?php $cardIndex = 1; foreach ($peserta_rows as $p): ?>
+                                            <?php
+                                                $pid = (int)$p['id_peserta_didik_barung'];
+                                                $inf = sku_compute_status_cell($pdo, $pid, $selected_tingkat_id);
+                                                $namaNorm = mb_strtolower(sku_plain_person_name((string)$p['nama_peserta_didik']));
+                                                $nisnNorm = mb_strtolower(trim((string)($p['nisn'] ?? $p['nta'] ?? '')));
+                                                $namaLengkap = (string)$p['nama_peserta_didik'];
+                                                $namaKelas = (string)($p['nama_kelas'] ?? '-');
+                                                $fotoSiswa = (string)($p['foto'] ?? '');
+                                                $initials = strtoupper(mb_substr(trim($namaLengkap), 0, 1));
+                                                $fallbackHtml = '<div class="sku-avatar-initials">' . htmlspecialchars($initials, ENT_QUOTES, 'UTF-8') . '</div>';
+                                                $avatarHtml = getPersonAvatarHtml($fotoSiswa, $fallbackHtml, 'sku-avatar-img');
+                                            ?>
+                                            <div class="col-12 col-xl-6 mb-3 sku-card-item"
+                                                 data-nama-normal="<?= htmlspecialchars($namaNorm, ENT_QUOTES, 'UTF-8') ?>"
+                                                 data-nisn-normal="<?= htmlspecialchars($nisnNorm, ENT_QUOTES, 'UTF-8') ?>"
+                                                 data-peserta="<?= $pid ?>">
+                                                <div class="card sku-student-card h-100 shadow-sm border-0 mb-0">
+                                                    <div class="card-body p-3">
+                                                        <!-- Header Siswa Mobile-App Style -->
+                                                        <div class="d-flex align-items-center justify-content-between flex-wrap gap-2 mb-3">
+                                                            <div class="d-flex align-items-center">
+                                                                <div class="sku-student-no mr-2" title="Nomor Urut">
+                                                                    <?= $cardIndex++ ?>
+                                                                </div>
+                                                                <div class="mr-3 flex-shrink-0">
+                                                                    <div class="sku-avatar-wrap">
+                                                                        <?= $avatarHtml ?>
+                                                                    </div>
+                                                                </div>
+                                                                <div>
+                                                                    <div class="sku-student-name">
+                                                                        <?= sku_html_person_name($namaLengkap) ?>
+                                                                    </div>
+                                                                    <div class="sku-student-meta">
+                                                                        <span><i class="fas fa-id-card-alt mr-1 text-primary"></i><?= htmlspecialchars($p['nisn'] ?? $p['nta'] ?? '-') ?></span>
+                                                                        <span class="meta-dot">•</span>
+                                                                        <span><i class="fas fa-graduation-cap mr-1 text-info"></i>Kelas <?= htmlspecialchars($namaKelas) ?></span>
+                                                                    </div>
+                                                                </div>
+                                                            </div>
+                                                            <div class="text-right d-flex flex-column align-items-end">
+                                                                <span class="sku-app-badge sku-status-cell <?= $inf['ok'] ? 'sku-badge-lulus' : 'sku-badge-proses' ?>"
+                                                                      data-peserta="<?= $pid ?>">
+                                                                    <i class="fas <?= $inf['ok'] ? 'fa-check-circle' : 'fa-clock' ?> mr-1"></i>
+                                                                    <?= htmlspecialchars($inf['label']) ?>
+                                                                </span>
+                                                                <div class="sku-pct-pill mt-1 sku-pct-text" data-peserta="<?= $pid ?>">
+                                                                    <i class="fas fa-chart-line mr-1 text-primary"></i>
+                                                                    <span class="sku-pct-val font-weight-bold"><?= $inf['percentage'] ?>%</span>
+                                                                    <span class="text-muted ml-1 font-weight-normal">(<?= $inf['done'] ?>/<?= $inf['total'] ?>)</span>
+                                                                </div>
+                                                            </div>
+                                                        </div>
+
+                                                        <!-- Progress Bar Siswa -->
+                                                        <div class="sku-pct-cell mb-3" data-peserta="<?= $pid ?>">
+                                                            <div class="progress sku-progress-track">
+                                                                <div class="progress-bar <?= $inf['percentage'] >= 100 ? 'bg-success' : 'bg-primary' ?>"
+                                                                     role="progressbar"
+                                                                     style="width: <?= $inf['percentage'] ?>%; transition: width .3s ease;"
+                                                                     aria-valuenow="<?= $inf['percentage'] ?>"
+                                                                     aria-valuemin="0"
+                                                                     aria-valuemax="100"></div>
+                                                            </div>
+                                                        </div>
+
+                                                        <!-- Accordion Toggle Butir SKU (Mobile App Pill Button) -->
+                                                        <div class="d-flex justify-content-between align-items-center">
+                                                            <button class="btn sku-app-btn-toggle btn-block d-flex align-items-center justify-content-between py-2 px-3 sku-btn-expand"
+                                                                    type="button"
+                                                                    data-toggle="collapse"
+                                                                    data-target="#skuCollapse<?= $pid ?>"
+                                                                    aria-expanded="false"
+                                                                    aria-controls="skuCollapse<?= $pid ?>">
+                                                                <span class="d-flex align-items-center">
+                                                                    <span class="sku-icon-circle mr-2"><i class="fas fa-tasks"></i></span>
+                                                                    <span>Lembar Ujian SKU <strong class="text-primary">(<?= count($sku_butir_rows) ?> Butir)</strong></span>
+                                                                </span>
+                                                                <span class="sku-expand-icon"><i class="fas fa-chevron-down"></i></span>
+                                                            </button>
+                                                        </div>
+
+                                                        <!-- Konten Butir SKU Vertikal -->
+                                                        <div class="collapse mt-3" id="skuCollapse<?= $pid ?>">
+                                                            <div class="sku-butir-list rounded-xl p-2">
+                                                                <?php if (empty($sku_butir_rows)): ?>
+                                                                    <div class="text-center text-muted py-3 small">Belum ada butir SKU pada tingkat ini.</div>
+                                                                <?php else: ?>
+                                                                    <?php foreach ($sku_butir_rows as $bb): ?>
+                                                                        <?php
+                                                                            $bid = (int)$bb['id_butir'];
+                                                                            $on = !empty($checks_map[$pid][$bid]);
+                                                                            $tgl_ujian = (string)($tanggal_map[$pid][$bid] ?? '');
+                                                                        ?>
+                                                                        <div class="sku-item-row p-2 mb-2 rounded-lg d-flex flex-column flex-sm-row align-items-sm-center justify-content-between gap-2 <?= $on ? 'sku-item-completed' : '' ?>"
+                                                                             data-peserta="<?= $pid ?>" data-butir="<?= $bid ?>">
+                                                                            <div class="d-flex align-items-start pr-sm-2 flex-grow-1">
+                                                                                <div class="custom-control custom-checkbox mr-2 pt-1">
+                                                                                    <input type="checkbox"
+                                                                                           class="custom-control-input sku-check"
+                                                                                           id="chk_card_<?= $pid ?>_<?= $bid ?>"
+                                                                                           data-peserta="<?= $pid ?>"
+                                                                                           data-butir="<?= $bid ?>"
+                                                                                           <?= $on ? 'checked' : '' ?>
+                                                                                           <?= $can_interact_sku ? '' : 'disabled' ?>>
+                                                                                    <label class="custom-control-label" for="chk_card_<?= $pid ?>_<?= $bid ?>"></label>
+                                                                                </div>
+                                                                                <div style="font-size: 0.9rem; line-height: 1.4;">
+                                                                                    <span class="sku-num-pill">#<?= (int)$bb['urutan'] ?></span>
+                                                                                    <span class="text-dark font-weight-500"><?= nl2br(htmlspecialchars($bb['teks_butir'])) ?></span>
+                                                                                </div>
+                                                                            </div>
+                                                                            <!-- Input Tanggal Ujian dengan Tombol Khas Mobile Apps -->
+                                                                            <div class="d-flex align-items-center flex-shrink-0 mt-2 mt-sm-0 pt-1 pt-sm-0 border-top border-top-sm-0 justify-content-end sku-date-wrapper">
+                                                                                <div class="input-group input-group-sm">
+                                                                                    <div class="input-group-prepend">
+                                                                                        <span class="input-group-text"><i class="far fa-calendar-alt"></i></span>
+                                                                                    </div>
+                                                                                    <input type="date"
+                                                                                           class="form-control form-control-sm sku-date"
+                                                                                           data-peserta="<?= $pid ?>"
+                                                                                           data-butir="<?= $bid ?>"
+                                                                                           value="<?= htmlspecialchars($tgl_ujian, ENT_QUOTES, 'UTF-8') ?>"
+                                                                                           title="Tanggal Ujian"
+                                                                                           <?= $can_interact_sku ? '' : 'disabled' ?>>
+                                                                                    <?php if ($can_interact_sku): ?>
+                                                                                    <div class="input-group-append">
+                                                                                        <button type="button" class="btn btn-today"
+                                                                                                title="Isi tanggal hari ini"
+                                                                                                data-peserta="<?= $pid ?>"
+                                                                                                data-butir="<?= $bid ?>">
+                                                                                            <i class="fas fa-magic mr-1"></i>Hari Ini
+                                                                                        </button>
+                                                                                    </div>
+                                                                                    <?php endif; ?>
+                                                                                </div>
+                                                                            </div>
+                                                                        </div>
+                                                                    <?php endforeach; ?>
+                                                                <?php endif; ?>
+                                                            </div>
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        <?php endforeach; ?>
+                                    </div>
+                                <?php endif; ?>
+                            </div>
+
+                            <!-- SKU Table Matrix View (Disembunyikan default / Tampilan Alternatif) -->
+                            <div class="sku-table-wrap mb-3 d-none" id="skuTableView">
                                 <table class="table table-sm table-bordered mb-0 align-middle sku-main-table" id="skuMainTable">
                                     <thead class="sku-thead-stick">
                                         <tr>
@@ -1585,9 +1896,11 @@ require_once '../templates/sidebar.php';
                                                     $pid = (int)$p['id_peserta_didik_barung'];
                                                     $inf = sku_compute_status_cell($pdo, $pid, $selected_tingkat_id);
                                                     $namaNorm = mb_strtolower(sku_plain_person_name((string)$p['nama_peserta_didik']));
+                                                    $nisnNorm = mb_strtolower(trim((string)($p['nisn'] ?? $p['nta'] ?? '')));
                                                     $nomBaris = $nom;
                                                 ?>
                                                 <tr class="sku-data-row" data-nama-normal="<?= htmlspecialchars($namaNorm, ENT_QUOTES, 'UTF-8') ?>"
+                                                    data-nisn-normal="<?= htmlspecialchars($nisnNorm, ENT_QUOTES, 'UTF-8') ?>"
                                                     data-urut-asli="<?= (int)$nomBaris ?>">
                                                     <td class="text-center sticky-sku-cell sku-th-no sku-row-no"><?= $nom++ ?></td>
                                                     <td class="sticky-sku-cell sku-th-nama font-weight-bold text-left sku-td-nama"><?= sku_html_person_name((string)$p['nama_peserta_didik']) ?></td>
@@ -1710,6 +2023,401 @@ require_once '../templates/sidebar.php';
 <?php endif; ?>
 
 <style>
+/* SKU Mobile Tabs Navigation (Pill Segments) */
+.sku-tingkat-tabs-wrapper {
+    width: 100%;
+    overflow: hidden;
+}
+.sku-tingkat-tabs-scroll {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    overflow-x: auto;
+    padding-bottom: 6px;
+    -webkit-overflow-scrolling: touch;
+    scrollbar-width: thin;
+}
+.sku-tingkat-tabs-scroll::-webkit-scrollbar {
+    height: 4px;
+}
+.sku-tingkat-tabs-scroll::-webkit-scrollbar-thumb {
+    background: #cbd5e1;
+    border-radius: 999px;
+}
+.sku-tab-pill {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    padding: 8px 16px;
+    border-radius: 999px !important;
+    font-size: 0.88rem;
+    font-weight: 700;
+    text-decoration: none !important;
+    white-space: nowrap;
+    outline: none !important;
+    transition: all .2s cubic-bezier(0.4, 0, 0.2, 1);
+    box-shadow: 0 2px 6px rgba(15, 23, 42, 0.04);
+}
+.sku-tab-pill:focus,
+.sku-tab-pill:active {
+    outline: none !important;
+    border-radius: 999px !important;
+}
+.sku-tab-icon {
+    font-size: 0.82rem;
+}
+.sku-tab-count {
+    background: rgba(0, 0, 0, 0.07);
+    padding: 2px 7px;
+    border-radius: 999px;
+    font-size: 0.72rem;
+    font-weight: 800;
+}
+
+/* Siaga Pill Style (Green Tone) */
+.sku-tab-siaga {
+    background: #ffffff;
+    color: #15803d;
+    border: 1.5px solid #bbf7d0;
+}
+.sku-tab-siaga:hover {
+    background: #f0fdf4;
+    color: #166534;
+    border-color: #86efac;
+    transform: translateY(-1px);
+}
+.sku-tab-siaga.active,
+.sku-tab-siaga.active span,
+.sku-tab-siaga.active i {
+    background: linear-gradient(135deg, #16a34a, #15803d) !important;
+    color: #ffffff !important;
+    border-color: #15803d !important;
+    box-shadow: 0 4px 12px rgba(22, 163, 74, 0.3) !important;
+}
+.sku-tab-siaga.active .sku-tab-count {
+    background: rgba(255, 255, 255, 0.28) !important;
+    color: #ffffff !important;
+}
+
+/* Penggalang Pill Style (Red Tone) */
+.sku-tab-penggalang {
+    background: #ffffff;
+    color: #be123c;
+    border: 1.5px solid #fecdd3;
+}
+.sku-tab-penggalang:hover {
+    background: #fff1f2;
+    color: #9f1239;
+    border-color: #fda4af;
+    transform: translateY(-1px);
+}
+.sku-tab-penggalang.active,
+.sku-tab-penggalang.active span,
+.sku-tab-penggalang.active i {
+    background: linear-gradient(135deg, #e11d48, #be123c) !important;
+    color: #ffffff !important;
+    border-color: #be123c !important;
+    box-shadow: 0 4px 12px rgba(225, 29, 72, 0.3) !important;
+}
+.sku-tab-penggalang.active .sku-tab-count {
+    background: rgba(255, 255, 255, 0.28) !important;
+    color: #ffffff !important;
+}
+
+/* Summary Badge */
+.sku-summary-badge {
+    background: #f1f5f9;
+    border: 1px solid #e2e8f0;
+    border-radius: 999px;
+    padding: 6px 14px;
+    font-size: 0.82rem;
+    font-weight: 600;
+    color: #475569;
+    display: inline-flex;
+    align-items: center;
+}
+
+/* Nomor Urut Siswa */
+.sku-student-no {
+    width: 28px;
+    height: 28px;
+    background: #f1f5f9;
+    border: 1px solid #e2e8f0;
+    color: #475569;
+    font-size: 0.78rem;
+    font-weight: 800;
+    border-radius: 10px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+}
+
+/* SKU Mobile App Cards Design */
+.sku-student-card {
+    border-radius: 20px !important;
+    border: 1px solid #edf2f7 !important;
+    background: #ffffff !important;
+    box-shadow: 0 4px 20px rgba(15, 23, 42, 0.05) !important;
+    transition: transform .2s cubic-bezier(0.4, 0, 0.2, 1), box-shadow .2s cubic-bezier(0.4, 0, 0.2, 1);
+    position: relative;
+    overflow: hidden;
+}
+.sku-student-card::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 5px;
+    height: 100%;
+    background: linear-gradient(180deg, #6366f1, #3b82f6);
+    border-top-left-radius: 20px;
+    border-bottom-left-radius: 20px;
+}
+.sku-student-card:hover {
+    transform: translateY(-3px);
+    box-shadow: 0 12px 28px rgba(15, 23, 42, 0.09) !important;
+}
+
+/* Avatar Styling Mobile-App */
+.sku-avatar-wrap {
+    width: 54px;
+    height: 54px;
+    border-radius: 18px;
+    overflow: hidden;
+    position: relative;
+    box-shadow: 0 4px 12px rgba(79, 70, 229, 0.18);
+    background: #f1f5f9;
+}
+.sku-avatar-img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    border-radius: 18px;
+}
+.sku-avatar-initials {
+    width: 100%;
+    height: 100%;
+    background: linear-gradient(135deg, #6366f1 0%, #3b82f6 50%, #06b6d4 100%);
+    color: #ffffff;
+    font-size: 1.35rem;
+    font-weight: 800;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 18px;
+    text-transform: uppercase;
+    letter-spacing: -0.5px;
+    box-shadow: inset 0 2px 4px rgba(255, 255, 255, 0.3);
+}
+
+.sku-student-name {
+    font-size: 1.1rem;
+    font-weight: 800;
+    color: #0f172a;
+    letter-spacing: -0.3px;
+    line-height: 1.3;
+}
+.sku-student-meta {
+    font-size: 0.82rem;
+    color: #64748b;
+    font-weight: 600;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-top: 4px;
+}
+.meta-dot {
+    color: #cbd5e1;
+    font-size: 0.7rem;
+}
+
+/* Modern App Status Badges */
+.sku-app-badge {
+    display: inline-flex;
+    align-items: center;
+    padding: 6px 14px;
+    border-radius: 999px;
+    font-size: 0.75rem;
+    font-weight: 800;
+    letter-spacing: 0.4px;
+    text-transform: uppercase;
+    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.04);
+}
+.sku-badge-lulus {
+    background: linear-gradient(135deg, #ecfdf5, #d1fae5) !important;
+    color: #047857 !important;
+    border: 1.5px solid #a7f3d0 !important;
+}
+.sku-badge-proses {
+    background: linear-gradient(135deg, #fff1f2, #ffe4e6) !important;
+    color: #be123c !important;
+    border: 1.5px solid #fecdd3 !important;
+}
+
+.sku-pct-pill {
+    font-size: 0.82rem;
+    color: #0f172a;
+    background: #f8fafc;
+    border: 1px solid #e2e8f0;
+    padding: 3px 12px;
+    border-radius: 999px;
+    display: inline-flex;
+    align-items: center;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.02);
+}
+
+.sku-progress-track {
+    height: 9px !important;
+    background-color: #f1f5f9;
+    border-radius: 999px;
+    overflow: hidden;
+    box-shadow: inset 0 1px 2px rgba(0,0,0,0.06);
+}
+.sku-progress-track .progress-bar {
+    border-radius: 999px;
+    background: linear-gradient(90deg, #6366f1, #3b82f6) !important;
+}
+.sku-progress-track .progress-bar.bg-success {
+    background: linear-gradient(90deg, #10b981, #059669) !important;
+}
+
+/* Mobile App Expand Toggle Button */
+.sku-app-btn-toggle {
+    background: #f8fafc;
+    border: 1.5px solid #e2e8f0;
+    border-radius: 14px;
+    color: #1e293b;
+    font-size: 0.9rem;
+    font-weight: 700;
+    padding: 10px 16px;
+    transition: all .2s ease;
+    box-shadow: 0 2px 6px rgba(15, 23, 42, 0.02);
+}
+.sku-app-btn-toggle:hover {
+    background: #f1f5f9;
+    border-color: #cbd5e1;
+    color: #0f172a;
+    box-shadow: 0 4px 10px rgba(15, 23, 42, 0.05);
+}
+.sku-icon-circle {
+    width: 28px;
+    height: 28px;
+    background: linear-gradient(135deg, #e0e7ff, #c7d2fe);
+    color: #4338ca;
+    border-radius: 50%;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 0.82rem;
+    box-shadow: 0 2px 4px rgba(79, 70, 229, 0.15);
+}
+
+/* Checklist Items inside Card */
+.sku-butir-list {
+    background: #f8fafc;
+    border: 1px solid #e2e8f0;
+    border-radius: 16px;
+    padding: 10px;
+}
+.sku-item-row {
+    background: #ffffff;
+    border: 1.5px solid #edf2f7;
+    border-radius: 14px;
+    transition: all .2s cubic-bezier(0.4, 0, 0.2, 1);
+    box-shadow: 0 2px 5px rgba(15, 23, 42, 0.03);
+    margin-bottom: 8px;
+}
+.sku-item-row:hover {
+    border-color: #cbd5e1;
+    box-shadow: 0 4px 12px rgba(15, 23, 42, 0.06);
+    transform: translateY(-1px);
+}
+.sku-item-row.sku-item-completed {
+    background: linear-gradient(to right, #f0fdf4, #ffffff) !important;
+    border-color: #86efac !important;
+}
+
+.sku-num-pill {
+    background: linear-gradient(135deg, #e0e7ff, #c7d2fe);
+    color: #3730a3;
+    font-size: 0.78rem;
+    font-weight: 800;
+    padding: 3px 8px;
+    border-radius: 8px;
+    margin-right: 8px;
+    display: inline-block;
+}
+.font-weight-500 {
+    font-weight: 550;
+    color: #0f172a;
+}
+
+/* Custom Checkbox App Style */
+.custom-checkbox .custom-control-input:checked ~ .custom-control-label::before {
+    background-color: #10b981 !important;
+    border-color: #10b981 !important;
+    box-shadow: 0 2px 6px rgba(16, 185, 129, 0.35) !important;
+}
+.custom-checkbox .custom-control-label::before {
+    border-radius: 6px !important;
+    width: 20px;
+    height: 20px;
+    border: 2px solid #cbd5e1;
+}
+.custom-checkbox .custom-control-label::after {
+    width: 20px;
+    height: 20px;
+}
+
+/* Mobile App Quick Action Buttons (Hari Ini) */
+.btn-today {
+    background: linear-gradient(135deg, #6366f1 0%, #4f46e5 100%) !important;
+    color: #ffffff !important;
+    font-size: 0.75rem !important;
+    font-weight: 700 !important;
+    padding: 6px 14px !important;
+    border: none !important;
+    border-top-right-radius: 10px !important;
+    border-bottom-right-radius: 10px !important;
+    box-shadow: 0 2px 8px rgba(79, 70, 229, 0.3) !important;
+    transition: all .15s ease;
+    display: inline-flex;
+    align-items: center;
+    letter-spacing: .2px;
+}
+.btn-today:hover, .btn-today:active {
+    background: linear-gradient(135deg, #4f46e5 0%, #4338ca 100%) !important;
+    transform: scale(0.97);
+    color: #ffffff !important;
+}
+.sku-date-wrapper .input-group {
+    box-shadow: 0 2px 6px rgba(15, 23, 42, 0.05);
+    border-radius: 10px;
+}
+.sku-date-wrapper .form-control {
+    border-color: #e2e8f0;
+    font-size: 0.85rem;
+    font-weight: 600;
+    color: #0f172a;
+    height: calc(1.5em + .75rem + 4px);
+}
+.sku-date-wrapper .input-group-text {
+    background: #f8fafc;
+    border-color: #e2e8f0;
+    color: #6366f1;
+    border-top-left-radius: 10px;
+    border-bottom-left-radius: 10px;
+}
+
+/* View Switch Button Group */
+.sku-view-switch .btn {
+    border-radius: 8px !important;
+    padding: 6px 14px;
+    font-weight: 700;
+    letter-spacing: .2px;
+}
+
 /* Reset and Base Styles for SKU Table */
 .sku-table-wrap {
     overflow: auto !important;
