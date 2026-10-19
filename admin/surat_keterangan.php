@@ -247,58 +247,60 @@ if ($selected_tingkat_id > 0) {
 
 // Fetch peserta didik for selected tingkat
 $participants = [];
+$suket_rows_sql = "
+    SELECT id_peserta_didik_barung, nama_peserta_didik, nta, tempat_lahir, tanggal_lahir, foto, jenis_kelamin
+    FROM (
+        SELECT p.id_peserta_didik_barung, p.nama_peserta_didik, p.nta,
+               s.foto, s.jenis_kelamin,
+               COALESCE(NULLIF(TRIM(s.tempat_lahir), ''), NULLIF(TRIM(p.tempat_lahir), '')) AS tempat_lahir,
+               COALESCE(
+                 CASE
+                   WHEN s.tanggal_lahir IS NULL THEN NULL
+                   WHEN LEFT(s.tanggal_lahir, 10) = '0000-00-00' THEN NULL
+                   WHEN CAST(LEFT(s.tanggal_lahir, 4) AS UNSIGNED) < 1900 THEN NULL
+                   ELSE LEFT(s.tanggal_lahir, 10)
+                 END,
+                 CASE
+                   WHEN p.tanggal_lahir IS NULL THEN NULL
+                   WHEN LEFT(p.tanggal_lahir, 10) = '0000-00-00' THEN NULL
+                   WHEN CAST(LEFT(p.tanggal_lahir, 4) AS UNSIGNED) < 1900 THEN NULL
+                   ELSE LEFT(p.tanggal_lahir, 10)
+                 END
+               ) AS tanggal_lahir,
+               ROW_NUMBER() OVER (
+                 PARTITION BY COALESCE(NULLIF(p.id_siswa, 0), 0), COALESCE(NULLIF(TRIM(p.nta), ''), '')
+                 ORDER BY CASE WHEN IFNULL(p.status, 'aktif') = 'aktif' THEN 0 ELSE 1 END, p.id_peserta_didik_barung ASC
+               ) AS rn
+        FROM tb_peserta_didik_barung p
+        LEFT JOIN tb_siswa s ON (
+            s.id_siswa = p.id_siswa
+            OR (
+                p.id_siswa IS NULL
+                AND TRIM(IFNULL(p.nta, '')) <> ''
+                AND CONVERT(TRIM(IFNULL(s.nisn, '')) USING utf8mb4) COLLATE utf8mb4_unicode_ci
+                    = CONVERT(TRIM(IFNULL(p.nta, '')) USING utf8mb4) COLLATE utf8mb4_unicode_ci
+            )
+        )
+        WHERE p.id_tingkat_barung = ?
+          AND (
+            (
+                p.sku_kecakapan_lulus_at IS NOT NULL
+                AND DATE(p.sku_kecakapan_lulus_at) BETWEEN ? AND ?
+            )
+            OR (
+                p.promoted_at IS NOT NULL
+                AND DATE(p.promoted_at) BETWEEN ? AND ?
+                AND p.promoted_from_tingkat_id = ?
+                AND ? > 0
+            )
+          )
+    ) suket_rows
+    WHERE rn = 1
+    ORDER BY nama_peserta_didik ASC
+";
 if ($selected_tingkat_id > 0) {
     try {
-        $stmt = $pdo->prepare("
-            SELECT id_peserta_didik_barung, nama_peserta_didik, nta, tempat_lahir, tanggal_lahir
-            FROM (
-                SELECT p.id_peserta_didik_barung, p.nama_peserta_didik, p.nta,
-                       COALESCE(NULLIF(TRIM(s.tempat_lahir), ''), NULLIF(TRIM(p.tempat_lahir), '')) AS tempat_lahir,
-                       COALESCE(
-                         CASE
-                           WHEN s.tanggal_lahir IS NULL THEN NULL
-                           WHEN LEFT(s.tanggal_lahir, 10) = '0000-00-00' THEN NULL
-                           WHEN CAST(LEFT(s.tanggal_lahir, 4) AS UNSIGNED) < 1900 THEN NULL
-                           ELSE LEFT(s.tanggal_lahir, 10)
-                         END,
-                         CASE
-                           WHEN p.tanggal_lahir IS NULL THEN NULL
-                           WHEN LEFT(p.tanggal_lahir, 10) = '0000-00-00' THEN NULL
-                           WHEN CAST(LEFT(p.tanggal_lahir, 4) AS UNSIGNED) < 1900 THEN NULL
-                           ELSE LEFT(p.tanggal_lahir, 10)
-                         END
-                       ) AS tanggal_lahir,
-                       ROW_NUMBER() OVER (
-                         PARTITION BY COALESCE(NULLIF(p.id_siswa, 0), 0), COALESCE(NULLIF(TRIM(p.nta), ''), '')
-                         ORDER BY CASE WHEN IFNULL(p.status, 'aktif') = 'aktif' THEN 0 ELSE 1 END, p.id_peserta_didik_barung ASC
-                       ) AS rn
-                FROM tb_peserta_didik_barung p
-                LEFT JOIN tb_siswa s ON (
-                    s.id_siswa = p.id_siswa
-                    OR (
-                        p.id_siswa IS NULL
-                        AND TRIM(IFNULL(p.nta, '')) <> ''
-                        AND CONVERT(TRIM(IFNULL(s.nisn, '')) USING utf8mb4) COLLATE utf8mb4_unicode_ci
-                            = CONVERT(TRIM(IFNULL(p.nta, '')) USING utf8mb4) COLLATE utf8mb4_unicode_ci
-                    )
-                )
-                WHERE p.id_tingkat_barung = ?
-                  AND (
-                    (
-                        p.sku_kecakapan_lulus_at IS NOT NULL
-                        AND DATE(p.sku_kecakapan_lulus_at) BETWEEN ? AND ?
-                    )
-                    OR (
-                        p.promoted_at IS NOT NULL
-                        AND DATE(p.promoted_at) BETWEEN ? AND ?
-                        AND p.promoted_from_tingkat_id = ?
-                        AND ? > 0
-                    )
-                  )
-            ) suket_rows
-            WHERE rn = 1
-            ORDER BY nama_peserta_didik ASC
-        ");
+        $stmt = $pdo->prepare($suket_rows_sql);
         $stmt->execute([
             $selected_tingkat_id,
             $ta_start_date, $ta_end_date,
@@ -311,15 +313,51 @@ if ($selected_tingkat_id > 0) {
     }
 }
 
+// Jumlah surat per tingkat (badge pada tab)
+$suket_counts = [];
+foreach ($tingkat_list as $t_count) {
+    $tid_count = (int)($t_count['id_tingkat_barung'] ?? 0);
+    if ($tid_count <= 0) {
+        continue;
+    }
+    $prev_count_id = 0;
+    foreach ($all_tingkat_list as $idx_count => $at_count) {
+        if ((int)($at_count['id_tingkat_barung'] ?? 0) === $tid_count) {
+            if ($idx_count > 0) {
+                $prev_count_id = (int)($all_tingkat_list[$idx_count - 1]['id_tingkat_barung'] ?? 0);
+            }
+            break;
+        }
+    }
+    try {
+        $stmt_count = $pdo->prepare($suket_rows_sql);
+        $stmt_count->execute([
+            $tid_count,
+            $ta_start_date, $ta_end_date,
+            $ta_start_date, $ta_end_date,
+            $prev_count_id, $prev_count_id,
+        ]);
+        $suket_counts[$tid_count] = count($stmt_count->fetchAll(PDO::FETCH_ASSOC));
+    } catch (Exception $e) {
+        $suket_counts[$tid_count] = 0;
+    }
+}
+
 $custom_script = '';
 
 // Page-specific JS (rendered by templates/footer.php after libraries)
 $js_print_letters = <<<'JS'
-// Tahun Ajaran filter: navigate on change
-$('#filterTahunAjaran').on('change', function () {
-  var val = $(this).val();
-  var tingkat = ($('#selectedTingkatId').val() || '').toString();
-  window.location.href = '?tingkat=' + encodeURIComponent(tingkat) + '&tahun_ajaran=' + encodeURIComponent(val);
+// Filter kartu berdasarkan nama / NTA
+$(document).on('input', '#suketSearchInput', function () {
+  var q = ($(this).val() || '').toLowerCase().trim();
+  var shown = 0;
+  $('#suketCardsContainer .suket-card-col').each(function () {
+    var hay = String($(this).attr('data-search') || '');
+    var ok = q === '' || hay.indexOf(q) !== -1;
+    $(this).toggle(ok);
+    if (ok) { shown++; }
+  });
+  $('#suketVisibleCount').text(shown);
 });
 
 // Print single letter — opens preview without auto-print to avoid browser freeze
@@ -438,6 +476,171 @@ include '../templates/header.php';
 include '../templates/sidebar.php';
 ?>
 
+<?php
+$selected_tingkat_golongan = 'Siaga';
+foreach ($tingkat_list as $_t) {
+    if ((int)($_t['id_tingkat_barung'] ?? 0) === $selected_tingkat_id) {
+        $selected_tingkat_golongan = (string)($_t['golongan'] ?? 'Siaga');
+        break;
+    }
+}
+$is_penggalang_sel = strcasecmp($selected_tingkat_golongan, 'Penggalang') === 0;
+$suket_total = count($participants);
+?>
+<style>
+.suket-tabs-wrap {
+    display: flex; align-items: center; gap: 8px;
+    overflow-x: auto; padding: 4px 2px 10px;
+    -webkit-overflow-scrolling: touch; scrollbar-width: thin;
+}
+.suket-tabs-wrap::-webkit-scrollbar { height: 4px; }
+.suket-tabs-wrap::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 999px; }
+.suket-tab-pill {
+    display: inline-flex; align-items: center; gap: 7px;
+    flex: 0 0 auto; padding: 9px 15px; border-radius: 999px !important;
+    font-size: .86rem; font-weight: 700; white-space: nowrap;
+    text-decoration: none !important; border: 1.5px solid #e2e8f0;
+    background: #fff; color: #475569; box-shadow: 0 2px 6px rgba(15, 23, 42, .05);
+    transition: all .2s ease;
+}
+.suket-tab-pill:hover { color: #2563eb; border-color: #bfdbfe; }
+.suket-tab-pill.active.siaga {
+    background: linear-gradient(135deg, #0f766e 0%, #15803d 100%);
+    border-color: transparent; color: #fff;
+    box-shadow: 0 6px 16px rgba(21, 128, 61, .28);
+}
+.suket-tab-pill.active.penggalang {
+    background: linear-gradient(135deg, #9f1239 0%, #be123c 100%);
+    border-color: transparent; color: #fff;
+    box-shadow: 0 6px 16px rgba(190, 18, 60, .28);
+}
+.suket-tab-count {
+    font-size: .7rem; font-weight: 800; padding: 2px 7px;
+    border-radius: 999px; background: #f1f5f9; color: #475569;
+}
+.suket-tab-pill.active .suket-tab-count { background: rgba(255, 255, 255, .28); color: #fff; }
+.suket-toolbar .suket-search { flex: 0 0 260px; width: 260px; }
+.suket-toolbar .app-select-wrap { flex: 0 0 200px; }
+.suket-toolbar .app-select-btn { width: 200px; }
+.suket-toolbar .app-select-wrap .dropdown-menu { left: auto; right: 0; }
+.suket-toolbar-actions { display: inline-flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+.suket-toolbar-actions .btn {
+    border-radius: 12px; font-size: .8rem; font-weight: 700;
+    display: inline-flex; align-items: center; gap: 6px; padding: 8px 13px;
+}
+.suket-kta-card {
+    position: relative; display: flex; flex-direction: column;
+    height: 100%; background: #fff; border: 1px solid #e2e8f0;
+    border-radius: 16px; overflow: hidden;
+    box-shadow: 0 6px 18px rgba(15, 23, 42, .06);
+    transition: transform .18s, box-shadow .18s;
+}
+.suket-kta-card:hover { transform: translateY(-3px); box-shadow: 0 12px 28px rgba(15, 23, 42, .12); }
+.suket-kta-top {
+    position: relative; padding: 12px 14px; color: #fff;
+    display: flex; align-items: center; gap: 10px; overflow: hidden;
+    background: linear-gradient(135deg, #1d4ed8 0%, #0891b2 100%);
+}
+.suket-kta-top::after {
+    content: ""; position: absolute; right: -26px; top: -30px;
+    width: 110px; height: 110px; border-radius: 50%; background: rgba(255, 255, 255, .12);
+}
+.suket-kta-emblem {
+    width: 34px; height: 34px; border-radius: 50%; flex: 0 0 auto;
+    background: rgba(255, 255, 255, .2); border: 1.5px solid rgba(255, 255, 255, .35);
+    display: grid; place-items: center; font-size: 1rem;
+}
+.suket-kta-top-text { min-width: 0; line-height: 1.15; }
+.suket-kta-top-text .org {
+    font-size: .66rem; letter-spacing: .09em; font-weight: 800;
+    text-transform: uppercase; opacity: .9;
+    overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 46vw;
+}
+.suket-kta-top-text .title { font-size: .86rem; font-weight: 800; letter-spacing: .02em; }
+.suket-kta-serial {
+    margin-left: auto; font-size: .66rem; font-weight: 800;
+    padding: 4px 9px; border-radius: 999px; white-space: nowrap;
+    background: rgba(255, 255, 255, .22); border: 1px solid rgba(255, 255, 255, .35);
+}
+.suket-kta-body { position: relative; padding: 14px; display: flex; gap: 13px; flex: 1 1 auto; }
+.suket-kta-body::before {
+    content: "\f2a3"; font-family: "Font Awesome 5 Free"; font-weight: 900;
+    position: absolute; right: 6px; bottom: -6px; font-size: 5.5rem;
+    color: rgba(15, 23, 42, .035); pointer-events: none;
+}
+.suket-kta-photo { position: relative; flex: 0 0 auto; }
+.suket-kta-photo .photo-frame {
+    width: 72px; height: 88px; border-radius: 12px; overflow: hidden;
+    background: linear-gradient(135deg, #dbeafe, #e0f2fe); border: 2px solid #fff;
+    box-shadow: 0 3px 10px rgba(15, 23, 42, .15); display: grid; place-items: center;
+}
+.suket-kta-photo img, .suket-kta-photo .suket-initials {
+    width: 100%; height: 100%; object-fit: cover;
+    display: grid; place-items: center; font-size: 1.4rem; font-weight: 800; color: #1e40af;
+    background: linear-gradient(135deg, #dbeafe, #e0f2fe);
+}
+.suket-kta-nta {
+    position: absolute; left: 50%; transform: translateX(-50%); bottom: -9px;
+    background: #0f172a; color: #fff; font-size: .6rem; font-weight: 800;
+    padding: 3px 8px; border-radius: 999px; white-space: nowrap; border: 2px solid #fff;
+}
+.suket-kta-info { min-width: 0; flex: 1; }
+.suket-kta-name {
+    font-size: .98rem; font-weight: 800; color: #0f172a;
+    line-height: 1.25; margin: 0 0 5px; overflow-wrap: anywhere;
+}
+.suket-kta-meta { display: flex; flex-wrap: wrap; gap: 5px; margin-bottom: 8px; }
+.suket-kta-pill {
+    display: inline-flex; align-items: center; gap: 4px;
+    font-size: .68rem; font-weight: 700; padding: 3px 8px;
+    border-radius: 999px; background: #f1f5f9; color: #334155;
+}
+.suket-kta-pill.blue { background: #eff6ff; color: #1d4ed8; }
+.suket-kta-pill.green { background: #ecfdf5; color: #15803d; }
+.suket-kta-pill.red { background: #fff1f2; color: #be123c; }
+.suket-kta-detail {
+    display: grid; grid-template-columns: 1fr 1fr; gap: 4px 10px;
+    font-size: .72rem; color: #475569;
+}
+.suket-kta-detail .lbl {
+    display: block; font-size: .62rem; color: #94a3b8;
+    text-transform: uppercase; letter-spacing: .05em; font-weight: 800;
+}
+.suket-kta-detail .val { font-weight: 700; color: #1e293b; overflow-wrap: anywhere; }
+.suket-kta-foot {
+    display: flex; align-items: center; justify-content: space-between; gap: 8px;
+    padding: 9px 14px; border-top: 1px dashed #e2e8f0; background: #fbfdff;
+}
+.suket-kta-status {
+    display: inline-flex; align-items: center; gap: 6px;
+    font-size: .7rem; font-weight: 800; color: #15803d; margin: 0;
+}
+.suket-kta-status .dot {
+    width: 7px; height: 7px; border-radius: 50%; background: #22c55e;
+    box-shadow: 0 0 0 3px rgba(34, 197, 94, .16);
+}
+.suket-kta-actions { display: inline-flex; gap: 6px; }
+.suket-kta-actions .btn { border-radius: 10px; font-size: .72rem; font-weight: 700; padding: 6px 10px; }
+@media (max-width: 575.98px) {
+    .suket-kta-body { gap: 11px; padding: 13px 12px; }
+    .suket-kta-photo .photo-frame { width: 64px; height: 78px; }
+    .suket-kta-name { font-size: .92rem; }
+    .suket-kta-detail { font-size: .69rem; }
+    .suket-kta-top { padding: 10px 12px; }
+    .suket-kta-top-text .title { font-size: .78rem; }
+    .suket-kta-serial { font-size: .6rem; padding: 3px 7px; }
+    .suket-toolbar .suket-search,
+    .suket-toolbar .app-select-wrap,
+    .suket-toolbar .app-select-btn { flex: 1 1 100%; width: 100%; }
+    .suket-toolbar-actions { width: 100%; }
+    .suket-toolbar-actions .btn { flex: 1 1 0; justify-content: center; }
+    .suket-kta-actions .btn { flex: 1 1 0; justify-content: center; }
+}
+@media (max-width: 991.98px) {
+    #suketCardsView { padding-bottom: 12px; }
+}
+</style>
+
 <div class="main-content">
     <section class="section">
         <div class="section-header">
@@ -458,108 +661,183 @@ include '../templates/sidebar.php';
             <input type="hidden" id="selectedTahunAjaran" value="<?= htmlspecialchars($selected_tahun_ajaran) ?>">
             <input type="hidden" id="printDate" value="<?= date('d F Y') ?>">
 
-            <div class="card">
-                <div class="card-header">
-                    <h4>Surat Keterangan Kenaikan Tingkat</h4>
-                    <div class="card-header-action">
-                        <button class="btn btn-info" onclick="printAllLetters()" id="btnPrintAll" <?= empty($participants) ? 'disabled' : '' ?>>
-                            <i class="fas fa-print"></i> Cetak Semua Surat
-                        </button>
-                        <button class="btn btn-primary" onclick="exportPDF()">
-                            <i class="fas fa-print"></i> Cetak PDF Data
-                        </button>
+            <div class="app-summary-row">
+                <div class="app-summary-chip">
+                    <div class="ico" style="background:#eff6ff;color:#1d4ed8;"><i class="fas fa-file-alt"></i></div>
+                    <div>
+                        <div class="lbl">Total Surat</div>
+                        <div class="val"><?= (int)$suket_total ?> surat</div>
                     </div>
                 </div>
-                <div class="card-body">
-                    <!-- Tahun Ajaran filter -->
-                    <div class="form-group row align-items-center">
-                        <label class="col-sm-2 col-form-label">Tahun Ajaran:</label>
-                        <div class="col-sm-5">
-                            <select class="form-control" id="filterTahunAjaran">
-                                <?php foreach ($tahun_ajaran_set as $_ta): ?>
-                                    <option value="<?= htmlspecialchars($_ta) ?>"
-                                        <?= ($_ta === $selected_tahun_ajaran) ? 'selected' : '' ?>>
-                                        <?= htmlspecialchars($_ta) ?><?= ($_ta === $current_tahun_ajaran) ? ' (Aktif)' : '' ?>
-                                    </option>
-                                <?php endforeach; ?>
-                            </select>
-                            <?php if (!$is_current_ta): ?>
-                                <small class="form-text text-muted">
-                                    <i class="fas fa-lock"></i> Tahun ajaran sebelumnya — tanggal surat terkunci.
-                                </small>
-                            <?php endif; ?>
-                        </div>
+                <div class="app-summary-chip">
+                    <div class="ico" style="<?= $is_penggalang_sel ? 'background:#fff1f2;color:#be123c;' : 'background:#ecfdf5;color:#15803d;' ?>"><i class="fas fa-layer-group"></i></div>
+                    <div>
+                        <div class="lbl">Tingkat</div>
+                        <div class="val"><?= htmlspecialchars($selected_tingkat_name !== '' ? $selected_tingkat_name : '-') ?></div>
                     </div>
-
-                    <div class="form-group">
-                        <label class="d-block">Pilih Tingkat:</label>
-                        <ul class="nav nav-pills flex-wrap mb-2" role="tablist">
-                            <?php foreach ($tingkat_list as $index => $tingkat):
-                                $tid = (int)($tingkat['id_tingkat_barung'] ?? 0);
-                                $aktif = ($selected_tingkat_id === $tid);
-                                $golongan = $tingkat['golongan'] ?? 'Siaga';
-                                if ($golongan === 'Penggalang') {
-                                    $pill_class = $aktif ? 'nav-link active bg-danger border-danger' : 'nav-link border border-danger text-danger';
-                                } else {
-                                    $pill_class = $aktif ? 'nav-link active bg-success border-success' : 'nav-link border border-success text-success';
-                                }
-                                $is_first = $index === 0;
-                                $is_last = $index === count($tingkat_list) - 1;
-                                ?>
-                                <li class="nav-item" style="margin: 0;">
-                                    <a href="?tingkat=<?= $tid ?>&tahun_ajaran=<?= urlencode($selected_tahun_ajaran) ?>" 
-                                       class="nav-link py-1 px-3 <?= $pill_class ?>" 
-                                       role="tab" 
-                                       style="transition: none; <?= !$is_first ? 'border-left: 0; margin-left: -1px;' : '' ?> <?= !$is_last ? 'border-right: 0;' : '' ?> border-radius: 0;<?= $is_first ? ' border-top-left-radius: 4px; border-bottom-left-radius: 4px;' : '' ?><?= $is_last ? ' border-top-right-radius: 4px; border-bottom-right-radius: 4px;' : '' ?>">
-                                        <?= htmlspecialchars($tingkat['nama_tingkat'] ?? '') ?>
-                                    </a>
-                                </li>
-                            <?php endforeach; ?>
-                        </ul>
+                </div>
+                <div class="app-summary-chip">
+                    <div class="ico" style="background:#eef2ff;color:#4338ca;"><i class="fas fa-calendar-alt"></i></div>
+                    <div>
+                        <div class="lbl">Tahun Ajaran</div>
+                        <div class="val"><?= htmlspecialchars($selected_tahun_ajaran) ?></div>
                     </div>
+                </div>
+            </div>
 
-                    <?php if (!empty($participants)): ?>
-                        <div class="table-responsive">
-                            <table class="table table-striped" id="table-1">
-                                <thead>
-                                    <tr>
-                                        <th>No</th>
-                                        <th>Nama Peserta Didik</th>
-                                        <th>NTA</th>
-                                        <th>Tempat Lahir</th>
-                                        <th>Tanggal Lahir</th>
-                                        <th>Aksi</th>
-                                    </tr>
-                                </thead>
-                                <tbody>
-                                    <?php $no = 1; foreach ($participants as $participant): ?>
-                                    <tr>
-                                        <td><?= $no++ ?></td>
-                                        <td><?= htmlspecialchars($participant['nama_peserta_didik']) ?></td>
-                                        <td><?= htmlspecialchars($participant['nta']) ?></td>
-                                        <td><?= htmlspecialchars($participant['tempat_lahir'] ?? '-') ?></td>
-                                        <td><?= formatDateDMY($participant['tanggal_lahir'] ?? null) ?></td>
-                                        <td>
-                                            <div class="btn-group" role="group">
-                                                <button class="btn btn-sm btn-success btn-print-single" title="Cetak Surat" data-id="<?= htmlspecialchars($participant['id_peserta_didik_barung'] ?? $participant['id_peserta_didik'] ?? '') ?>" data-nama="<?= htmlspecialchars($participant['nama_peserta_didik'] ?? '') ?>" data-nta="<?= htmlspecialchars($participant['nta'] ?? '') ?>">
-                                                    <i class="fas fa-print"></i>
-                                                </button>
-                                                <button class="btn btn-sm btn-danger btn-cancel-single" title="Batalkan kelulusan" data-id="<?= htmlspecialchars($participant['id_peserta_didik_barung'] ?? $participant['id_peserta_didik'] ?? '') ?>" data-nama="<?= htmlspecialchars($participant['nama_peserta_didik'] ?? '') ?>">
-                                                    <i class="fas fa-times"></i>
-                                                </button>
+            <div class="suket-tabs-wrap">
+                <?php foreach ($tingkat_list as $tingkat):
+                    $tid = (int)($tingkat['id_tingkat_barung'] ?? 0);
+                    $aktif = ($selected_tingkat_id === $tid);
+                    $penggalang = (($tingkat['golongan'] ?? 'Siaga') === 'Penggalang');
+                ?>
+                    <a href="?tingkat=<?= $tid ?>&tahun_ajaran=<?= urlencode($selected_tahun_ajaran) ?>"
+                       class="suket-tab-pill <?= $penggalang ? 'penggalang' : 'siaga' ?> <?= $aktif ? 'active' : '' ?>"
+                       aria-selected="<?= $aktif ? 'true' : 'false' ?>">
+                        <i class="fas <?= $penggalang ? 'fa-compass' : 'fa-seedling' ?>"></i>
+                        <span><?= htmlspecialchars($tingkat['nama_tingkat'] ?? '') ?></span>
+                        <span class="suket-tab-count"><?= (int)($suket_counts[$tid] ?? 0) ?></span>
+                    </a>
+                <?php endforeach; ?>
+            </div>
+
+            <div class="app-toolbar suket-toolbar">
+                <div class="app-search suket-search">
+                    <i class="fas fa-search"></i>
+                    <input type="search" id="suketSearchInput" placeholder="Cari nama atau NTA…" autocomplete="off">
+                </div>
+
+                <div class="dropdown app-select-wrap">
+                    <button class="app-select-btn" type="button" id="dropdownTahunAjaran" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
+                        <i class="fas fa-calendar-alt"></i>
+                        <span><?= htmlspecialchars($selected_tahun_ajaran) ?></span>
+                        <i class="fas fa-chevron-down app-select-caret"></i>
+                    </button>
+                    <div class="dropdown-menu dropdown-menu-right" aria-labelledby="dropdownTahunAjaran">
+                        <?php foreach ($tahun_ajaran_set as $_ta): ?>
+                            <?php $ta_selected = ($_ta === $selected_tahun_ajaran); ?>
+                            <a class="dropdown-item <?= $ta_selected ? 'app-select-selected' : '' ?>"
+                               href="?tingkat=<?= (int)$selected_tingkat_id ?>&tahun_ajaran=<?= urlencode($_ta) ?>">
+                                <i class="fas fa-calendar-alt mr-2"></i><?= htmlspecialchars($_ta) ?><?= ($_ta === $current_tahun_ajaran) ? ' (Aktif)' : '' ?>
+                                <?php if ($ta_selected): ?><i class="fas fa-check app-select-check"></i><?php endif; ?>
+                            </a>
+                        <?php endforeach; ?>
+                    </div>
+                </div>
+
+                <div class="suket-toolbar-actions">
+                    <button class="btn btn-info" onclick="printAllLetters()" id="btnPrintAll" <?= empty($participants) ? 'disabled' : '' ?>>
+                        <i class="fas fa-print"></i><span>Cetak Semua</span>
+                    </button>
+                    <button class="btn btn-primary" onclick="exportPDF()">
+                        <i class="fas fa-file-pdf"></i><span>Cetak PDF</span>
+                    </button>
+                </div>
+            </div>
+
+            <?php if (!$is_current_ta): ?>
+                <div class="alert alert-light border small mb-3">
+                    <i class="fas fa-lock text-muted"></i> Tahun ajaran sebelumnya — tanggal surat terkunci.
+                </div>
+            <?php endif; ?>
+
+            <div id="suketCardsView">
+                <?php if (empty($participants)): ?>
+                    <div class="alert alert-light border text-center py-5">
+                        <i class="fas fa-file-alt fa-3x text-muted mb-3 d-block"></i>
+                        <div class="font-weight-bold text-dark">Belum ada surat keterangan untuk tingkat ini.</div>
+                        <div class="small text-muted mt-1">Surat muncul setelah peserta didik dinyatakan lulus SKU.</div>
+                    </div>
+                <?php else: ?>
+                    <div class="row app-cards-row" id="suketCardsContainer">
+                        <?php $suket_no = 1; foreach ($participants as $participant): ?>
+                            <?php
+                                $p_id = (int)($participant['id_peserta_didik_barung'] ?? 0);
+                                $p_nama = (string)($participant['nama_peserta_didik'] ?? '');
+                                $p_nta = trim((string)($participant['nta'] ?? ''));
+                                $p_tempat = trim((string)($participant['tempat_lahir'] ?? ''));
+                                $p_tgl = formatDateDMY($participant['tanggal_lahir'] ?? null);
+                                $p_jk = strtoupper(trim((string)($participant['jenis_kelamin'] ?? '')));
+                                $p_jk_label = ($p_jk === 'P' || $p_jk === 'PEREMPUAN') ? 'Putri' : ($p_jk === '' ? '' : 'Putra');
+                                $p_initials = mb_strtoupper(mb_substr(trim($p_nama), 0, 2));
+                                $p_fallback = '<div class="suket-initials">' . htmlspecialchars($p_initials, ENT_QUOTES, 'UTF-8') . '</div>';
+                                $p_avatar = getPersonAvatarHtml((string)($participant['foto'] ?? ''), $p_fallback, 'suket-photo-img');
+                                $p_search = mb_strtolower($p_nama . ' ' . $p_nta . ' ' . $p_tempat);
+                            ?>
+                            <div class="col-12 col-md-6 mb-3 suket-card-col"
+                                 data-search="<?= htmlspecialchars($p_search, ENT_QUOTES, 'UTF-8') ?>">
+                                <div class="suket-kta-card">
+                                    <div class="suket-kta-top">
+                                        <div class="suket-kta-emblem"><i class="fas fa-certificate"></i></div>
+                                        <div class="suket-kta-top-text">
+                                            <div class="org"><?= htmlspecialchars($print_settings['school_name']) ?></div>
+                                            <div class="title">Surat Keterangan</div>
+                                        </div>
+                                        <div class="suket-kta-serial">#<?= $suket_no++ ?></div>
+                                    </div>
+                                    <div class="suket-kta-body">
+                                        <div class="suket-kta-photo">
+                                            <div class="photo-frame"><?= $p_avatar ?></div>
+                                            <div class="suket-kta-nta"><?= $p_nta !== '' ? htmlspecialchars($p_nta, ENT_QUOTES, 'UTF-8') : 'NTA -' ?></div>
+                                        </div>
+                                        <div class="suket-kta-info">
+                                            <div class="suket-kta-name"><?= htmlspecialchars($p_nama, ENT_QUOTES, 'UTF-8') ?></div>
+                                            <div class="suket-kta-meta">
+                                                <span class="suket-kta-pill <?= $is_penggalang_sel ? 'red' : 'green' ?>">
+                                                    <i class="fas <?= $is_penggalang_sel ? 'fa-compass' : 'fa-seedling' ?>"></i>
+                                                    <?= htmlspecialchars($selected_tingkat_name !== '' ? $selected_tingkat_name : '-') ?>
+                                                </span>
+                                                <span class="suket-kta-pill blue"><i class="fas fa-calendar-alt"></i> <?= htmlspecialchars($selected_tahun_ajaran) ?></span>
+                                                <?php if ($p_jk_label !== ''): ?>
+                                                    <span class="suket-kta-pill"><?= $p_jk_label ?></span>
+                                                <?php endif; ?>
                                             </div>
-                                        </td>
-                                    </tr>
-                                    <?php endforeach; ?>
-                                </tbody>
-                            </table>
-                        </div>
-                    <?php else: ?>
-                        <div class="alert alert-info">
-                            <i class="fas fa-info-circle"></i> Tidak ada data peserta didik untuk tingkat ini.
-                        </div>
-                    <?php endif; ?>
-                </div>
+                                            <div class="suket-kta-detail">
+                                                <div>
+                                                    <span class="lbl">NTA</span>
+                                                    <span class="val"><?= $p_nta !== '' ? htmlspecialchars($p_nta, ENT_QUOTES, 'UTF-8') : '-' ?></span>
+                                                </div>
+                                                <div>
+                                                    <span class="lbl">Golongan</span>
+                                                    <span class="val"><?= htmlspecialchars($selected_tingkat_golongan) ?></span>
+                                                </div>
+                                                <div>
+                                                    <span class="lbl">Tempat Lahir</span>
+                                                    <span class="val"><?= $p_tempat !== '' ? htmlspecialchars($p_tempat, ENT_QUOTES, 'UTF-8') : '-' ?></span>
+                                                </div>
+                                                <div>
+                                                    <span class="lbl">Tanggal Lahir</span>
+                                                    <span class="val"><?= htmlspecialchars($p_tgl !== '' ? $p_tgl : '-', ENT_QUOTES, 'UTF-8') ?></span>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <div class="suket-kta-foot">
+                                        <span class="suket-kta-status"><span class="dot"></span> Lulus</span>
+                                        <div class="suket-kta-actions">
+                                            <button class="btn btn-success btn-print-single"
+                                                title="Cetak Surat"
+                                                data-id="<?= $p_id ?>"
+                                                data-nama="<?= htmlspecialchars($p_nama, ENT_QUOTES, 'UTF-8') ?>"
+                                                data-nta="<?= htmlspecialchars($p_nta, ENT_QUOTES, 'UTF-8') ?>">
+                                                <i class="fas fa-print"></i> Cetak
+                                            </button>
+                                            <button class="btn btn-outline-danger btn-cancel-single"
+                                                title="Batalkan kelulusan"
+                                                data-id="<?= $p_id ?>"
+                                                data-nama="<?= htmlspecialchars($p_nama, ENT_QUOTES, 'UTF-8') ?>">
+                                                <i class="fas fa-times"></i> Batalkan
+                                            </button>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        <?php endforeach; ?>
+                    </div>
+                    <div class="text-muted small mt-1">
+                        Menampilkan <span id="suketVisibleCount"><?= (int)$suket_total ?></span> dari <?= (int)$suket_total ?> surat
+                    </div>
+                <?php endif; ?>
             </div>
         </div>
     </section>
