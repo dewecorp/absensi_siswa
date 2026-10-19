@@ -985,6 +985,12 @@ body.sidebar-scroll-on .main-sidebar::-webkit-scrollbar-thumb:hover {
     }
   }
 
+  /* Mencegah mouseup/touchend instan pada opsi saat select2 baru terbuka di layar sentuh mobile */
+  .select2-dropdown.select2-touch-shield .select2-results__options,
+  .select2-dropdown.select2-touch-shield .select2-results__option {
+    pointer-events: none !important;
+  }
+
   /* Grabber removed for center dialog */
   .select2-dropdown::before {
     display: none !important;

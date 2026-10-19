@@ -459,11 +459,6 @@ $js_page = [
     }
 
     $(document).ready(function() {
-        // Initialize Select2 for filter (main page)
-        $('.select2').not('#jurnalModal .select2').select2({
-            width: '100%'
-        });
-
         // Initialize Select2 inside modal
         $('#jurnalModal select[name=\"mapel\"], #jurnalModal select[name=\"id_kelas\"], #jurnalModal select[name=\"jenis\"]').each(function() {
             var elItem = $(this);
@@ -683,7 +678,7 @@ include '../templates/header.php';
                             <div class="form-group row mb-4">
                                 <label class="col-form-label text-md-right col-12 col-md-3 col-lg-3">Pilih Kelas</label>
                                 <div class="col-sm-12 col-md-7">
-                                    <select class="form-control select2" name="kelas" onchange="this.form.submit()">
+                                    <select class="form-control" name="kelas" onchange="this.form.submit()">
                                         <option value="">-- Pilih Kelas --</option>
                                         <?php foreach ($classes as $class): ?>
                                             <option value="<?php echo $class['id_kelas']; ?>" <?php echo (isset($_GET['kelas']) && $_GET['kelas'] == $class['id_kelas']) ? 'selected' : ''; ?>>
@@ -704,7 +699,7 @@ include '../templates/header.php';
                                 <div class="col-12 col-md-6 mb-4">
                                     <div class="form-group mb-0">
                                         <label>Jenis Jadwal</label>
-                                        <select class="form-control select2" name="jenis" onchange="this.form.submit()">
+                                        <select class="form-control" name="jenis" onchange="this.form.submit()">
                                             <option value="">-- Semua Jenis --</option>
                                             <option value="Reguler" <?php echo (isset($_GET['jenis']) && $_GET['jenis'] == 'Reguler') ? 'selected' : ''; ?>>Reguler</option>
                                             <option value="Ramadhan" <?php echo (isset($_GET['jenis']) && $_GET['jenis'] == 'Ramadhan') ? 'selected' : ''; ?>>Ramadhan</option>
@@ -714,7 +709,7 @@ include '../templates/header.php';
                                 <div class="col-12 col-md-6 mb-4">
                                     <div class="form-group mb-0">
                                         <label>Bulan</label>
-                                        <select class="form-control select2" name="bulan" onchange="this.form.submit()">
+                                        <select class="form-control" name="bulan" onchange="this.form.submit()">
                                             <option value="">-- Semua Bulan --</option>
                                             <?php foreach ($available_months as $bulan_value => $bulan_label): ?>
                                                 <option value="<?php echo $bulan_value; ?>" <?php echo (isset($_GET['bulan']) && $_GET['bulan'] === $bulan_value) ? 'selected' : ''; ?>>
