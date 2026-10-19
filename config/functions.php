@@ -3419,6 +3419,54 @@ function isSchoolHoliday(PDO $pdo, string $date): array {
         return ['is_holiday' => false, 'name' => ''];
     }
 }
+
+/**
+ * Batas jam masuk untuk menentukan status "Tepat Waktu" / "Terlambat".
+ * Default 07:10:00 (selaras dengan pengisian kehadiran di dashboard guru). Bisa
+ * dioverride lewat kolom tb_profil_madrasah.batas_jam_masuk bila tersedia.
+ */
+function getTeacherLateThreshold(PDO $pdo): string {
+    $default = '07:10:00';
+    try {
+        if (dbTableExists($pdo, 'tb_profil_madrasah') && dbColumnExists($pdo, 'tb_profil_madrasah', 'batas_jam_masuk')) {
+            $stmt = $pdo->query('SELECT batas_jam_masuk FROM tb_profil_madrasah ORDER BY id ASC LIMIT 1');
+            $row = $stmt ? $stmt->fetch(PDO::FETCH_ASSOC) : null;
+            $val = trim((string)($row['batas_jam_masuk'] ?? ''));
+            if ($val !== '' && preg_match('/^\d{1,2}:\d{2}(:\d{2})?$/', $val)) {
+                if (strlen($val) === 4) { $val = '0' . $val; }
+                return strlen($val) === 5 ? $val . ':00' : $val;
+            }
+        }
+    } catch (Throwable $e) {}
+    return $default;
+}
+
+/**
+ * Label ketepatan waktu guru dari waktu input.
+ * Menerima 'HH:MM:SS' maupun 'YYYY-MM-DD HH:MM:SS'.
+ *
+ * @return array{label:string,late:bool}|null null bila waktu kosong/tidak valid
+ */
+function getTeacherPunctuality(PDO $pdo, ?string $waktu_input): ?array {
+    if ($waktu_input === null || trim($waktu_input) === '') {
+        return null;
+    }
+    $ts = strtotime($waktu_input);
+    if ($ts === false) {
+        return null;
+    }
+    $threshold = getTeacherLateThreshold($pdo);
+    $threshold_ts = strtotime(date('Y-m-d', $ts) . ' ' . $threshold);
+    if ($threshold_ts === false) {
+        return null;
+    }
+    $late = $ts > $threshold_ts;
+    return [
+        'label' => $late ? 'Terlambat' : 'Tepat Waktu',
+        'late'  => $late,
+    ];
+}
+
 // Function to get activity icon based on action
 function getActivityIcon(string $action): string {
     $action = strtolower($action);

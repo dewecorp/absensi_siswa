@@ -249,6 +249,16 @@ if ($selected_kelas_id) {
             $teacher['status_kehadiran'] = $attendance['status'] ?? ''; // Default empty
             $teacher['keterangan'] = $attendance['keterangan'] ?? '';
             $teacher['waktu_input'] = $attendance['waktu_input'] ?? '';
+            $teacher['punctuality'] = null;
+            if (strtolower($teacher['status_kehadiran']) === 'hadir') {
+                $teacher['punctuality'] = getTeacherPunctuality($pdo, $teacher['waktu_input']);
+            }
+            // Pisahkan kata ketepatan waktu dari catatan bebas agar tidak dobel
+            // dengan chip yang ditampilkan sejajar status.
+            $ket_raw = trim((string)$teacher['keterangan']);
+            $ket_clean = preg_replace('/\b(tepat\s+waktu|terlambat)\b/i', '', $ket_raw);
+            $ket_clean = trim(preg_replace('/^[\s|,\-]+|[\s|,\-]+$/u', '', (string)$ket_clean));
+            $teacher['keterangan_clean'] = $ket_clean;
             
             $teachers[] = $teacher;
         }
@@ -274,6 +284,29 @@ $js_libs = [
 $js_page = [];
 
 $js_page[] = "
+var ATT_LATE_THRESHOLD = '" . getTeacherLateThreshold($pdo) . "';
+
+// Bandingkan 'HH:MM:SS' (format zero-padded) dengan batas jam masuk
+function attIsLate(hms) {
+    if (!hms) return false;
+    return hms > ATT_LATE_THRESHOLD;
+}
+
+// Perbarui badge ketepatan waktu pada kartu guru
+function attUpdatePunctuality(id, status, hms) {
+    var \$p = \$('#punctuality_' + id);
+    if (!\$p.length) return;
+    var isHadir = status && String(status).toLowerCase() === 'hadir' && hms;
+    if (!isHadir) {
+        \$p.hide().removeClass('is-late is-ontime');
+        \$p.find('.att-punct-text').text('');
+        return;
+    }
+    var late = attIsLate(hms);
+    \$p.show().toggleClass('is-late', late).toggleClass('is-ontime', !late);
+    \$p.find('.att-punct-text').text(late ? 'Terlambat' : 'Tepat Waktu');
+}
+
 $(document).ready(function() {
     // Initialize Select2
     $('.select2').select2();
@@ -349,14 +382,26 @@ $(document).ready(function() {
 
         badge.attr('class', 'badge ' + badgeClass).text(statusLabel);
         card.find('.att-avatar').attr('class', 'att-avatar att-avatar--' + (newStatus || ''));
+        // Perbarui keterangan ketepatan waktu (Tepat Waktu / Terlambat)
+        attUpdatePunctuality(id, newStatus, $('#waktu_' + id).val());
         
-        // Show/Hide Keterangan based on status 'izin' or 'sakit'
+        // Tampilkan keterangan: izin/sakit selalu; status lain jika sudah ada catatan.
         if (newStatus === 'izin' || newStatus === 'sakit') {
             $('#keterangan_container_' + id).show();
             $('#keterangan_' + id).focus();
-        } else {
-            $('#keterangan_container_' + id).hide();
+        } else if (!newStatus) {
+            // Batal (klik ulang status) -> kosongkan catatan
             $('#keterangan_' + id).val('');
+            $('#keterangan_container_' + id).hide();
+        } else {
+            // Hadir: pertahankan catatan yang ada (mis. hasil isian dashboard guru),
+            // jangan dihapus agar tidak hilang.
+            var keptKet = ($('#keterangan_' + id).val() || '').trim();
+            if (keptKet !== '') {
+                $('#keterangan_container_' + id).show();
+            } else {
+                $('#keterangan_container_' + id).hide();
+            }
         }
         
         var ketVal = $('#keterangan_' + id).val() || '';
@@ -483,16 +528,29 @@ include '../templates/sidebar.php';
                                         $parts = preg_split('/\s+/', $nm);
                                         $ini = '';
                                         foreach (array_slice($parts, 0, 2) as $w) { if ($w !== '') $ini .= strtoupper(substr($w, 0, 1)); }
+                                        $av_foto = trim((string)($teacher['foto'] ?? ''));
+                                        $has_foto = ($av_foto !== '' && is_file(__DIR__ . '/../uploads/' . $av_foto));
                                     ?>
                                     <div class="att-card">
                                         <div class="att-card-head">
-                                            <div class="att-avatar att-avatar--<?= $status_lower ?>"><?= htmlspecialchars($ini !== '' ? $ini : '?') ?></div>
+                                            <div class="att-avatar att-avatar--<?= $status_lower ?>">
+                                                <?php if ($has_foto): ?>
+                                                    <img class="att-avatar-img" src="../uploads/<?= htmlspecialchars($av_foto) ?>" alt="<?= htmlspecialchars($nm) ?>">
+                                                <?php else: ?>
+                                                    <?= htmlspecialchars($ini !== '' ? $ini : '?') ?>
+                                                <?php endif; ?>
+                                            </div>
                                             <div class="att-card-id">
                                                 <div class="att-name"><?= htmlspecialchars($nm) ?></div>
                                                 <div class="att-sub">
                                                     <span class="att-num">No <?= $no++ ?></span>
                                                     <span id="badge_<?= $teacher['id_guru'] ?>" class="badge <?= $badgeCls ?>">
                                                         <?= $teacher['status_kehadiran'] ? ucfirst($teacher['status_kehadiran']) : 'Belum Absen' ?>
+                                                    </span>
+                                                    <?php $punct = $teacher['punctuality'] ?? null; ?>
+                                                    <span class="att-punct <?= $punct ? ($punct['late'] ? 'is-late' : 'is-ontime') : '' ?>" id="punctuality_<?= $teacher['id_guru'] ?>" style="display: <?= $punct ? 'inline-flex' : 'none' ?>;">
+                                                        <i class="fas fa-clock"></i>
+                                                        <span class="att-punct-text"><?= $punct ? htmlspecialchars($punct['label']) : '' ?></span>
                                                     </span>
                                                 </div>
                                             </div>
@@ -511,8 +569,9 @@ include '../templates/sidebar.php';
                                         <input type="hidden" name="status[<?= $teacher['id_guru'] ?>]" id="status_<?= $teacher['id_guru'] ?>" class="status-input" data-id="<?= $teacher['id_guru'] ?>" value="<?= $teacher['status_kehadiran'] ?>">
                                         <input type="hidden" name="modified[<?= $teacher['id_guru'] ?>]" id="modified_<?= $teacher['id_guru'] ?>" value="0">
                                         <input type="hidden" name="waktu_input[<?= $teacher['id_guru'] ?>]" id="waktu_<?= $teacher['id_guru'] ?>" value="<?= $teacher['waktu_input'] ? date('H:i:s', strtotime($teacher['waktu_input'])) : '' ?>">
-                                        <div class="att-card-note" id="keterangan_container_<?= $teacher['id_guru'] ?>" style="display: <?= in_array($status_lower, ['izin', 'sakit']) ? 'block' : 'none'; ?>;">
-                                            <input type="text" class="form-control" name="keterangan[<?= $teacher['id_guru'] ?>]" id="keterangan_<?= $teacher['id_guru'] ?>" value="<?= htmlspecialchars($teacher['keterangan']) ?>" placeholder="Tulis keterangan...">
+                                        <?php $ket_val = trim((string)($teacher['keterangan_clean'] ?? '')); ?>
+                                        <div class="att-card-note" id="keterangan_container_<?= $teacher['id_guru'] ?>" style="display: <?= (in_array($status_lower, ['izin', 'sakit'], true) || $ket_val !== '') ? 'block' : 'none'; ?>;">
+                                            <input type="text" class="form-control" name="keterangan[<?= $teacher['id_guru'] ?>]" id="keterangan_<?= $teacher['id_guru'] ?>" value="<?= htmlspecialchars($ket_val) ?>" placeholder="Tulis keterangan...">
                                         </div>
                                     </div>
                                     <?php endforeach; ?>
