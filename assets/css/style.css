@@ -934,15 +934,16 @@ select.form-control:not([size]):not([multiple]) {
 }
 .card.card-statistic-1 .card-header h4, .card.card-statistic-2 .card-header h4 {
   line-height: 1.2;
-  color: #98a6ad;
+  color: #0f172a;
+  font-weight: 700;
 }
 .card.card-statistic-1 .card-body, .card.card-statistic-2 .card-body {
   padding-top: 0;
 }
 .card.card-statistic-1 .card-body, .card.card-statistic-2 .card-body {
   font-size: 26px;
-  font-weight: 700;
-  color: #34395e;
+  font-weight: 800;
+  color: #0f172a;
   padding-bottom: 0;
 }
 .card.card-statistic-1, .card.card-statistic-2 {
@@ -1136,7 +1137,7 @@ select.form-control:not([size]):not([multiple]) {
 .table:not(.table-sm) thead th {
   border-bottom: none;
   background-color: rgba(0, 0, 0, 0.04);
-  color: #666;
+  color: #0f172a;
   padding-top: 15px;
   padding-bottom: 15px;
 }
@@ -2404,7 +2405,7 @@ body {
   font-size: 14px;
   font-weight: 400;
   font-family: "Nunito", "Segoe UI", arial;
-  color: #6c757d;
+  color: #0f172a;
 }
 
 a.bb {

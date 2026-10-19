@@ -352,6 +352,135 @@ if (getUserLevel() === 'siswa' && isset($_SESSION['user_id'])) {
 
         body {
             overflow-x: hidden;
+            color: #0f172a !important;
+        }
+
+        /* Enforce crisp high-contrast dark fonts globally across tables, forms, labels & text */
+        .table,
+        table.dataTable,
+        table.dataTable td,
+        table.dataTable th,
+        .table td,
+        .table th,
+        .table tbody td,
+        .table thead th {
+            color: #0f172a !important;
+        }
+
+        .table thead th,
+        table.dataTable thead th {
+            color: #0f172a !important;
+            font-weight: 800 !important;
+        }
+
+        .dataTables_wrapper,
+        .dataTables_wrapper .dataTables_info,
+        .dataTables_wrapper .dataTables_length,
+        .dataTables_wrapper .dataTables_filter,
+        .dataTables_wrapper .dataTables_filter label,
+        .dataTables_wrapper .dataTables_length label,
+        .dataTables_paginate {
+            color: #0f172a !important;
+            font-weight: 600;
+        }
+
+        .card,
+        .card-body,
+        .card-header,
+        .card-footer,
+        .section-title,
+        label,
+        p,
+        .main-content span:not(.badge):not(.pres-badge-tingkat):not(.pres-chip-count):not(.jam-slot-tag) {
+            color: #0f172a;
+        }
+
+        /* Enforce dark high contrast text on statistic widgets */
+        .card.card-statistic-1 .card-header h4,
+        .card.card-statistic-2 .card-header h4 {
+            color: #1e293b !important;
+            font-weight: 700 !important;
+            font-size: 13.5px !important;
+            letter-spacing: .3px !important;
+        }
+        .card.card-statistic-1 .card-body,
+        .card.card-statistic-2 .card-body {
+            color: #0f172a !important;
+            font-weight: 800 !important;
+        }
+        .card.card-statistic-1 .card-body strong,
+        .card.card-statistic-2 .card-body strong {
+            color: #0f172a !important;
+        }
+        .card.card-statistic-1 .text-muted,
+        .card.card-statistic-2 .text-muted {
+            color: #334155 !important;
+            font-weight: 600 !important;
+        }
+
+        /* Navbar Styling - High Contrast White Text with Clean Frosted Glass Frame */
+        .main-navbar .navbar-nav .nav-link,
+        .main-navbar .navbar-nav .nav-link-user,
+        .main-navbar .navbar-nav .nav-link-user div,
+        .main-navbar .navbar-nav .text-white,
+        .main-navbar .navbar-nav span,
+        .main-navbar .navbar-nav i {
+            color: #ffffff !important;
+        }
+
+        .main-navbar .navbar-nav .nav-item > div.text-white {
+            background: rgba(255, 255, 255, 0.18) !important;
+            border: 1.5px solid rgba(255, 255, 255, 0.45) !important;
+            border-radius: 999px !important;
+            padding: 6px 16px !important;
+            backdrop-filter: blur(8px);
+            -webkit-backdrop-filter: blur(8px);
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.12) !important;
+            letter-spacing: .3px;
+        }
+
+        .main-navbar .nav-link-user {
+            background: rgba(255, 255, 255, 0.18) !important;
+            border: 1.5px solid rgba(255, 255, 255, 0.45) !important;
+            border-radius: 999px !important;
+            padding: 4px 16px 4px 6px !important;
+            backdrop-filter: blur(8px);
+            -webkit-backdrop-filter: blur(8px);
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.12) !important;
+            transition: all .2s ease;
+        }
+        .main-navbar .nav-link-user:hover {
+            background: rgba(255, 255, 255, 0.28) !important;
+            border-color: rgba(255, 255, 255, 0.8) !important;
+        }
+        .main-navbar .nav-link-user img {
+            border: 2px solid #ffffff !important;
+        }
+
+        .main-navbar .nav-link-lg.notification-toggle,
+        .main-navbar .nav-link-lg.nav-msg-toggle {
+            background: rgba(255, 255, 255, 0.18) !important;
+            border: 1.5px solid rgba(255, 255, 255, 0.45) !important;
+            border-radius: 50% !important;
+            width: 42px !important;
+            height: 42px !important;
+            display: flex !important;
+            align-items: center !important;
+            justify-content: center !important;
+            backdrop-filter: blur(8px);
+            -webkit-backdrop-filter: blur(8px);
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.12) !important;
+            margin-right: 10px !important;
+            transition: all .2s ease;
+        }
+        .main-navbar .nav-link-lg.notification-toggle:hover,
+        .main-navbar .nav-link-lg.nav-msg-toggle:hover {
+            background: rgba(255, 255, 255, 0.28) !important;
+            border-color: rgba(255, 255, 255, 0.8) !important;
+        }
+
+        .text-muted {
+            color: #475569 !important;
         }
 
         /* Responsive images */
