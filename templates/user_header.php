@@ -46,6 +46,7 @@ $notif_list_h_u = $n_notif_nav_u <= 0 ? 'height:auto;max-height:140px;overflow:h
 <!DOCTYPE html>
 <html lang="en">
 <head>
+    <script>document.documentElement.className += ' js';</script>
     <meta charset="UTF-8">
     <meta content="width=device-width, initial-scale=1, maximum-scale=1, shrink-to-fit=no" name="viewport">
     <title><?php echo isset($page_title) ? $page_title : 'Dashboard'; ?> | Sistem Informasi Madrasah</title>

@@ -199,6 +199,7 @@ if (getUserLevel() === 'siswa' && isset($_SESSION['user_id'])) {
 <!DOCTYPE html>
 <html lang="en">
 <head>
+    <script>document.documentElement.className += ' js';</script>
     <meta charset="UTF-8">
     <meta content="width=device-width, initial-scale=1, maximum-scale=1, shrink-to-fit=no" name="viewport">
     <title><?php echo $page_title; ?> | Sistem Informasi Madrasah</title>

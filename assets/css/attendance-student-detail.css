@@ -29,6 +29,30 @@
     display: none !important;
 }
 
+/* Cegah kilasan ringkasan + tabel lama sebelum JS mengubahnya jadi
+   header/kartu/timeline (FOUC). Hanya berlaku saat JS aktif dan hanya
+   pada blok hasil "per siswa" yang memuat tabel #studentTable. */
+html.js table#studentTable {
+    display: none;
+}
+
+html.js .mt-4:has(> .table-responsive > table#studentTable) > .row.mb-4,
+html.js .mt-4:has(> .table-responsive > table#studentTable) > .row.mt-3,
+html.js .mt-4:has(> .table-responsive > table#studentTable) > .alert,
+html.js .mt-4:has(> .table-responsive > table#studentTable) > h5,
+html.js .mt-4:has(> .table-responsive > table#studentTable) > .table-responsive {
+    display: none;
+}
+
+/* Varian halaman rekap sholat: blok siswa ada di dalam .card-body. */
+html.js .card-body:has(> .table-responsive > table#studentTable) > .row.mb-4,
+html.js .card-body:has(> .table-responsive > table#studentTable) > .row.mt-3,
+html.js .card-body:has(> .table-responsive > table#studentTable) > .alert,
+html.js .card-body:has(> .table-responsive > table#studentTable) > h5,
+html.js .card-body:has(> .table-responsive > table#studentTable) > .table-responsive {
+    display: none;
+}
+
 /* ============================================================
    Timeline riwayat kehadiran (kartu, dipakai di mobile & desktop)
    Dibangun oleh assets/js/attendance-student-detail.js
