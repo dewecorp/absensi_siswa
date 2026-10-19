@@ -29,12 +29,40 @@
 /* Global modern rounded dropdown (kecuali submenu sidebar, ikut bawaan template) */
 .navbar .dropdown-menu,
 .dropdown-list,
-.modern-notif-dropdown {
+.modern-notif-dropdown,
+.app-select-wrap .dropdown-menu {
   border-radius: 14px !important;
   overflow: hidden;
   border: 1px solid #e5e9f2 !important;
   box-shadow: 0 12px 40px rgba(20,30,70,.18) !important;
   padding: 0 !important;
+}
+.app-select-wrap .dropdown-menu {
+  margin-top: 6px !important;
+  min-width: 100% !important;
+}
+.app-select-wrap .dropdown-menu .dropdown-item {
+  padding: 10px 16px !important;
+  font-size: 13px;
+  font-weight: 600;
+  color: #334155;
+}
+.app-select-wrap .dropdown-menu .dropdown-item:hover,
+.app-select-wrap .dropdown-menu .dropdown-item:focus {
+  background: #eef2ff !important;
+  color: #1d4ed8 !important;
+}
+.app-select-wrap .dropdown-menu .dropdown-item.app-select-selected {
+  background: #f1f5f9 !important;
+  color: #0f172a !important;
+  font-weight: 800;
+}
+.app-select-wrap .dropdown-menu .dropdown-item .app-select-check {
+  float: right;
+  margin-left: 12px;
+  color: #2563eb;
+  font-size: 11px;
+  line-height: 1.6;
 }
 .dropdown-list,
 .modern-notif-dropdown {

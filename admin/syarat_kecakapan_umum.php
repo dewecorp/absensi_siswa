@@ -523,8 +523,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['sku_ajax']) && $_POST
             }
             $up = $pdo->prepare('UPDATE tb_sku_kecakapan_nilai SET tanggal_ujian = ? WHERE id_peserta_didik_barung = ? AND id_butir = ?');
             $up->execute([$tgl !== '' ? $tgl : null, $id_p, $id_b]);
-            if ($up->rowCount() === 0 && $tgl !== '') {
-                $pdo->prepare('INSERT INTO tb_sku_kecakapan_nilai (id_peserta_didik_barung, id_butir, tanggal_ujian) VALUES (?, ?, ?)')
+            if ($tgl !== '') {
+                $pdo->prepare('INSERT INTO tb_sku_kecakapan_nilai (id_peserta_didik_barung, id_butir, tanggal_ujian) VALUES (?, ?, ?) ON DUPLICATE KEY UPDATE tanggal_ujian = VALUES(tanggal_ujian)')
                     ->execute([$id_p, $id_b, $tgl]);
             }
             $existsSt = $pdo->prepare('SELECT COUNT(*) FROM tb_sku_kecakapan_nilai WHERE id_peserta_didik_barung = ? AND id_butir = ?');
@@ -1423,13 +1423,13 @@ $(function(){
     if (view === 'table') {
       $('#skuCardsView').addClass('d-none');
       $('#skuTableView').removeClass('d-none');
-      $('#btnViewTable').addClass('btn-primary active').removeClass('btn-outline-primary');
-      $('#btnViewCards').addClass('btn-outline-primary').removeClass('btn-primary active');
+      $('#btnViewTable').addClass('active');
+      $('#btnViewCards').removeClass('active');
     } else {
       $('#skuTableView').addClass('d-none');
       $('#skuCardsView').removeClass('d-none');
-      $('#btnViewCards').addClass('btn-primary active').removeClass('btn-outline-primary');
-      $('#btnViewTable').addClass('btn-outline-primary').removeClass('btn-primary active');
+      $('#btnViewCards').addClass('active');
+      $('#btnViewTable').removeClass('active');
     }
     localStorage.setItem('simad_sku_view', view);
   }
@@ -1586,25 +1586,25 @@ require_once '../templates/sidebar.php';
 
         <div class="section-body">
             <div class="card">
-                <div class="card-header d-flex flex-wrap align-items-center justify-content-between gap-2">
+                <div class="card-header d-flex flex-wrap align-items-center justify-content-between" style="gap:10px;">
                     <h4 class="mb-0">
                         SKU Pramuka
                         <?= $selected_tingkat_name !== '' ? '<span class="badge badge-light border text-dark ml-2">' . htmlspecialchars($selected_tingkat_name) . '</span>' : '' ?>
                     </h4>
-                    <div class="d-flex flex-wrap gap-2">
+                    <div class="d-flex flex-wrap align-items-center" style="gap:6px;">
                         <?php if ($can_manage_sku): ?>
-                        <button type="button" class="btn btn-outline-primary btn-sm" data-toggle="modal" data-target="#modalSkuAdd"
-                            <?= $selected_tingkat_id <= 0 ? 'disabled' : '' ?>><i class="fas fa-plus"></i> Tambah kolom</button>
-                        <button type="button" class="btn btn-outline-secondary btn-sm" data-toggle="modal" data-target="#modalSkuImport"
-                            <?= $selected_tingkat_id <= 0 ? 'disabled' : '' ?>><i class="fas fa-file-import"></i> Import SKU</button>
+                        <button type="button" class="btn btn-outline-primary btn-sm" data-toggle="modal" data-target="#modalSkuAdd" title="Tambah kolom butir SKU"
+                            <?= $selected_tingkat_id <= 0 ? 'disabled' : '' ?>><i class="fas fa-plus"></i><span class="d-none d-sm-inline"> Tambah kolom</span></button>
+                        <button type="button" class="btn btn-outline-secondary btn-sm" data-toggle="modal" data-target="#modalSkuImport" title="Import butir SKU"
+                            <?= $selected_tingkat_id <= 0 ? 'disabled' : '' ?>><i class="fas fa-file-import"></i><span class="d-none d-sm-inline"> Import SKU</span></button>
                         <?php endif; ?>
-                        <a class="btn btn-outline-success btn-sm <?= $selected_tingkat_id <= 0 ? 'disabled text-muted' : '' ?>"
+                        <a class="btn btn-outline-success btn-sm <?= $selected_tingkat_id <= 0 ? 'disabled text-muted' : '' ?>" title="Ekspor Excel"
                             href="<?= $selected_tingkat_id > 0 ? 'syarat_kecakapan_umum.php?tingkat=' . (int)$selected_tingkat_id . '&export=xlsx' : '#' ?>">
-                            <i class="fas fa-file-excel"></i> Ekspor Excel</a>
-                        <a class="btn btn-outline-danger btn-sm <?= $selected_tingkat_id <= 0 ? 'disabled text-muted' : '' ?>"
+                            <i class="fas fa-file-excel"></i><span class="d-none d-sm-inline"> Ekspor Excel</span></a>
+                        <a class="btn btn-outline-danger btn-sm <?= $selected_tingkat_id <= 0 ? 'disabled text-muted' : '' ?>" title="Ekspor PDF"
                             <?= $selected_tingkat_id > 0 ? 'target="_blank" rel="noopener noreferrer"' : '' ?>
                             href="<?= $selected_tingkat_id > 0 ? 'syarat_kecakapan_umum.php?tingkat=' . (int)$selected_tingkat_id . '&export=pdf' : '#' ?>">
-                            <i class="fas fa-file-pdf"></i> Ekspor PDF</a>
+                            <i class="fas fa-file-pdf"></i><span class="d-none d-sm-inline"> Ekspor PDF</span></a>
                     </div>
                 </div>
                 <div class="card-body">
@@ -1651,31 +1651,57 @@ require_once '../templates/sidebar.php';
                         <?php endif; ?>
 
                         <?php if ($selected_tingkat_id > 0): ?>
-                            <div class="d-flex flex-wrap align-items-center justify-content-between mb-3 gap-2">
-                                <div class="d-flex align-items-center flex-wrap gap-2 flex-grow-1">
-                                    <?php if (!empty($peserta_rows)): ?>
-                                        <div style="min-width: 260px; max-width: 320px;">
-                                            <div class="input-group input-group-sm w-100">
-                                                <div class="input-group-prepend">
-                                                    <span class="input-group-text bg-white border-right-0"><i class="fas fa-search text-muted"></i></span>
-                                                </div>
-                                                <input type="search" id="skuFilterNama" class="form-control border-left-0 pl-0"
-                                                       placeholder="Cari siswa atau NISN…" autocomplete="off">
-                                            </div>
-                                        </div>
-                                    <?php endif; ?>
-                                    <div class="sku-summary-badge">
-                                        <i class="fas fa-user-graduate text-primary mr-1"></i>
-                                        Total: <strong class="text-dark ml-1"><?= count($peserta_rows) ?> Siswa</strong>
+                            <?php
+                                $sku_stats = ['total' => 0, 'lulus' => 0, 'proses' => 0];
+                                $sku_status_cache = [];
+                                foreach ($peserta_rows as $prStat) {
+                                    $pidStat = (int)($prStat['id_peserta_didik_barung'] ?? 0);
+                                    $infStat = sku_compute_status_cell($pdo, $pidStat, $selected_tingkat_id);
+                                    $sku_status_cache[$pidStat] = $infStat;
+                                    $sku_stats['total']++;
+                                    if (!empty($infStat['ok'])) {
+                                        $sku_stats['lulus']++;
+                                    } else {
+                                        $sku_stats['proses']++;
+                                    }
+                                }
+                            ?>
+                            <div class="app-toolbar">
+                                <div class="app-search">
+                                    <i class="fas fa-search"></i>
+                                    <input type="search" id="skuFilterNama" placeholder="Cari nama atau NISN…" autocomplete="off">
+                                </div>
+                                <div class="app-view-switch" role="group" aria-label="Mode tampilan">
+                                    <button type="button" class="active" id="btnViewCards" title="Tampilan Kartu">
+                                        <i class="fas fa-th-large"></i> Kartu
+                                    </button>
+                                    <button type="button" id="btnViewTable" title="Tampilan Tabel">
+                                        <i class="fas fa-table"></i> Tabel
+                                    </button>
+                                </div>
+                            </div>
+
+                            <div class="app-summary-row">
+                                <div class="app-summary-chip">
+                                    <div class="ico" style="background:#eff6ff;color:#1d4ed8;"><i class="fas fa-users"></i></div>
+                                    <div>
+                                        <div class="lbl">Total Anggota</div>
+                                        <div class="val"><?= (int)$sku_stats['total'] ?> siswa</div>
                                     </div>
                                 </div>
-                                <div class="btn-group btn-group-sm ml-auto sku-view-switch" role="group">
-                                    <button type="button" class="btn btn-primary active" id="btnViewCards" title="Tampilan Kartu Cepat">
-                                        <i class="fas fa-th-large mr-1"></i> Mode Kartu
-                                    </button>
-                                    <button type="button" class="btn btn-outline-primary" id="btnViewTable" title="Tampilan Matriks Tabel">
-                                        <i class="fas fa-table mr-1"></i> Mode Tabel
-                                    </button>
+                                <div class="app-summary-chip">
+                                    <div class="ico" style="background:#ecfdf5;color:#15803d;"><i class="fas fa-check-circle"></i></div>
+                                    <div>
+                                        <div class="lbl">Tuntas SKU</div>
+                                        <div class="val"><?= (int)$sku_stats['lulus'] ?> siswa</div>
+                                    </div>
+                                </div>
+                                <div class="app-summary-chip">
+                                    <div class="ico" style="background:#fff7ed;color:#c2410c;"><i class="fas fa-hourglass-half"></i></div>
+                                    <div>
+                                        <div class="lbl">Masih Proses</div>
+                                        <div class="val"><?= (int)$sku_stats['proses'] ?> siswa</div>
+                                    </div>
                                 </div>
                             </div>
 
@@ -1687,11 +1713,11 @@ require_once '../templates/sidebar.php';
                                         Tidak ada anggota aktif untuk tingkat ini. Tambahkan di <strong>Data Anggota Pramuka</strong>.
                                     </div>
                                 <?php else: ?>
-                                    <div class="row" id="skuCardsContainer">
+                                    <div class="row app-cards-row" id="skuCardsContainer">
                                         <?php $cardIndex = 1; foreach ($peserta_rows as $p): ?>
                                             <?php
                                                 $pid = (int)$p['id_peserta_didik_barung'];
-                                                $inf = sku_compute_status_cell($pdo, $pid, $selected_tingkat_id);
+                                                $inf = $sku_status_cache[$pid] ?? sku_compute_status_cell($pdo, $pid, $selected_tingkat_id);
                                                 $namaNorm = mb_strtolower(sku_plain_person_name((string)$p['nama_peserta_didik']));
                                                 $nisnNorm = mb_strtolower(trim((string)($p['nisn'] ?? $p['nta'] ?? '')));
                                                 $namaLengkap = (string)$p['nama_peserta_didik'];
@@ -1701,15 +1727,15 @@ require_once '../templates/sidebar.php';
                                                 $fallbackHtml = '<div class="sku-avatar-initials">' . htmlspecialchars($initials, ENT_QUOTES, 'UTF-8') . '</div>';
                                                 $avatarHtml = getPersonAvatarHtml($fotoSiswa, $fallbackHtml, 'sku-avatar-img');
                                             ?>
-                                            <div class="col-12 col-xl-6 mb-3 sku-card-item"
+                                            <div class="col-12 col-md-6 mb-3 sku-card-item"
                                                  data-nama-normal="<?= htmlspecialchars($namaNorm, ENT_QUOTES, 'UTF-8') ?>"
                                                  data-nisn-normal="<?= htmlspecialchars($nisnNorm, ENT_QUOTES, 'UTF-8') ?>"
                                                  data-peserta="<?= $pid ?>">
                                                 <div class="card sku-student-card h-100 shadow-sm border-0 mb-0">
                                                     <div class="card-body p-3">
                                                         <!-- Header Siswa Mobile-App Style -->
-                                                        <div class="d-flex align-items-center justify-content-between flex-wrap gap-2 mb-3">
-                                                            <div class="d-flex align-items-center">
+                                                        <div class="sku-card-head mb-3">
+                                                            <div class="sku-card-left">
                                                                 <div class="sku-student-no mr-2" title="Nomor Urut">
                                                                     <?= $cardIndex++ ?>
                                                                 </div>
@@ -1718,7 +1744,7 @@ require_once '../templates/sidebar.php';
                                                                         <?= $avatarHtml ?>
                                                                     </div>
                                                                 </div>
-                                                                <div>
+                                                                <div class="sku-card-id">
                                                                     <div class="sku-student-name">
                                                                         <?= sku_html_person_name($namaLengkap) ?>
                                                                     </div>
@@ -1729,13 +1755,13 @@ require_once '../templates/sidebar.php';
                                                                     </div>
                                                                 </div>
                                                             </div>
-                                                            <div class="text-right d-flex flex-column align-items-end">
+                                                            <div class="sku-card-right">
                                                                 <span class="sku-app-badge sku-status-cell <?= $inf['ok'] ? 'sku-badge-lulus' : 'sku-badge-proses' ?>"
                                                                       data-peserta="<?= $pid ?>">
                                                                     <i class="fas <?= $inf['ok'] ? 'fa-check-circle' : 'fa-clock' ?> mr-1"></i>
                                                                     <?= htmlspecialchars($inf['label']) ?>
                                                                 </span>
-                                                                <div class="sku-pct-pill mt-1 sku-pct-text" data-peserta="<?= $pid ?>">
+                                                                <div class="sku-pct-pill sku-pct-text" data-peserta="<?= $pid ?>">
                                                                     <i class="fas fa-chart-line mr-1 text-primary"></i>
                                                                     <span class="sku-pct-val font-weight-bold"><?= $inf['percentage'] ?>%</span>
                                                                     <span class="text-muted ml-1 font-weight-normal">(<?= $inf['done'] ?>/<?= $inf['total'] ?>)</span>
@@ -1804,9 +1830,6 @@ require_once '../templates/sidebar.php';
                                                                             <!-- Input Tanggal Ujian dengan Tombol Khas Mobile Apps -->
                                                                             <div class="d-flex align-items-center flex-shrink-0 mt-2 mt-sm-0 pt-1 pt-sm-0 border-top border-top-sm-0 justify-content-end sku-date-wrapper">
                                                                                 <div class="input-group input-group-sm">
-                                                                                    <div class="input-group-prepend">
-                                                                                        <span class="input-group-text"><i class="far fa-calendar-alt"></i></span>
-                                                                                    </div>
                                                                                     <input type="date"
                                                                                            class="form-control form-control-sm sku-date"
                                                                                            data-peserta="<?= $pid ?>"
@@ -2048,6 +2071,7 @@ require_once '../templates/sidebar.php';
     display: inline-flex;
     align-items: center;
     gap: 8px;
+    flex: 0 0 auto;
     padding: 8px 16px;
     border-radius: 999px !important;
     font-size: 0.88rem;
@@ -2224,12 +2248,63 @@ require_once '../templates/sidebar.php';
     font-weight: 600;
     display: flex;
     align-items: center;
+    flex-wrap: wrap;
     gap: 8px;
     margin-top: 4px;
 }
 .meta-dot {
     color: #cbd5e1;
     font-size: 0.7rem;
+}
+
+/* Card header layout (mobile-app friendly, no overlap) */
+.sku-card-head {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 10px;
+    flex-wrap: wrap;
+}
+.sku-card-left {
+    display: flex;
+    align-items: center;
+    flex: 1 1 220px;
+    min-width: 0;
+}
+.sku-card-id {
+    min-width: 0;
+}
+.sku-card-id .sku-student-name {
+    overflow-wrap: anywhere;
+}
+.sku-card-right {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-end;
+    gap: 6px;
+    flex: 0 0 auto;
+}
+@media (max-width: 575.98px) {
+    .sku-card-right {
+        flex-direction: row;
+        flex-wrap: wrap;
+        align-items: center;
+        justify-content: flex-start;
+        width: 100%;
+        margin-top: 10px;
+    }
+    .sku-student-name {
+        font-size: 1rem;
+    }
+    .sku-avatar-wrap {
+        width: 48px;
+        height: 48px;
+        border-radius: 15px;
+    }
+    .sku-avatar-initials,
+    .sku-avatar-img {
+        border-radius: 15px;
+    }
 }
 
 /* Modern App Status Badges */
@@ -2327,6 +2402,21 @@ require_once '../templates/sidebar.php';
     transition: all .2s cubic-bezier(0.4, 0, 0.2, 1);
     box-shadow: 0 2px 5px rgba(15, 23, 42, 0.03);
     margin-bottom: 8px;
+    gap: 10px;
+}
+.sku-date-wrapper {
+    width: 100%;
+}
+.sku-date-wrapper .input-group {
+    width: 100%;
+}
+@media (min-width: 576px) {
+    .sku-date-wrapper {
+        width: auto;
+    }
+    .sku-date-wrapper .input-group {
+        width: auto;
+    }
 }
 .sku-item-row:hover {
     border-color: #cbd5e1;
@@ -2395,12 +2485,29 @@ require_once '../templates/sidebar.php';
     box-shadow: 0 2px 6px rgba(15, 23, 42, 0.05);
     border-radius: 10px;
 }
-.sku-date-wrapper .form-control {
+.sku-date-wrapper .form-control.sku-date {
     border-color: #e2e8f0;
     font-size: 0.85rem;
     font-weight: 600;
     color: #0f172a;
+    background: #fff;
     height: calc(1.5em + .75rem + 4px);
+    border-top-left-radius: 10px !important;
+    border-bottom-left-radius: 10px !important;
+    border-top-right-radius: 0 !important;
+    border-bottom-right-radius: 0 !important;
+}
+.sku-date-wrapper .form-control.sku-date:last-child {
+    border-top-right-radius: 10px !important;
+    border-bottom-right-radius: 10px !important;
+}
+.sku-date-wrapper .form-control.sku-date::-webkit-calendar-picker-indicator {
+    cursor: pointer;
+    opacity: .5;
+    padding: 2px;
+}
+.sku-date-wrapper .form-control.sku-date::-webkit-calendar-picker-indicator:hover {
+    opacity: .9;
 }
 .sku-date-wrapper .input-group-text {
     background: #f8fafc;

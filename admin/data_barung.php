@@ -1943,6 +1943,224 @@ JS_BLOCK;
 include '../templates/header.php';
 include '../templates/sidebar.php';
 ?>
+<style>
+/* ===== PRAMUKA MOBILE APP UI ===== */
+.pramuka-tabs-wrap {
+    display: flex; align-items: center; gap: 8px;
+    overflow-x: auto; padding: 4px 2px 10px;
+    -webkit-overflow-scrolling: touch;
+    scrollbar-width: thin;
+}
+.pramuka-tabs-wrap::-webkit-scrollbar { height: 4px; }
+.pramuka-tabs-wrap::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 999px; }
+.pramuka-tab-pill {
+    display: inline-flex; align-items: center; gap: 7px;
+    flex: 0 0 auto;
+    padding: 9px 15px; border-radius: 999px !important;
+    font-size: .86rem; font-weight: 700; white-space: nowrap;
+    text-decoration: none !important; border: 1.5px solid transparent;
+    outline: none !important;
+    transition: all .2s ease; box-shadow: 0 2px 6px rgba(15, 23, 42, .05);
+}
+.pramuka-tab-pill:focus, .pramuka-tab-pill:active { outline: none !important; text-decoration: none !important; }
+.pramuka-tab-siaga { background: #fff; color: #15803d; border-color: #bbf7d0; }
+.pramuka-tab-siaga:hover { background: #f0fdf4; color: #166534; border-color: #86efac; }
+.pramuka-tab-siaga.active {
+    background: linear-gradient(135deg, #16a34a, #15803d) !important;
+    color: #fff !important; border-color: #15803d !important;
+    box-shadow: 0 6px 16px rgba(22, 163, 74, .32) !important;
+}
+.pramuka-tab-penggalang { background: #fff; color: #be123c; border-color: #fecdd3; }
+.pramuka-tab-penggalang:hover { background: #fff1f2; color: #9f1239; border-color: #fda4af; }
+.pramuka-tab-penggalang.active {
+    background: linear-gradient(135deg, #e11d48, #be123c) !important;
+    color: #fff !important; border-color: #be123c !important;
+    box-shadow: 0 6px 16px rgba(225, 29, 72, .32) !important;
+}
+.pramuka-tab-pill.active span, .pramuka-tab-pill.active i { color: #fff !important; }
+.pramuka-tab-count {
+    background: rgba(0, 0, 0, .07); padding: 2px 8px;
+    border-radius: 999px; font-size: .7rem; font-weight: 800;
+}
+.pramuka-tab-pill.active .pramuka-tab-count {
+    background: rgba(255, 255, 255, .28) !important; color: #fff !important;
+}
+
+/* Toolbar */
+.pramuka-app-toolbar { display: flex; flex-wrap: wrap; align-items: center; gap: 10px; margin: 2px 0 14px; }
+.pramuka-search {
+    flex: 1 1 240px; display: flex; align-items: center; gap: 8px;
+    background: #fff; border: 1.5px solid #e2e8f0; border-radius: 14px;
+    padding: 9px 13px; box-shadow: 0 2px 8px rgba(15, 23, 42, .04);
+}
+.pramuka-search i { color: #94a3b8; }
+.pramuka-search input {
+    border: 0; outline: 0; width: 100%; font-size: .9rem;
+    color: #0f172a; background: transparent;
+}
+.pramuka-view-switch { display: inline-flex; background: #eef2f7; border-radius: 14px; padding: 4px; gap: 4px; }
+.pramuka-view-switch button {
+    border: 0; background: transparent; color: #475569; font-size: .82rem;
+    font-weight: 700; padding: 7px 14px; border-radius: 11px;
+    display: inline-flex; align-items: center; gap: 6px; transition: all .18s;
+}
+.pramuka-view-switch button.active { background: #fff; color: #2563eb; box-shadow: 0 2px 8px rgba(15, 23, 42, .12); }
+.pramuka-select-all {
+    display: inline-flex; align-items: center; gap: 7px;
+    font-size: .8rem; font-weight: 700; color: #1e293b;
+    background: #fff; border: 1.5px solid #e2e8f0; border-radius: 14px;
+    padding: 8px 13px; cursor: pointer; white-space: nowrap;
+}
+.pramuka-select-all input { width: 16px; height: 16px; accent-color: #2563eb; margin: 0; }
+
+/* Summary chips (3 kolom sama lebar) */
+.pramuka-summary-row {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 8px;
+    margin-bottom: 14px;
+}
+.pramuka-summary-chip {
+    display: flex; align-items: center; gap: 9px;
+    background: #fff; border: 1px solid #e2e8f0; border-radius: 14px;
+    padding: 8px 12px; min-width: 0;
+}
+.pramuka-summary-chip > div:last-child { min-width: 0; }
+.pramuka-summary-chip .lbl { font-size: .72rem; color: #64748b; font-weight: 700; overflow-wrap: anywhere; }
+.pramuka-summary-chip .val { font-size: .92rem; font-weight: 800; color: #0f172a; overflow-wrap: anywhere; }
+.pramuka-summary-chip .ico {
+    width: 30px; height: 30px; border-radius: 9px; flex: 0 0 auto;
+    display: grid; place-items: center; font-size: .78rem;
+}
+
+/* KTA Member Card */
+.pramuka-kta-card {
+    position: relative; background: #fff; border-radius: 18px; overflow: hidden;
+    border: 1.5px solid #e8edf3; box-shadow: 0 6px 18px rgba(15, 23, 42, .06);
+    height: 100%; transition: transform .18s, box-shadow .18s, border-color .18s;
+}
+.pramuka-kta-card:hover { transform: translateY(-3px); box-shadow: 0 12px 28px rgba(15, 23, 42, .12); }
+.pramuka-kta-card.selected-card {
+    border-color: #2563eb;
+    box-shadow: 0 0 0 3px rgba(37, 99, 235, .15), 0 10px 24px rgba(37, 99, 235, .16);
+}
+.pramuka-kta-top {
+    position: relative; padding: 12px 14px; color: #fff;
+    display: flex; align-items: center; gap: 10px; overflow: hidden;
+}
+.pramuka-kta-siaga .pramuka-kta-top { background: linear-gradient(135deg, #0f766e, #15803d); }
+.pramuka-kta-penggalang .pramuka-kta-top { background: linear-gradient(135deg, #9f1239, #be123c); }
+.pramuka-kta-top::after {
+    content: ""; position: absolute; right: -26px; top: -30px;
+    width: 110px; height: 110px; border-radius: 50%; background: rgba(255, 255, 255, .12);
+}
+.pramuka-kta-emblem {
+    width: 34px; height: 34px; border-radius: 50%; flex: 0 0 auto;
+    background: rgba(255, 255, 255, .2); border: 1.5px solid rgba(255, 255, 255, .35);
+    display: grid; place-items: center; font-size: 1rem;
+}
+.pramuka-kta-top-text { min-width: 0; line-height: 1.15; }
+.pramuka-kta-top-text .org {
+    font-size: .66rem; letter-spacing: .09em; font-weight: 800;
+    text-transform: uppercase; opacity: .9;
+}
+.pramuka-kta-top-text .title { font-size: .86rem; font-weight: 800; letter-spacing: .02em; }
+.pramuka-kta-serial {
+    margin-left: auto; font-size: .66rem; font-weight: 800;
+    padding: 4px 9px; border-radius: 999px; white-space: nowrap;
+    background: rgba(255, 255, 255, .22); border: 1px solid rgba(255, 255, 255, .35);
+}
+.pramuka-kta-body { position: relative; padding: 14px; display: flex; gap: 13px; }
+.pramuka-kta-body::before {
+    content: "\f4e4"; font-family: "Font Awesome 5 Free"; font-weight: 900;
+    position: absolute; right: 6px; bottom: -6px; font-size: 5.5rem;
+    color: rgba(15, 23, 42, .035); pointer-events: none;
+}
+.pramuka-kta-photo { position: relative; flex: 0 0 auto; }
+.pramuka-kta-photo .photo-frame {
+    width: 72px; height: 88px; border-radius: 12px; overflow: hidden;
+    background: linear-gradient(135deg, #dbeafe, #e0f2fe); border: 2px solid #fff;
+    box-shadow: 0 3px 10px rgba(15, 23, 42, .15); display: grid; place-items: center;
+}
+.pramuka-kta-photo img, .pramuka-kta-photo .kta-initials {
+    width: 100%; height: 100%; object-fit: cover;
+    display: grid; place-items: center; font-size: 1.4rem; font-weight: 800; color: #1e40af;
+    background: linear-gradient(135deg, #dbeafe, #e0f2fe);
+}
+.pramuka-kta-nta {
+    position: absolute; left: 50%; transform: translateX(-50%); bottom: -9px;
+    background: #0f172a; color: #fff; font-size: .6rem; font-weight: 800;
+    padding: 3px 8px; border-radius: 999px; white-space: nowrap; border: 2px solid #fff;
+}
+.pramuka-kta-info { min-width: 0; flex: 1; }
+.pramuka-kta-name {
+    font-size: .98rem; font-weight: 800; color: #0f172a;
+    line-height: 1.25; margin: 0 0 5px; overflow-wrap: anywhere;
+}
+.pramuka-kta-meta { display: flex; flex-wrap: wrap; gap: 5px; margin-bottom: 8px; }
+.pramuka-kta-pill {
+    display: inline-flex; align-items: center; gap: 4px;
+    font-size: .68rem; font-weight: 700; padding: 3px 8px;
+    border-radius: 999px; background: #f1f5f9; color: #334155;
+}
+.pramuka-kta-pill.blue { background: #eff6ff; color: #1d4ed8; }
+.pramuka-kta-pill.green { background: #ecfdf5; color: #15803d; }
+.pramuka-kta-pill.red { background: #fff1f2; color: #be123c; }
+.pramuka-kta-detail {
+    display: grid; grid-template-columns: 1fr 1fr; gap: 4px 10px;
+    font-size: .72rem; color: #475569;
+}
+.pramuka-kta-detail .lbl {
+    display: block; font-size: .62rem; color: #94a3b8;
+    text-transform: uppercase; letter-spacing: .05em; font-weight: 800;
+}
+.pramuka-kta-detail .val { font-weight: 700; color: #1e293b; overflow-wrap: anywhere; }
+.pramuka-kta-foot {
+    display: flex; align-items: center; justify-content: space-between; gap: 8px;
+    padding: 9px 14px; border-top: 1px dashed #e2e8f0; background: #fbfdff;
+}
+.pramuka-kta-status {
+    display: inline-flex; align-items: center; gap: 6px;
+    font-size: .7rem; font-weight: 800; color: #15803d; cursor: pointer; margin: 0;
+}
+.pramuka-kta-status .dot {
+    width: 7px; height: 7px; border-radius: 50%; background: #22c55e;
+    box-shadow: 0 0 0 3px rgba(34, 197, 94, .16);
+}
+.pramuka-kta-status input { width: 15px; height: 15px; accent-color: #2563eb; margin-right: 2px; }
+.pramuka-kta-actions { display: inline-flex; gap: 6px; }
+.pramuka-kta-actions .btn {
+    width: 32px; height: 32px; border-radius: 10px;
+    display: grid; place-items: center; padding: 0; font-size: .74rem;
+}
+
+/* Floating bulk action bar */
+.kta-floating-bar {
+    position: fixed; left: 50%; bottom: 22px; z-index: 1050;
+    transform: translate(-50%, 130px); opacity: 0; pointer-events: none;
+    display: flex; align-items: center; gap: 10px;
+    background: #0f172a; color: #fff; padding: 10px 12px 10px 16px;
+    border-radius: 999px; box-shadow: 0 12px 30px rgba(15, 23, 42, .35);
+    transition: transform .25s ease, opacity .25s ease;
+}
+.kta-floating-bar.show { transform: translate(-50%, 0); opacity: 1; pointer-events: auto; }
+.kta-floating-count { font-size: .8rem; font-weight: 800; white-space: nowrap; }
+.kta-floating-bar .btn { border-radius: 999px; font-size: .75rem; font-weight: 700; padding: 6px 12px; }
+
+@media (max-width: 575.98px) {
+    .pramuka-kta-body { gap: 11px; padding: 13px 12px; }
+    .pramuka-kta-photo .photo-frame { width: 64px; height: 78px; }
+    .pramuka-kta-name { font-size: .92rem; }
+    .pramuka-kta-detail { font-size: .69rem; }
+    .pramuka-kta-top { padding: 10px 12px; }
+    .pramuka-kta-top-text .title { font-size: .78rem; }
+    .pramuka-kta-serial { font-size: .6rem; padding: 3px 7px; }
+}
+@media (max-width: 991.98px) {
+    #pramukaCardsView { padding-bottom: 12px; }
+    .kta-floating-bar { bottom: 84px; width: calc(100% - 24px); justify-content: space-between; }
+}
+</style>
 
 <div class="main-content">
     <section class="section">
@@ -1957,26 +2175,26 @@ include '../templates/sidebar.php';
 
         <div class="section-body">
             <div class="card">
-                <div class="card-header">
-                    <h4>Data Anggota Pramuka (<?= htmlspecialchars($selected_tingkat_name !== '' ? $selected_tingkat_name : 'Semua') ?>)</h4>
-                    <div class="card-header-action">
-                        <button type="button" class="btn btn-success" onclick="exportToExcel()" <?php echo $selected_tingkat_id > 0 ? '' : 'disabled'; ?>>
-                            <i class="fas fa-file-excel"></i> Excel
+                <div class="card-header d-flex flex-wrap align-items-center justify-content-between" style="gap:10px;">
+                    <h4 class="mb-0">Data Anggota Pramuka (<?= htmlspecialchars($selected_tingkat_name !== '' ? $selected_tingkat_name : 'Semua') ?>)</h4>
+                    <div class="card-header-action d-flex flex-wrap align-items-center" style="gap:6px;">
+                        <button type="button" class="btn btn-success" onclick="exportToExcel()" title="Ekspor Excel" <?php echo $selected_tingkat_id > 0 ? '' : 'disabled'; ?>>
+                            <i class="fas fa-file-excel"></i><span class="d-none d-sm-inline"> Excel</span>
                         </button>
-                        <button type="button" class="btn btn-warning ml-1" onclick="exportToPDF()" <?php echo $selected_tingkat_id > 0 ? '' : 'disabled'; ?>>
-                            <i class="fas fa-file-pdf"></i> PDF
+                        <button type="button" class="btn btn-warning" onclick="exportToPDF()" title="Ekspor PDF" <?php echo $selected_tingkat_id > 0 ? '' : 'disabled'; ?>>
+                            <i class="fas fa-file-pdf"></i><span class="d-none d-sm-inline"> PDF</span>
                         </button>
                         <?php if ($can_manage_barung): ?>
-                        <button class="btn btn-primary ml-1" data-toggle="modal" data-target="#modalTambahAnggotaBarung" type="button" <?php echo $barung_bisa_modal_tambah ? '' : 'disabled'; ?> title="<?= $barung_bisa_modal_tambah ? '' : 'Pilih tab Pra Mula / Mula / Bantu / Tata / Pra Ramu / Ramu untuk menambah dari data siswa' ?>">
-                            <i class="fas fa-plus"></i> Tambah
+                        <button class="btn btn-primary" data-toggle="modal" data-target="#modalTambahAnggotaBarung" type="button" title="Tambah anggota" <?php echo $barung_bisa_modal_tambah ? '' : 'disabled'; ?>>
+                            <i class="fas fa-plus"></i><span class="d-none d-sm-inline"> Tambah</span>
                         </button>
-                        <button class="btn btn-info ml-1" data-toggle="modal" data-target="#importModal" type="button" <?php echo $selected_tingkat_id > 0 ? '' : 'disabled'; ?>>
-                            <i class="fas fa-file-import"></i> Import
+                        <button class="btn btn-info" data-toggle="modal" data-target="#importModal" type="button" title="Import data" <?php echo $selected_tingkat_id > 0 ? '' : 'disabled'; ?>>
+                            <i class="fas fa-file-import"></i><span class="d-none d-sm-inline"> Import</span>
                         </button>
-                        <button class="btn btn-warning ml-1 d-none" id="btn-edit-selected" type="button" <?php echo $selected_tingkat_id > 0 ? '' : 'disabled'; ?>>
+                        <button class="btn btn-warning d-none" id="btn-edit-selected" type="button" <?php echo $selected_tingkat_id > 0 ? '' : 'disabled'; ?>>
                             <i class="fas fa-edit"></i> Edit Terpilih
                         </button>
-                        <button class="btn btn-danger ml-1 d-none" id="btn-delete-selected" type="button" <?php echo $selected_tingkat_id > 0 ? '' : 'disabled'; ?>>
+                        <button class="btn btn-danger d-none" id="btn-delete-selected" type="button" <?php echo $selected_tingkat_id > 0 ? '' : 'disabled'; ?>>
                             <i class="fas fa-sign-out-alt"></i> Keluarkan Terpilih
                         </button>
                         <?php endif; ?>
@@ -2012,69 +2230,206 @@ include '../templates/sidebar.php';
                         </div>
                     <?php endif; ?>
 
-                    <div class="mb-3">
-                        <ul class="nav nav-pills flex-wrap" role="tablist">
-                            <?php if (!empty($tingkat_list)): ?>
-                                <?php foreach ($tingkat_list as $index => $t): ?>
-                                    <?php
-                                        $tid = (int)($t['id_tingkat_barung'] ?? 0);
-                                        $active = $tid === $selected_tingkat_id;
-                                        $golongan = barung_golongan_for_tingkat($t['nama_tingkat'] ?? '', $t['golongan'] ?? 'Siaga');
-                                        if ($golongan === 'Penggalang') {
-                                            $pill_class = $active ? 'nav-link active bg-danger border-danger' : 'nav-link border border-danger text-danger';
-                                            $badge_class = $active ? 'badge-light' : 'badge-danger';
-                                        } else {
-                                            $pill_class = $active ? 'nav-link active bg-success border-success' : 'nav-link border border-success text-success';
-                                            $badge_class = $active ? 'badge-light' : 'badge-success';
-                                        }
-                                        $is_first = $index === 0;
-                                        $is_last = $index === count($tingkat_list) - 1;
-                                    ?>
-                                    <li class="nav-item" style="margin: 0;">
-                                        <a href="?tingkat=<?= $tid ?>" 
-                                           class="nav-link py-1 px-3 <?= $pill_class ?>" 
-                                           role="tab" 
-                                           style="pointer-events: auto; transition: none; <?= !$is_first ? 'border-left: 0; margin-left: -1px;' : '' ?> <?= !$is_last ? 'border-right: 0;' : '' ?> border-radius: 0;<?= $is_first ? ' border-top-left-radius: 4px; border-bottom-left-radius: 4px;' : '' ?><?= $is_last ? ' border-top-right-radius: 4px; border-bottom-right-radius: 4px;' : '' ?>">
-                                            <?= htmlspecialchars($t['nama_tingkat']) ?>
-                                            <span class="badge <?= $badge_class ?> ml-1"><?= htmlspecialchars($golongan) ?></span>
-                                        </a>
-                                    </li>
-                                <?php endforeach; ?>
-                            <?php else: ?>
-                                <li class="nav-item">
-                                    <span class="nav-link disabled text-muted py-1 px-3">
-                                        Belum ada tingkat barung. Silakan buat di menu <strong>Data Tingkat Barung</strong>.
-                                    </span>
-                                </li>
-                            <?php endif; ?>
-                        </ul>
+                    <div class="pramuka-tabs-wrap">
+                        <?php if (!empty($tingkat_list)): ?>
+                            <?php foreach ($tingkat_list as $index => $t): ?>
+                                <?php
+                                    $tid = (int)($t['id_tingkat_barung'] ?? 0);
+                                    $active = $tid === $selected_tingkat_id;
+                                    $golongan = barung_golongan_for_tingkat($t['nama_tingkat'] ?? '', $t['golongan'] ?? 'Siaga');
+                                    $is_penggalang_tab = ($golongan === 'Penggalang');
+                                    $count_peserta_tab = (int)($tingkat_counts[$tid] ?? 0);
+                                ?>
+                                <a href="?tingkat=<?= $tid ?>"
+                                   class="pramuka-tab-pill <?= $is_penggalang_tab ? 'pramuka-tab-penggalang' : 'pramuka-tab-siaga' ?> <?= $active ? 'active' : '' ?>"
+                                   role="tab" aria-selected="<?= $active ? 'true' : 'false' ?>">
+                                    <i class="fas <?= $is_penggalang_tab ? 'fa-compass' : 'fa-seedling' ?>"></i>
+                                    <span><?= htmlspecialchars((string)($t['nama_tingkat'] ?? '')) ?></span>
+                                    <span class="pramuka-tab-count"><?= $count_peserta_tab ?></span>
+                                </a>
+                            <?php endforeach; ?>
+                        <?php else: ?>
+                            <span class="text-muted small">Belum ada tingkat barung. Silakan buat di menu <strong>Data Tingkat Barung</strong>.</span>
+                        <?php endif; ?>
                     </div>
 
-                    <div class="row mb-3">
-                        <div class="col-12 col-md-4 col-lg-3 mb-2">
-                            <div class="border rounded bg-light px-3 py-2 h-100">
-                                <div class="text-muted small">Total Anggota</div>
-                                <div class="h5 mb-0"><?= (int)count($peserta_rows) ?> siswa</div>
+                    <?php
+                        $selected_golongan = barung_golongan_for_tingkat($selected_tingkat_name, 'Siaga');
+                        $is_penggalang_sel = ($selected_golongan === 'Penggalang');
+                    ?>
+
+                    <div class="pramuka-app-toolbar">
+                        <div class="pramuka-search">
+                            <i class="fas fa-search"></i>
+                            <input type="search" id="pramukaFilterInput" placeholder="Cari nama, NTA, atau kelas…" autocomplete="off">
+                        </div>
+                        <div class="pramuka-view-switch" role="group" aria-label="Mode tampilan">
+                            <button type="button" class="active" id="btnViewCards" title="Tampilan Kartu Anggota">
+                                <i class="fas fa-id-card"></i> Kartu
+                            </button>
+                            <button type="button" id="btnViewTable" title="Tampilan Tabel">
+                                <i class="fas fa-table"></i> Tabel
+                            </button>
+                        </div>
+                        <?php if ($can_manage_barung && !empty($peserta_rows)): ?>
+                            <label class="pramuka-select-all mb-0" for="checkAllCards">
+                                <input type="checkbox" id="checkAllCards">
+                                <span>Pilih semua</span>
+                            </label>
+                        <?php endif; ?>
+                    </div>
+
+                    <div class="pramuka-summary-row">
+                        <div class="pramuka-summary-chip">
+                            <div class="ico" style="background:#eff6ff;color:#1d4ed8;"><i class="fas fa-users"></i></div>
+                            <div>
+                                <div class="lbl">Total Anggota</div>
+                                <div class="val"><?= (int)count($peserta_rows) ?> siswa</div>
                             </div>
                         </div>
                         <?php foreach ($kelas_summary_barung as $nama_kelas_info => $jumlah_kelas_info): ?>
-                            <div class="col-6 col-md-3 col-lg-2 mb-2">
-                                <div class="border rounded px-3 py-2 h-100">
-                                    <div class="text-muted small">Kelas <?= htmlspecialchars($nama_kelas_info, ENT_QUOTES, 'UTF-8') ?></div>
-                                    <div class="h6 mb-0"><?= (int)$jumlah_kelas_info ?> siswa</div>
+                            <div class="pramuka-summary-chip">
+                                <div class="ico" style="background:#ecfdf5;color:#15803d;"><i class="fas fa-door-open"></i></div>
+                                <div>
+                                    <div class="lbl">Kelas <?= htmlspecialchars($nama_kelas_info, ENT_QUOTES, 'UTF-8') ?></div>
+                                    <div class="val"><?= (int)$jumlah_kelas_info ?> siswa</div>
                                 </div>
                             </div>
                         <?php endforeach; ?>
                         <?php if ($kelas_summary_unmapped > 0): ?>
-                            <div class="col-6 col-md-3 col-lg-2 mb-2">
-                                <div class="border rounded px-3 py-2 h-100">
-                                    <div class="text-muted small">Belum Terkait Kelas</div>
-                                    <div class="h6 mb-0"><?= (int)$kelas_summary_unmapped ?> siswa</div>
+                            <div class="pramuka-summary-chip">
+                                <div class="ico" style="background:#fff7ed;color:#c2410c;"><i class="fas fa-user-clock"></i></div>
+                                <div>
+                                    <div class="lbl">Belum Terkait Kelas</div>
+                                    <div class="val"><?= (int)$kelas_summary_unmapped ?> siswa</div>
                                 </div>
                             </div>
                         <?php endif; ?>
                     </div>
 
+                    <!-- Cards View -->
+                    <div id="pramukaCardsView">
+                        <?php if (empty($peserta_rows)): ?>
+                            <div class="alert alert-light border text-center py-5">
+                                <i class="fas fa-users-slash fa-3x text-muted mb-3 d-block"></i>
+                                <div class="font-weight-bold text-dark">Belum ada anggota aktif di tingkat ini.</div>
+                                <div class="small text-muted mt-1">Tambahkan lewat tombol <strong>Tambah</strong> atau <strong>Import</strong>.</div>
+                            </div>
+                        <?php else: ?>
+                            <div class="row app-cards-row" id="pramukaCardsContainer">
+                                <?php $cardNo = 1; foreach ($peserta_rows as $row): ?>
+                                    <?php
+                                        $pid = (int)($row['id_peserta_didik_barung'] ?? 0);
+                                        $namaLengkap = htmlspecialchars_decode((string)($row['nama_peserta_didik'] ?? ''), ENT_QUOTES);
+                                        $ntaVal = trim((string)($row['nta'] ?? ''));
+                                        $nisnVal = trim((string)($row['nisn'] ?? ''));
+                                        $kelasVal = trim((string)($row['nama_kelas'] ?? ''));
+                                        if ($kelasVal === '') { $kelasVal = '-'; }
+                                        $tempatVal = trim((string)($row['tempat_lahir'] ?? ''));
+                                        if ($tempatVal === '') { $tempatVal = '-'; }
+                                        $tglRaw = (string)($row['tanggal_lahir'] ?? '');
+                                        $tglFmt = ($tglRaw !== '' && $tglRaw !== '0000-00-00') ? date('d M Y', strtotime($tglRaw)) : '-';
+                                        $usiaVal = barung_format_usia($row['tanggal_lahir'] ?? null);
+                                        $fotoVal = (string)($row['foto'] ?? '');
+                                        $jkVal = strtoupper(trim((string)($row['jenis_kelamin'] ?? '')));
+                                        $initials = mb_strtoupper(mb_substr(trim($namaLengkap), 0, 2));
+                                        $fallbackHtml = '<div class="kta-initials">' . htmlspecialchars($initials, ENT_QUOTES, 'UTF-8') . '</div>';
+                                        $avatarHtml = getPersonAvatarHtml($fotoVal, $fallbackHtml, 'kta-photo-img');
+                                    ?>
+                                    <div class="col-12 col-md-6 mb-3 pramuka-card-col"
+                                         data-nama-normal="<?= htmlspecialchars(mb_strtolower($namaLengkap), ENT_QUOTES, 'UTF-8') ?>"
+                                         data-nta-normal="<?= htmlspecialchars(mb_strtolower($ntaVal . ' ' . $nisnVal), ENT_QUOTES, 'UTF-8') ?>"
+                                         data-kelas-normal="<?= htmlspecialchars(mb_strtolower($kelasVal), ENT_QUOTES, 'UTF-8') ?>">
+                                        <div class="pramuka-kta-card <?= $is_penggalang_sel ? 'pramuka-kta-penggalang' : 'pramuka-kta-siaga' ?>">
+                                            <div class="pramuka-kta-top">
+                                                <div class="pramuka-kta-emblem">
+                                                    <i class="fas <?= $is_penggalang_sel ? 'fa-compass' : 'fa-seedling' ?>"></i>
+                                                </div>
+                                                <div class="pramuka-kta-top-text">
+                                                    <div class="org">Gerakan Pramuka</div>
+                                                    <div class="title">Kartu Anggota</div>
+                                                </div>
+                                                <div class="pramuka-kta-serial">#<?= $cardNo++ ?></div>
+                                            </div>
+                                            <div class="pramuka-kta-body">
+                                                <div class="pramuka-kta-photo">
+                                                    <div class="photo-frame"><?= $avatarHtml ?></div>
+                                                    <div class="pramuka-kta-nta"><?= $ntaVal !== '' ? htmlspecialchars($ntaVal, ENT_QUOTES, 'UTF-8') : 'NTA -' ?></div>
+                                                </div>
+                                                <div class="pramuka-kta-info">
+                                                    <div class="pramuka-kta-name"><?= htmlspecialchars($namaLengkap, ENT_QUOTES, 'UTF-8') ?></div>
+                                                    <div class="pramuka-kta-meta">
+                                                        <span class="pramuka-kta-pill blue"><i class="fas fa-door-open"></i> Kelas <?= htmlspecialchars($kelasVal, ENT_QUOTES, 'UTF-8') ?></span>
+                                                        <span class="pramuka-kta-pill <?= $is_penggalang_sel ? 'red' : 'green' ?>">
+                                                            <i class="fas <?= $is_penggalang_sel ? 'fa-compass' : 'fa-seedling' ?>"></i>
+                                                            <?= htmlspecialchars($selected_tingkat_name !== '' ? $selected_tingkat_name : $selected_golongan, ENT_QUOTES, 'UTF-8') ?>
+                                                        </span>
+                                                        <?php if ($jkVal !== ''): ?>
+                                                            <span class="pramuka-kta-pill"><?= ($jkVal === 'P' || $jkVal === 'PEREMPUAN') ? 'Putri' : 'Putra' ?></span>
+                                                        <?php endif; ?>
+                                                    </div>
+                                                    <div class="pramuka-kta-detail">
+                                                        <div>
+                                                            <span class="lbl">Tempat Lahir</span>
+                                                            <span class="val"><?= htmlspecialchars($tempatVal, ENT_QUOTES, 'UTF-8') ?></span>
+                                                        </div>
+                                                        <div>
+                                                            <span class="lbl">Tanggal Lahir</span>
+                                                            <span class="val"><?= htmlspecialchars($tglFmt, ENT_QUOTES, 'UTF-8') ?></span>
+                                                        </div>
+                                                        <div>
+                                                            <span class="lbl">Usia</span>
+                                                            <span class="val"><?= htmlspecialchars($usiaVal !== '' ? $usiaVal : '-', ENT_QUOTES, 'UTF-8') ?></span>
+                                                        </div>
+                                                        <div>
+                                                            <span class="lbl">NISN</span>
+                                                            <span class="val"><?= htmlspecialchars($nisnVal !== '' ? $nisnVal : '-', ENT_QUOTES, 'UTF-8') ?></span>
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                            <div class="pramuka-kta-foot">
+                                                <label class="pramuka-kta-status">
+                                                    <?php if ($can_manage_barung): ?>
+                                                        <input type="checkbox" class="kta-card-check" value="<?= $pid ?>">
+                                                    <?php endif; ?>
+                                                    <span class="dot"></span> Aktif
+                                                </label>
+                                                <?php if ($can_manage_barung): ?>
+                                                    <div class="pramuka-kta-actions">
+                                                        <button class="btn btn-warning edit-btn"
+                                                            data-id="<?= $pid ?>"
+                                                            data-tingkat="<?= (int)($row['id_tingkat_barung'] ?? 0) ?>"
+                                                            data-nama="<?= htmlspecialchars($namaLengkap, ENT_QUOTES, 'UTF-8') ?>"
+                                                            data-nta="<?= htmlspecialchars($ntaVal, ENT_QUOTES, 'UTF-8') ?>"
+                                                            data-tempat="<?= htmlspecialchars($tempatVal === '-' ? '' : $tempatVal, ENT_QUOTES, 'UTF-8') ?>"
+                                                            data-tanggal="<?= htmlspecialchars($tglRaw, ENT_QUOTES, 'UTF-8') ?>"
+                                                            type="button" title="Edit anggota">
+                                                            <i class="fas fa-pen"></i>
+                                                        </button>
+                                                        <button class="btn btn-danger delete-btn"
+                                                            data-id="<?= $pid ?>"
+                                                            data-tingkat="<?= (int)($row['id_tingkat_barung'] ?? 0) ?>"
+                                                            data-nama="<?= htmlspecialchars($namaLengkap, ENT_QUOTES, 'UTF-8') ?>"
+                                                            type="button" title="Keluarkan anggota">
+                                                            <i class="fas fa-user-minus"></i>
+                                                        </button>
+                                                    </div>
+                                                <?php endif; ?>
+                                            </div>
+                                        </div>
+                                    </div>
+                                <?php endforeach; ?>
+                            </div>
+                            <div id="pramukaCardsEmptyFilter" class="alert alert-light border text-center py-4 d-none">
+                                <i class="fas fa-search fa-2x text-muted mb-2 d-block"></i>
+                                <span class="text-muted">Tidak ada anggota yang cocok dengan pencarian.</span>
+                            </div>
+                        <?php endif; ?>
+                    </div>
+
+                    <!-- Table View -->
+                    <div id="pramukaTableView" style="display:none;">
                     <div class="table-responsive">
                         <table class="table table-striped" id="table-1">
                             <thead>
@@ -2133,11 +2488,26 @@ include '../templates/sidebar.php';
                             </tbody>
                         </table>
                     </div>
+                    </div><!-- /#pramukaTableView -->
                 </div>
             </div>
         </div>
     </section>
 </div>
+
+<?php if ($can_manage_barung): ?>
+<div id="ktaFloatingBar" class="kta-floating-bar">
+    <span class="kta-floating-count" id="ktaFloatingCount">0 Terpilih</span>
+    <div class="d-flex align-items-center" style="gap:6px;">
+        <button type="button" class="btn btn-warning" id="btn-floating-edit">
+            <i class="fas fa-pen"></i> Edit
+        </button>
+        <button type="button" class="btn btn-danger" id="btn-floating-delete">
+            <i class="fas fa-user-minus"></i> Keluarkan
+        </button>
+    </div>
+</div>
+<?php endif; ?>
 
 <?php if ($can_manage_barung): ?>
 <!-- Add Modal: tambah dari data siswa (filter kelas sesuai tab tingkat) -->
@@ -2396,7 +2766,7 @@ include '../templates/sidebar.php';
                 <div class="modal-body py-2">
                     <p class="text-muted small mb-2">Ubah data pada tabel di bawah, lalu simpan. Baris tanpa nama akan dilewati; NTA boleh kosong.</p>
                     <div class="table-responsive" style="max-height: min(65vh, 520px); overflow-y: auto;">
-                        <table class="table table-sm table-bordered mb-0 align-middle">
+                        <table class="table table-sm table-bordered mb-0 align-middle" style="min-width: 640px;">
                             <thead class="thead-light">
                                 <tr>
                                     <th style="width: 48px;">No</th>

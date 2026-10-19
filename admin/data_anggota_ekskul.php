@@ -30,12 +30,9 @@ try {
 }
 
 $css_libs = [
-    'https://cdn.datatables.net/1.10.25/css/dataTables.bootstrap4.min.css',
     'https://cdnjs.cloudflare.com/ajax/libs/toastr.js/latest/toastr.min.css',
 ];
 $js_libs = [
-    'https://cdn.datatables.net/1.10.25/js/jquery.dataTables.min.js',
-    'https://cdn.datatables.net/1.10.25/js/dataTables.bootstrap4.min.js',
     'https://cdnjs.cloudflare.com/ajax/libs/toastr.js/latest/toastr.min.js',
 ];
 
@@ -120,6 +117,23 @@ if ($ekskul_name === '') {
 $ekskul_title = $ekskul_name !== '' ? ('Data Anggota ' . $ekskul_name) : 'Data Anggota Ekstrakurikuler';
 $page_title = $ekskul_title;
 $slug = $ekskul_id > 0 ? ('ekskul_' . $ekskul_id) : 'ekskul';
+
+$ekskul_school = getSchoolProfile($pdo);
+$ekskul_school_name = trim((string)($ekskul_school['nama_madrasah'] ?? ''));
+if ($ekskul_school_name === '') {
+    $ekskul_school_name = 'Madrasah';
+}
+
+// Jumlah anggota aktif per ekskul (untuk badge tab)
+$ekskul_counts = [];
+try {
+    $count_rows = $pdo->query("SELECT id_ekstrakurikuler, COUNT(*) AS jml FROM {$table_name} WHERE status = 'aktif' GROUP BY id_ekstrakurikuler")->fetchAll(PDO::FETCH_ASSOC);
+    foreach ($count_rows as $cr) {
+        $ekskul_counts[(int)$cr['id_ekstrakurikuler']] = (int)$cr['jml'];
+    }
+} catch (Exception $e) {
+    $ekskul_counts = [];
+}
 
 if ($message === null && $_SERVER['REQUEST_METHOD'] === 'GET' && isset($_GET['ok'])) {
     $ok = (string)($_GET['ok'] ?? '');
@@ -255,7 +269,7 @@ try {
 if ($selected_class_id > 0 && $ekskul_id > 0) {
     try {
         $stmt_members = $pdo->prepare("
-            SELECT a.id, s.nisn, s.nama_siswa
+            SELECT a.id, a.tanggal_masuk, s.nisn, s.nama_siswa, s.foto, s.jenis_kelamin
             FROM {$table_name} a
             INNER JOIN tb_siswa s ON s.id_siswa = a.id_siswa
             WHERE a.status = 'aktif' AND a.id_ekstrakurikuler = ? AND s.id_kelas = ?
@@ -468,12 +482,29 @@ if ($export_type !== '' && $selected_class_id > 0 && $ekskul_id > 0) {
 
 $js_page = [<<<'JS'
 $(function () {
-  if ($('#table-anggota').length) {
-    $('#table-anggota').DataTable();
+  function filterCards() {
+    var q = ($('#ekskulSearchInput').val() || '').toLowerCase().trim();
+    var shown = 0;
+    $('#ekskulCardsContainer .ekskul-card-col').each(function () {
+      var hay = String($(this).attr('data-search') || '');
+      var ok = q === '' || hay.indexOf(q) !== -1;
+      $(this).toggle(ok);
+      if (ok) { shown++; }
+    });
+    $('#ekskulVisibleCount').text(shown);
   }
+  $('#ekskulSearchInput').on('input', filterCards);
 
   $('#checkAllSiswa').on('change', function () {
     $('.check-siswa').prop('checked', $(this).is(':checked'));
+  });
+
+  $('#searchSiswaTersedia').on('input', function () {
+    var q = ($(this).val() || '').toLowerCase().trim();
+    $('.siswa-tersedia-row').each(function () {
+      var hay = String($(this).attr('data-search') || '');
+      $(this).toggle(q === '' || hay.indexOf(q) !== -1);
+    });
   });
 
   $(document).on('submit', '.form-keluarkan-angota', function (e) {
@@ -501,6 +532,158 @@ include '../templates/header.php';
 include '../templates/sidebar.php';
 ?>
 
+<style>
+.ekskul-tabs-wrap {
+    display: flex; align-items: center; gap: 8px;
+    overflow-x: auto; padding: 4px 2px 10px;
+    -webkit-overflow-scrolling: touch; scrollbar-width: thin;
+}
+.ekskul-tabs-wrap::-webkit-scrollbar { height: 4px; }
+.ekskul-tabs-wrap::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 999px; }
+.ekskul-tab-pill {
+    display: inline-flex; align-items: center; gap: 7px;
+    flex: 0 0 auto; padding: 9px 15px; border-radius: 999px !important;
+    font-size: .86rem; font-weight: 700; white-space: nowrap;
+    text-decoration: none !important; border: 1.5px solid #e2e8f0;
+    background: #fff; color: #475569; box-shadow: 0 2px 6px rgba(15, 23, 42, .05);
+    transition: all .2s ease;
+}
+.ekskul-tab-pill:hover { color: #2563eb; border-color: #bfdbfe; }
+.ekskul-tab-pill.active {
+    background: linear-gradient(135deg, #4f46e5 0%, #3b82f6 100%);
+    border-color: transparent; color: #fff;
+    box-shadow: 0 6px 16px rgba(79, 70, 229, .28);
+}
+.ekskul-tab-count {
+    font-size: .7rem; font-weight: 800; padding: 2px 7px;
+    border-radius: 999px; background: #eef2ff; color: #4338ca;
+}
+.ekskul-tab-pill.active .ekskul-tab-count {
+    background: rgba(255, 255, 255, .25); color: #fff;
+}
+.ekskul-toolbar-actions { display: inline-flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+.ekskul-toolbar .ekskul-search { flex: 0 0 260px; width: 260px; }
+.ekskul-toolbar .app-select-wrap { flex: 0 0 260px; }
+.ekskul-toolbar .app-select-btn { width: 260px; }
+.ekskul-toolbar .app-select-wrap .dropdown-menu { left: auto; right: 0; }
+.ekskul-toolbar-actions .btn {
+    border-radius: 12px; font-size: .8rem; font-weight: 700;
+    display: inline-flex; align-items: center; gap: 6px; padding: 8px 13px;
+}
+.ekskul-kta-card {
+    position: relative; display: flex; flex-direction: column;
+    height: 100%; background: #fff; border: 1px solid #e2e8f0;
+    border-radius: 16px; overflow: hidden;
+    box-shadow: 0 6px 18px rgba(15, 23, 42, .06);
+    transition: transform .18s, box-shadow .18s;
+}
+.ekskul-kta-card:hover { transform: translateY(-3px); box-shadow: 0 12px 28px rgba(15, 23, 42, .12); }
+.ekskul-kta-top {
+    position: relative; padding: 12px 14px; color: #fff;
+    display: flex; align-items: center; gap: 10px; overflow: hidden;
+    background: linear-gradient(135deg, #4338ca 0%, #2563eb 100%);
+}
+.ekskul-kta-top::after {
+    content: ""; position: absolute; right: -26px; top: -30px;
+    width: 110px; height: 110px; border-radius: 50%; background: rgba(255, 255, 255, .12);
+}
+.ekskul-kta-emblem {
+    width: 34px; height: 34px; border-radius: 50%; flex: 0 0 auto;
+    background: rgba(255, 255, 255, .2); border: 1.5px solid rgba(255, 255, 255, .35);
+    display: grid; place-items: center; font-size: 1rem;
+}
+.ekskul-kta-top-text { min-width: 0; line-height: 1.15; }
+.ekskul-kta-top-text .org {
+    font-size: .66rem; letter-spacing: .09em; font-weight: 800;
+    text-transform: uppercase; opacity: .9;
+    overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 46vw;
+}
+.ekskul-kta-top-text .title { font-size: .86rem; font-weight: 800; letter-spacing: .02em; }
+.ekskul-kta-serial {
+    margin-left: auto; font-size: .66rem; font-weight: 800;
+    padding: 4px 9px; border-radius: 999px; white-space: nowrap;
+    background: rgba(255, 255, 255, .22); border: 1px solid rgba(255, 255, 255, .35);
+}
+.ekskul-kta-body { position: relative; padding: 14px; display: flex; gap: 13px; flex: 1 1 auto; }
+.ekskul-kta-body::before {
+    content: "\f5a2"; font-family: "Font Awesome 5 Free"; font-weight: 900;
+    position: absolute; right: 6px; bottom: -6px; font-size: 5.5rem;
+    color: rgba(15, 23, 42, .035); pointer-events: none;
+}
+.ekskul-kta-photo { position: relative; flex: 0 0 auto; }
+.ekskul-kta-photo .photo-frame {
+    width: 72px; height: 88px; border-radius: 12px; overflow: hidden;
+    background: linear-gradient(135deg, #dbeafe, #e0f2fe); border: 2px solid #fff;
+    box-shadow: 0 3px 10px rgba(15, 23, 42, .15); display: grid; place-items: center;
+}
+.ekskul-kta-photo img, .ekskul-kta-photo .ekskul-initials {
+    width: 100%; height: 100%; object-fit: cover;
+    display: grid; place-items: center; font-size: 1.4rem; font-weight: 800; color: #1e40af;
+    background: linear-gradient(135deg, #dbeafe, #e0f2fe);
+}
+.ekskul-kta-nta {
+    position: absolute; left: 50%; transform: translateX(-50%); bottom: -9px;
+    background: #0f172a; color: #fff; font-size: .6rem; font-weight: 800;
+    padding: 3px 8px; border-radius: 999px; white-space: nowrap; border: 2px solid #fff;
+}
+.ekskul-kta-info { min-width: 0; flex: 1; }
+.ekskul-kta-name {
+    font-size: .98rem; font-weight: 800; color: #0f172a;
+    line-height: 1.25; margin: 0 0 5px; overflow-wrap: anywhere;
+}
+.ekskul-kta-meta { display: flex; flex-wrap: wrap; gap: 5px; margin-bottom: 8px; }
+.ekskul-kta-pill {
+    display: inline-flex; align-items: center; gap: 4px;
+    font-size: .68rem; font-weight: 700; padding: 3px 8px;
+    border-radius: 999px; background: #f1f5f9; color: #334155;
+}
+.ekskul-kta-pill.blue { background: #eff6ff; color: #1d4ed8; }
+.ekskul-kta-pill.green { background: #ecfdf5; color: #15803d; }
+.ekskul-kta-detail {
+    display: grid; grid-template-columns: 1fr 1fr; gap: 4px 10px;
+    font-size: .72rem; color: #475569;
+}
+.ekskul-kta-detail .lbl {
+    display: block; font-size: .62rem; color: #94a3b8;
+    text-transform: uppercase; letter-spacing: .05em; font-weight: 800;
+}
+.ekskul-kta-detail .val { font-weight: 700; color: #1e293b; overflow-wrap: anywhere; }
+.ekskul-kta-foot {
+    display: flex; align-items: center; justify-content: space-between; gap: 8px;
+    padding: 9px 14px; border-top: 1px dashed #e2e8f0; background: #fbfdff;
+}
+.ekskul-kta-status {
+    display: inline-flex; align-items: center; gap: 6px;
+    font-size: .7rem; font-weight: 800; color: #15803d; margin: 0;
+}
+.ekskul-kta-status .dot {
+    width: 7px; height: 7px; border-radius: 50%; background: #22c55e;
+    box-shadow: 0 0 0 3px rgba(34, 197, 94, .16);
+}
+.ekskul-kta-foot .btn { border-radius: 10px; font-size: .72rem; font-weight: 700; padding: 6px 10px; }
+@media (max-width: 575.98px) {
+    .ekskul-kta-body { gap: 11px; padding: 13px 12px; }
+    .ekskul-kta-photo .photo-frame { width: 64px; height: 78px; }
+    .ekskul-kta-name { font-size: .92rem; }
+    .ekskul-kta-detail { font-size: .69rem; }
+    .ekskul-kta-top { padding: 10px 12px; }
+    .ekskul-kta-top-text .title { font-size: .78rem; }
+    .ekskul-kta-serial { font-size: .6rem; padding: 3px 7px; }
+    .ekskul-toolbar-actions { width: 100%; }
+    .ekskul-toolbar-actions .btn { flex: 1 1 0; justify-content: center; }
+    .ekskul-toolbar .ekskul-search,
+    .ekskul-toolbar .app-select-wrap,
+    .ekskul-toolbar .app-select-btn { flex: 1 1 100%; width: 100%; }
+}
+@media (max-width: 991.98px) {
+    #ekskulCardsView { padding-bottom: 12px; }
+}
+</style>
+
+<?php
+$members_count = count($members);
+$available_count = count($available_students);
+?>
 <div class="main-content">
     <section class="section">
         <div class="section-header">
@@ -508,107 +691,193 @@ include '../templates/sidebar.php';
             <?php echo render_breadcrumb(); ?>
         </div>
         <div class="section-body">
-            <div class="card">
-                <div class="card-header">
-                    <h4>Filter Kelas</h4>
+
+            <div class="ekskul-tabs-wrap">
+                <?php if (!empty($ekskul_list)): ?>
+                    <?php foreach ($ekskul_list as $e): ?>
+                        <?php
+                            $eid = (int)($e['id_ekstrakurikuler'] ?? 0);
+                            $e_active = ($eid === $ekskul_id);
+                        ?>
+                        <a href="?ekskul=<?= $eid ?><?= $selected_class_id > 0 ? '&kelas=' . (int)$selected_class_id : '' ?>"
+                           class="ekskul-tab-pill <?= $e_active ? 'active' : '' ?>"
+                           aria-selected="<?= $e_active ? 'true' : 'false' ?>">
+                            <i class="fas fa-medal"></i>
+                            <span><?= htmlspecialchars((string)($e['nama_ekstrakurikuler'] ?? '')) ?></span>
+                            <span class="ekskul-tab-count"><?= (int)($ekskul_counts[$eid] ?? 0) ?></span>
+                        </a>
+                    <?php endforeach; ?>
+                <?php else: ?>
+                    <span class="text-muted small">Belum ada data ekstrakurikuler (selain Pramuka).</span>
+                <?php endif; ?>
+            </div>
+
+            <div class="app-summary-row">
+                <div class="app-summary-chip">
+                    <div class="ico" style="background:#eef2ff;color:#4338ca;"><i class="fas fa-users"></i></div>
+                    <div>
+                        <div class="lbl">Total Anggota</div>
+                        <div class="val"><?= (int)$total_members_count ?> siswa</div>
+                    </div>
                 </div>
-                <div class="card-body">
-                    <form method="GET" id="formFilterKelasAnggota">
-                        <div class="row align-items-end">
-                            <div class="col-md-6 form-group mb-2 mb-md-0">
-                                <label class="font-weight-bold" for="selectEkskulAnggota">Ekstrakurikuler:</label>
-                                <select name="ekskul" id="selectEkskulAnggota" class="form-control" onchange="this.form.submit();">
-                                    <?php if (empty($ekskul_list)): ?>
-                                        <option value="">-- Belum ada ekskul --</option>
-                                    <?php endif; ?>
-                                    <?php foreach ($ekskul_list as $e): ?>
-                                        <option value="<?= (int)$e['id_ekstrakurikuler'] ?>" <?= $ekskul_id === (int)$e['id_ekstrakurikuler'] ? 'selected' : '' ?>>
-                                            <?= htmlspecialchars($e['nama_ekstrakurikuler']) ?>
-                                        </option>
-                                    <?php endforeach; ?>
-                                </select>
-                            </div>
-                            <div class="col-md-6 form-group mb-0">
-                                <label class="font-weight-bold" for="selectKelasAnggota">Pilih Kelas:</label>
-                                <select name="kelas" id="selectKelasAnggota" class="form-control" onchange="this.form.submit();">
-                                    <option value="">-- Pilih Kelas --</option>
-                                    <?php foreach ($classes as $c): ?>
-                                        <option value="<?= (int)$c['id_kelas'] ?>" <?= $selected_class_id === (int)$c['id_kelas'] ? 'selected' : '' ?>>
-                                            <?= htmlspecialchars($c['nama_kelas']) ?>
-                                        </option>
-                                    <?php endforeach; ?>
-                                </select>
-                            </div>
-                        </div>
-                        <div class="mt-2">
-                            <span class="badge badge-primary px-3 py-2" style="font-size: 13px;">
-                                Jumlah Anggota: <?= $selected_class_id > 0 ? (int)count($members) : (int)$total_members_count ?>
-                            </span>
-                        </div>
-                    </form>
+                <div class="app-summary-chip">
+                    <div class="ico" style="background:#ecfdf5;color:#15803d;"><i class="fas fa-door-open"></i></div>
+                    <div>
+                        <div class="lbl"><?= $selected_class_id > 0 ? 'Kelas ' . htmlspecialchars($selected_class_name) : 'Kelas' ?></div>
+                        <div class="val"><?= $selected_class_id > 0 ? (int)$members_count . ' siswa' : '-' ?></div>
+                    </div>
+                </div>
+                <div class="app-summary-chip">
+                    <div class="ico" style="background:#fff7ed;color:#c2410c;"><i class="fas fa-user-plus"></i></div>
+                    <div>
+                        <div class="lbl">Belum Terdaftar</div>
+                        <div class="val"><?= $selected_class_id > 0 ? (int)$available_count . ' siswa' : '-' ?></div>
+                    </div>
                 </div>
             </div>
 
-            <?php if ($selected_class_id > 0): ?>
-            <div class="card">
-                <div class="card-header">
-                    <h4>Daftar Anggota Kelas <?= htmlspecialchars($selected_class_name) ?></h4>
-                    <div class="card-header-action">
-                        <?php if ($can_manage_anggota_ekskul): ?>
-                        <button class="btn btn-success" data-toggle="modal" data-target="#modalTambahKolektif">
-                            <i class="fas fa-plus"></i> Tambah Anggota
+            <div class="app-toolbar ekskul-toolbar">
+                <div class="app-search ekskul-search">
+                    <i class="fas fa-search"></i>
+                    <input type="search" id="ekskulSearchInput" placeholder="Cari nama atau NISN…" autocomplete="off">
+                </div>
+
+                <div class="dropdown app-select-wrap">
+                    <button class="app-select-btn" type="button" id="dropdownFilterKelas" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
+                        <i class="fas fa-door-open"></i>
+                        <span><?= $selected_class_id > 0 ? 'Kelas ' . htmlspecialchars($selected_class_name) : 'Pilih Kelas' ?></span>
+                        <i class="fas fa-chevron-down app-select-caret"></i>
+                    </button>
+                    <div class="dropdown-menu dropdown-menu-right" aria-labelledby="dropdownFilterKelas">
+                        <a class="dropdown-item <?= $selected_class_id <= 0 ? 'app-select-selected' : '' ?>" href="?ekskul=<?= (int)$ekskul_id ?>">
+                            <i class="fas fa-list mr-2"></i>Pilih Kelas
+                            <?php if ($selected_class_id <= 0): ?><i class="fas fa-check app-select-check"></i><?php endif; ?>
+                        </a>
+                        <?php foreach ($classes as $c): ?>
+                            <?php $c_selected = ($selected_class_id === (int)$c['id_kelas']); ?>
+                            <a class="dropdown-item <?= $c_selected ? 'app-select-selected' : '' ?>"
+                               href="?ekskul=<?= (int)$ekskul_id ?>&kelas=<?= (int)$c['id_kelas'] ?>">
+                                <i class="fas fa-door-open mr-2"></i><?= htmlspecialchars($c['nama_kelas']) ?>
+                                <?php if ($c_selected): ?><i class="fas fa-check app-select-check"></i><?php endif; ?>
+                            </a>
+                        <?php endforeach; ?>
+                    </div>
+                </div>
+
+                <?php if ($selected_class_id > 0): ?>
+                <div class="ekskul-toolbar-actions">
+                    <?php if ($can_manage_anggota_ekskul): ?>
+                        <button type="button" class="btn btn-success" data-toggle="modal" data-target="#modalTambahKolektif">
+                            <i class="fas fa-plus"></i><span>Tambah</span>
                         </button>
-                        <?php endif; ?>
-                        <a href="?ekskul=<?= (int)$ekskul_id ?>&kelas=<?= (int)$selected_class_id ?>&export=excel" class="btn btn-info">
-                            <i class="fas fa-file-excel"></i> Ekspor Excel
-                        </a>
-                        <a href="?ekskul=<?= (int)$ekskul_id ?>&kelas=<?= (int)$selected_class_id ?>&export=pdf&amp;auto=1" target="_blank" class="btn btn-danger">
-                            <i class="fas fa-file-pdf"></i> Ekspor PDF
-                        </a>
-                    </div>
+                    <?php endif; ?>
+                    <a href="?ekskul=<?= (int)$ekskul_id ?>&kelas=<?= (int)$selected_class_id ?>&export=excel" class="btn btn-info">
+                        <i class="fas fa-file-excel"></i><span>Excel</span>
+                    </a>
+                    <a href="?ekskul=<?= (int)$ekskul_id ?>&kelas=<?= (int)$selected_class_id ?>&export=pdf&amp;auto=1" target="_blank" class="btn btn-danger">
+                        <i class="fas fa-file-pdf"></i><span>PDF</span>
+                    </a>
                 </div>
-                <div class="card-body">
-                    <div class="table-responsive">
-                        <table class="table table-striped" id="table-anggota">
-                            <thead>
-                                <tr>
-                                    <th>No</th>
-                                    <th>NISN</th>
-                                    <th>Nama Siswa</th>
-                                    <?php if ($can_manage_anggota_ekskul): ?><th>Aksi</th><?php endif; ?>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                <?php if (!empty($members)): ?>
-                                    <?php foreach ($members as $i => $m): ?>
-                                        <tr>
-                                            <td><?= $i + 1 ?></td>
-                                            <td><?= htmlspecialchars($m['nisn'] ?? '-') ?></td>
-                                            <td><?= htmlspecialchars($m['nama_siswa']) ?></td>
-                                            <?php if ($can_manage_anggota_ekskul): ?><td>
-                                                <form method="POST" class="d-inline form-keluarkan-angota">
-                                                    <input type="hidden" name="ekskul" value="<?= (int)$ekskul_id ?>">
-                                                    <input type="hidden" name="id_kelas" value="<?= (int)$selected_class_id ?>">
-                                                    <input type="hidden" name="action" value="keluarkan">
-                                                    <input type="hidden" name="id_anggota" value="<?= (int)$m['id'] ?>">
-                                                    <button type="submit" class="btn btn-warning btn-sm">
-                                                        <i class="fas fa-user-minus"></i> Keluarkan
-                                                    </button>
-                                                </form>
-                                            </td><?php endif; ?>
-                                        </tr>
-                                    <?php endforeach; ?>
-                                <?php endif; ?>
-                            </tbody>
-                        </table>
-                        <?php if (empty($members)): ?>
-                            <div class="alert alert-info mb-0">Belum ada anggota aktif pada kelas ini.</div>
-                        <?php endif; ?>
-                    </div>
-                </div>
+                <?php endif; ?>
             </div>
 
-            <?php endif; ?>
+            <div id="ekskulCardsView">
+                <?php if ($selected_class_id <= 0): ?>
+                    <div class="alert alert-light border text-center py-5">
+                        <i class="fas fa-door-open fa-3x text-muted mb-3 d-block"></i>
+                        <div class="font-weight-bold text-dark">Pilih kelas terlebih dahulu.</div>
+                        <div class="small text-muted mt-1">Daftar anggota akan tampil sebagai kartu.</div>
+                    </div>
+                <?php elseif (empty($members)): ?>
+                    <div class="alert alert-light border text-center py-5">
+                        <i class="fas fa-users-slash fa-3x text-muted mb-3 d-block"></i>
+                        <div class="font-weight-bold text-dark">Belum ada anggota aktif pada kelas ini.</div>
+                        <div class="small text-muted mt-1">Tambahkan lewat tombol <strong>Tambah</strong>.</div>
+                    </div>
+                <?php else: ?>
+                    <div class="row app-cards-row" id="ekskulCardsContainer">
+                        <?php foreach ($members as $i => $m): ?>
+                            <?php
+                                $m_nama = (string)($m['nama_siswa'] ?? '');
+                                $m_nisn = trim((string)($m['nisn'] ?? ''));
+                                $m_jk = strtoupper(trim((string)($m['jenis_kelamin'] ?? '')));
+                                $m_jk_label = ($m_jk === 'P' || $m_jk === 'PEREMPUAN') ? 'Putri' : ($m_jk === '' ? '' : 'Putra');
+                                $m_masuk = (string)($m['tanggal_masuk'] ?? '');
+                                $m_masuk_fmt = ($m_masuk !== '' && $m_masuk !== '0000-00-00 00:00:00') ? date('d M Y', strtotime($m_masuk)) : '-';
+                                $m_initials = mb_strtoupper(mb_substr(trim($m_nama), 0, 2));
+                                $m_fallback = '<div class="ekskul-initials">' . htmlspecialchars($m_initials, ENT_QUOTES, 'UTF-8') . '</div>';
+                                $m_avatar = getPersonAvatarHtml((string)($m['foto'] ?? ''), $m_fallback, 'ekskul-photo-img');
+                                $m_search = mb_strtolower($m_nama . ' ' . $m_nisn . ' ' . $selected_class_name);
+                            ?>
+                            <div class="col-12 col-md-6 mb-3 ekskul-card-col"
+                                 data-search="<?= htmlspecialchars($m_search, ENT_QUOTES, 'UTF-8') ?>">
+                                <div class="ekskul-kta-card">
+                                    <div class="ekskul-kta-top">
+                                        <div class="ekskul-kta-emblem"><i class="fas fa-medal"></i></div>
+                                        <div class="ekskul-kta-top-text">
+                                            <div class="org"><?= htmlspecialchars($ekskul_school_name) ?></div>
+                                            <div class="title">Kartu Anggota <?= htmlspecialchars($ekskul_name !== '' ? $ekskul_name : 'Ekstrakurikuler') ?></div>
+                                        </div>
+                                        <div class="ekskul-kta-serial">#<?= $i + 1 ?></div>
+                                    </div>
+                                    <div class="ekskul-kta-body">
+                                        <div class="ekskul-kta-photo">
+                                            <div class="photo-frame"><?= $m_avatar ?></div>
+                                            <div class="ekskul-kta-nta"><?= $m_nisn !== '' ? htmlspecialchars($m_nisn, ENT_QUOTES, 'UTF-8') : 'NISN -' ?></div>
+                                        </div>
+                                        <div class="ekskul-kta-info">
+                                            <div class="ekskul-kta-name"><?= htmlspecialchars($m_nama, ENT_QUOTES, 'UTF-8') ?></div>
+                                            <div class="ekskul-kta-meta">
+                                                <span class="ekskul-kta-pill blue"><i class="fas fa-door-open"></i> Kelas <?= htmlspecialchars($selected_class_name) ?></span>
+                                                <span class="ekskul-kta-pill green"><i class="fas fa-medal"></i> <?= htmlspecialchars($ekskul_name !== '' ? $ekskul_name : 'Ekskul') ?></span>
+                                                <?php if ($m_jk_label !== ''): ?>
+                                                    <span class="ekskul-kta-pill"><?= $m_jk_label ?></span>
+                                                <?php endif; ?>
+                                            </div>
+                                            <div class="ekskul-kta-detail">
+                                                <div>
+                                                    <span class="lbl">NISN</span>
+                                                    <span class="val"><?= $m_nisn !== '' ? htmlspecialchars($m_nisn, ENT_QUOTES, 'UTF-8') : '-' ?></span>
+                                                </div>
+                                                <div>
+                                                    <span class="lbl">Kelas</span>
+                                                    <span class="val"><?= htmlspecialchars($selected_class_name) ?></span>
+                                                </div>
+                                                <div>
+                                                    <span class="lbl">Tanggal Masuk</span>
+                                                    <span class="val"><?= htmlspecialchars($m_masuk_fmt, ENT_QUOTES, 'UTF-8') ?></span>
+                                                </div>
+                                                <div>
+                                                    <span class="lbl">Status</span>
+                                                    <span class="val" style="color:#15803d;">Aktif</span>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <div class="ekskul-kta-foot">
+                                        <span class="ekskul-kta-status"><span class="dot"></span> Aktif</span>
+                                        <?php if ($can_manage_anggota_ekskul): ?>
+                                            <form method="POST" class="form-keluarkan-angota m-0">
+                                                <input type="hidden" name="ekskul" value="<?= (int)$ekskul_id ?>">
+                                                <input type="hidden" name="id_kelas" value="<?= (int)$selected_class_id ?>">
+                                                <input type="hidden" name="action" value="keluarkan">
+                                                <input type="hidden" name="id_anggota" value="<?= (int)$m['id'] ?>">
+                                                <button type="submit" class="btn btn-warning btn-sm">
+                                                    <i class="fas fa-user-minus"></i> Keluarkan
+                                                </button>
+                                            </form>
+                                        <?php endif; ?>
+                                    </div>
+                                </div>
+                            </div>
+                        <?php endforeach; ?>
+                    </div>
+                    <div class="text-muted small mt-1">
+                        Menampilkan <span id="ekskulVisibleCount"><?= (int)$members_count ?></span> dari <?= (int)$members_count ?> anggota
+                    </div>
+                <?php endif; ?>
+            </div>
+
         </div>
     </section>
 </div>
@@ -635,9 +904,13 @@ include '../templates/sidebar.php';
                                 <input type="checkbox" class="custom-control-input" id="checkAllSiswa">
                                 <label class="custom-control-label" for="checkAllSiswa">Pilih Semua</label>
                             </div>
+                            <div class="app-search mt-2">
+                                <i class="fas fa-search"></i>
+                                <input type="search" id="searchSiswaTersedia" placeholder="Cari nama atau NISN…" autocomplete="off">
+                            </div>
                         </div>
-                        <div class="table-responsive">
-                            <table class="table table-sm table-bordered">
+                        <div class="table-responsive" style="max-height:50vh;overflow:auto;">
+                            <table class="table table-sm table-bordered mb-0">
                                 <thead>
                                     <tr>
                                         <th style="width: 40px;">#</th>
@@ -647,7 +920,8 @@ include '../templates/sidebar.php';
                                 </thead>
                                 <tbody>
                                     <?php foreach ($available_students as $s): ?>
-                                        <tr>
+                                        <?php $s_search = mb_strtolower((string)($s['nama_siswa'] ?? '') . ' ' . (string)($s['nisn'] ?? '')); ?>
+                                        <tr class="siswa-tersedia-row" data-search="<?= htmlspecialchars($s_search, ENT_QUOTES, 'UTF-8') ?>">
                                             <td class="text-center">
                                                 <input type="checkbox" class="check-siswa" name="selected_siswa[]" value="<?= (int)$s['id_siswa'] ?>">
                                             </td>

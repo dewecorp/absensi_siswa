@@ -3755,3 +3755,181 @@ body:not(.sidebar-mini) .sidebar-style-2 .sidebar-menu li.active ul.dropdown-men
     text-align: center;
   }
 }
+
+@media (max-width: 991.98px) {
+  .main-content .app-cards-row {
+    margin-left: 0 !important;
+    margin-right: 0 !important;
+  }
+  .main-content .app-cards-row > [class*="col-"] {
+    padding-left: 10px !important;
+    padding-right: 10px !important;
+  }
+  .main-content .app-cards-row > [class*="col-"]:first-child {
+    padding-left: 12px !important;
+  }
+  .main-content .app-cards-row > [class*="col-"]:last-child {
+    padding-right: 12px !important;
+  }
+}
+
+/* ===== Shared mobile-app toolbar (used by SKU & similar pages) ===== */
+.app-toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 10px;
+  margin: 2px 0 14px;
+}
+.app-search {
+  flex: 1 1 240px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  background: #fff;
+  border: 1.5px solid #e2e8f0;
+  border-radius: 14px;
+  padding: 9px 13px;
+  box-shadow: 0 2px 8px rgba(15, 23, 42, .04);
+}
+.app-search i {
+  color: #94a3b8;
+}
+.app-search input {
+  border: 0;
+  outline: 0;
+  width: 100%;
+  font-size: .9rem;
+  color: #0f172a;
+  background: transparent;
+}
+.app-view-switch {
+  display: inline-flex;
+  background: #eef2f7;
+  border-radius: 14px;
+  padding: 4px;
+  gap: 4px;
+}
+.app-view-switch button {
+  border: 0;
+  background: transparent;
+  color: #475569;
+  font-size: .82rem;
+  font-weight: 700;
+  padding: 7px 14px;
+  border-radius: 11px;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  transition: all .18s;
+}
+.app-view-switch button.active {
+  background: #fff;
+  color: #2563eb;
+  box-shadow: 0 2px 8px rgba(15, 23, 42, .12);
+}
+/* Pill select (custom dropdown) — bentuk sama dengan .app-search */
+.app-select-wrap {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+}
+.app-select-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  height: 42px;
+  min-width: 132px;
+  padding: 0 13px;
+  background: #fff;
+  border: 1.5px solid #e2e8f0;
+  border-radius: 14px;
+  box-shadow: 0 2px 8px rgba(15, 23, 42, .04);
+  color: #0f172a;
+  font-size: .86rem;
+  font-weight: 700;
+  cursor: pointer;
+  transition: border-color .15s ease, box-shadow .15s ease;
+}
+.app-select-btn:hover,
+.app-select-btn:focus {
+  border-color: #bfdbfe;
+  box-shadow: 0 4px 12px rgba(37, 99, 235, .12);
+  outline: 0;
+}
+.app-select-btn > i:first-child {
+  color: #94a3b8;
+  font-size: .82rem;
+  flex: 0 0 auto;
+}
+.app-select-btn .app-select-caret {
+  margin-left: auto;
+  color: #94a3b8;
+  font-size: .62rem;
+  transition: transform .18s ease;
+}
+.app-select-wrap.show .app-select-caret { transform: rotate(180deg); }
+.app-summary-row {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 8px;
+  margin-bottom: 14px;
+}
+.app-summary-chip {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  background: #fff;
+  border: 1px solid #e2e8f0;
+  border-radius: 14px;
+  padding: 8px 12px;
+  min-width: 0;
+}
+.app-summary-chip > div:last-child {
+  min-width: 0;
+}
+.app-summary-chip .lbl {
+  font-size: .72rem;
+  color: #64748b;
+  font-weight: 700;
+  overflow-wrap: anywhere;
+}
+.app-summary-chip .val {
+  font-size: .92rem;
+  font-weight: 800;
+  color: #0f172a;
+  overflow-wrap: anywhere;
+}
+.app-summary-chip .ico {
+  width: 30px;
+  height: 30px;
+  border-radius: 9px;
+  flex: 0 0 auto;
+  display: grid;
+  place-items: center;
+  font-size: .78rem;
+}
+@media (max-width: 575.98px) {
+  .app-summary-chip,
+  .pramuka-summary-chip {
+    padding: 7px 9px;
+    gap: 6px;
+    border-radius: 12px;
+  }
+  .app-summary-chip .ico,
+  .pramuka-summary-chip .ico {
+    width: 26px;
+    height: 26px;
+    border-radius: 8px;
+    font-size: .68rem;
+  }
+  .app-summary-chip .lbl,
+  .pramuka-summary-chip .lbl {
+    font-size: .64rem;
+  }
+  .app-summary-chip .val,
+  .pramuka-summary-chip .val {
+    font-size: .82rem;
+  }
+}
+
