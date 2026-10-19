@@ -508,6 +508,20 @@ try {
     $fetch_error = $e->getMessage();
 }
 
+$tingkat_counts = [];
+try {
+    $stCount = $pdo->query('
+        SELECT id_tingkat_barung, COUNT(*) as jml
+        FROM tb_peserta_didik_barung
+        WHERE IFNULL(status, "aktif") = "aktif"
+        GROUP BY id_tingkat_barung
+    ');
+    while ($rc = $stCount->fetch(PDO::FETCH_ASSOC)) {
+        $tingkat_counts[(int)$rc['id_tingkat_barung']] = (int)$rc['jml'];
+    }
+} catch (Exception $e) {
+}
+
 $selected_tingkat_id = ensureInt($_GET['tingkat'] ?? 0);
 if ($selected_tingkat_id <= 0 && !empty($tingkat_list)) {
     $selected_tingkat_id = (int)($tingkat_list[0]['id_tingkat_barung'] ?? 0);
@@ -1131,7 +1145,10 @@ if ($selected_tingkat_id > 0) {
                 COALESCE(NULLIF(TRIM(k.nama_kelas), ''), '-') AS nama_kelas,
                 COALESCE(NULLIF(TRIM(s.tempat_lahir), ''), NULLIF(TRIM(p.tempat_lahir), '')) AS tempat_lahir,
                 COALESCE(s.tanggal_lahir, p.tanggal_lahir) AS tanggal_lahir,
-                p.id_tingkat_barung
+                p.id_tingkat_barung,
+                s.nisn,
+                s.foto,
+                s.jenis_kelamin
             FROM tb_peserta_didik_barung p
             LEFT JOIN tb_siswa s ON (
                 s.id_siswa = p.id_siswa
@@ -1484,33 +1501,167 @@ $(document).ready(function() {
         if (checkedCount > 0) {
             $('#btn-delete-selected').removeClass('d-none').text('Keluarkan Terpilih (' + checkedCount + ')');
             $('#btn-edit-selected').removeClass('d-none').text('Edit Terpilih (' + checkedCount + ')');
+            $('#ktaFloatingBar').addClass('show');
+            $('#ktaFloatingCount').text(checkedCount + ' Terpilih');
         } else {
             $('#btn-delete-selected').addClass('d-none').text('Keluarkan Terpilih');
             $('#btn-edit-selected').addClass('d-none').text('Edit Terpilih');
+            $('#ktaFloatingBar').removeClass('show');
         }
     }
 
-    // Select all (only visible rows under current filter)
-    $('#checkAllRows').on('change', function() {
-        var isChecked = $(this).prop('checked');
+    function syncCardsFromTable() {
+        var rows = table.rows({ search: 'applied' }).nodes();
+        var total = $('.row-check', rows).length;
+        var checked = $('.row-check:checked', rows).length;
+        var allChecked = (total > 0 && total === checked);
+        $('#checkAllRows').prop('checked', allChecked);
+        $('#checkAllCards').prop('checked', allChecked);
+
+        // Sync individual card checkboxes and selected classes
+        $('.row-check', rows).each(function() {
+            var pid = $(this).val();
+            var isChecked = $(this).is(':checked');
+            var $c = $('.kta-card-check[value=\"' + pid + '\"]');
+            if ($c.length) {
+                $c.prop('checked', isChecked);
+                if (isChecked) {
+                    $c.closest('.pramuka-kta-card').addClass('selected-card');
+                } else {
+                    $c.closest('.pramuka-kta-card').removeClass('selected-card');
+                }
+            }
+        });
+        updateDeleteSelectedUI();
+    }
+
+    // Toggle all selection
+    function toggleAllScoutSelection(isChecked) {
         var rows = table.rows({ search: 'applied' }).nodes();
         $('.row-check', rows).prop('checked', isChecked);
+        $('.pramuka-card-col:visible .kta-card-check').prop('checked', isChecked).each(function() {
+            var $card = $(this).closest('.pramuka-kta-card');
+            if (isChecked) {
+                $card.addClass('selected-card');
+            } else {
+                $card.removeClass('selected-card');
+            }
+        });
+        $('#checkAllRows').prop('checked', isChecked);
+        $('#checkAllCards').prop('checked', isChecked);
+        updateDeleteSelectedUI();
+    }
+
+    $('#checkAllRows').on('change', function() {
+        toggleAllScoutSelection($(this).prop('checked'));
+    });
+
+    $('#checkAllCards').on('change', function() {
+        toggleAllScoutSelection($(this).prop('checked'));
+    });
+
+    // Card checkbox handler
+    $(document).on('change', '.kta-card-check', function() {
+        var pid = $(this).val();
+        var isChecked = $(this).is(':checked');
+        var $card = $(this).closest('.pramuka-kta-card');
+        if (isChecked) {
+            $card.addClass('selected-card');
+        } else {
+            $card.removeClass('selected-card');
+        }
+        var $tCheck = $('#table-1 tbody .row-check[value=\"' + pid + '\"]');
+        if ($tCheck.length) {
+            $tCheck.prop('checked', isChecked);
+        }
+        var visibleCardChecks = $('.pramuka-card-col:visible .kta-card-check');
+        var allChecked = visibleCardChecks.length > 0 && visibleCardChecks.length === visibleCardChecks.filter(':checked').length;
+        $('#checkAllRows').prop('checked', allChecked);
+        $('#checkAllCards').prop('checked', allChecked);
         updateDeleteSelectedUI();
     });
 
-    // Row checkbox handler
+    // Row checkbox handler (from Table)
     $('#table-1 tbody').on('change', '.row-check', function() {
+        var pid = $(this).val();
+        var isChecked = $(this).is(':checked');
+        var $cCheck = $('.kta-card-check[value=\"' + pid + '\"]');
+        if ($cCheck.length) {
+            $cCheck.prop('checked', isChecked);
+            if (isChecked) {
+                $cCheck.closest('.pramuka-kta-card').addClass('selected-card');
+            } else {
+                $cCheck.closest('.pramuka-kta-card').removeClass('selected-card');
+            }
+        }
         var rows = table.rows({ search: 'applied' }).nodes();
         var total = $('.row-check', rows).length;
         var checked = $('.row-check:checked', rows).length;
         $('#checkAllRows').prop('checked', total > 0 && total === checked);
+        $('#checkAllCards').prop('checked', total > 0 && total === checked);
         updateDeleteSelectedUI();
     });
 
     // Reset when table redraws (paging/search)
     table.on('draw.dt', function() {
-        $('#checkAllRows').prop('checked', false);
-        updateDeleteSelectedUI();
+        syncCardsFromTable();
+    });
+
+    // Floating action buttons
+    $('#btn-floating-edit').on('click', function(e) {
+        e.preventDefault();
+        $('#btn-edit-selected').trigger('click');
+    });
+    $('#btn-floating-delete').on('click', function(e) {
+        e.preventDefault();
+        $('#btn-delete-selected').trigger('click');
+    });
+
+    // View Mode Toggle (Cards vs Table)
+    function setPramukaViewMode(mode) {
+        if (mode === 'table') {
+            $('#pramukaCardsView').hide();
+            $('#pramukaTableView').show();
+            $('#btnViewTable').addClass('btn-primary active').removeClass('btn-outline-primary');
+            $('#btnViewCards').addClass('btn-outline-primary').removeClass('btn-primary active');
+            localStorage.setItem('pramuka_view_mode', 'table');
+        } else {
+            $('#pramukaTableView').hide();
+            $('#pramukaCardsView').show();
+            $('#btnViewCards').addClass('btn-primary active').removeClass('btn-outline-primary');
+            $('#btnViewTable').addClass('btn-outline-primary').removeClass('btn-primary active');
+            localStorage.setItem('pramuka_view_mode', 'cards');
+        }
+    }
+    var savedMode = localStorage.getItem('pramuka_view_mode') || 'cards';
+    setPramukaViewMode(savedMode);
+
+    $('#btnViewCards').on('click', function() { setPramukaViewMode('cards'); });
+    $('#btnViewTable').on('click', function() { setPramukaViewMode('table'); });
+
+    // Live search filter for cards
+    $('#pramukaFilterInput').on('input', function() {
+        var query = $(this).val().toLowerCase().trim();
+        var visibleCount = 0;
+        $('.pramuka-card-col').each(function() {
+            var nama = $(this).data('nama-normal') || '';
+            var nta = $(this).data('nta-normal') || '';
+            var kelas = $(this).data('kelas-normal') || '';
+            if (query === '' || nama.indexOf(query) !== -1 || nta.indexOf(query) !== -1 || kelas.indexOf(query) !== -1) {
+                $(this).show();
+                visibleCount++;
+            } else {
+                $(this).hide();
+            }
+        });
+        if (visibleCount === 0 && $('.pramuka-card-col').length > 0) {
+            $('#pramukaCardsEmptyFilter').removeClass('d-none');
+        } else {
+            $('#pramukaCardsEmptyFilter').addClass('d-none');
+        }
+        if (typeof table !== 'undefined' && table.search) {
+            table.search(query).draw();
+        }
     });
 
     // Edit banyak (isi tabel dari baris tercentang)
