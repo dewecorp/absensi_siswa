@@ -950,7 +950,11 @@ body.sidebar-scroll-on .main-sidebar::-webkit-scrollbar-thumb:hover {
   }
 
   /* Select2 Dropdown Menu as Center Modal Dialog */
-  .select2-dropdown {
+  /* Kecuali yang di dalam modal Bootstrap - biarkan positioning default Select2 */
+  body > .select2-container--open {
+    z-index: 100001 !important;
+  }
+  body > .select2-container--open > .select2-dropdown {
     position: fixed !important;
     top: 50% !important;
     bottom: auto !important;
@@ -966,12 +970,27 @@ body.sidebar-scroll-on .main-sidebar::-webkit-scrollbar-thumb:hover {
     background: #ffffff !important;
     box-shadow: 0 16px 48px rgba(15, 23, 42, 0.28) !important;
     padding: 14px 14px 12px 14px !important;
-    z-index: 99999 !important;
+    z-index: 100002 !important;
     transform: translate(-50%, -50%) !important;
-    animation: select2CenterModalZoom 0.2s cubic-bezier(0.16, 1, 0.3, 1) forwards !important;
     overflow-x: hidden !important;
     display: flex !important;
     flex-direction: column !important;
+  }
+
+  /* Select2 di dalam modal: gunakan positioning default, tingkatkan z-index saja */
+  .modal .select2-container--open {
+    z-index: 1056 !important;
+  }
+  .modal .select2-dropdown {
+    z-index: 1057 !important;
+    border-radius: 12px !important;
+    border: none !important;
+    box-shadow: 0 8px 24px rgba(15, 23, 42, 0.2) !important;
+    max-height: 320px !important;
+  }
+  .modal .select2-results > .select2-results__options {
+    max-height: 280px !important;
+    overflow-y: auto !important;
   }
 
   @keyframes select2CenterModalZoom {
@@ -1023,6 +1042,15 @@ body.sidebar-scroll-on .main-sidebar::-webkit-scrollbar-thumb:hover {
     overflow-x: hidden !important;
     -webkit-overflow-scrolling: touch !important;
     padding: 2px !important;
+  }
+
+  /* Select2 di dalam modal mobile: dropdown lebih pendek agar tidak keluar viewport */
+  .modal .select2-dropdown {
+    max-height: 60vh !important;
+  }
+  .modal .select2-results > .select2-results__options {
+    max-height: calc(60vh - 80px) !important;
+    overflow-y: auto !important;
   }
 
   .select2-results__option,

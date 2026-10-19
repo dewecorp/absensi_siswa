@@ -190,11 +190,22 @@ if (!in_array($tahun_ajaran_aktif, $tahun_list, true)) {
 }
 
 $page_title = 'Daftar Bahan Ajar';
-$css_libs = [];
-$js_libs = [];
+$css_libs = [
+    'https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/css/select2.min.css'
+];
+$js_libs = [
+    'https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/js/select2.min.js'
+];
 
 $js_page = [<<<'JS'
 $(document).ready(function() {
+    // Initialize Select2 inside modal
+    $('#modalBahan select').each(function() {
+        var $el = $(this);
+        if ($el.hasClass('select2-hidden-accessible')) $el.select2('destroy');
+        $el.select2({ width: '100%', dropdownParent: $('#modalBahan') });
+    });
+
     $('#btnTambahBahan').on('click', function() {
         $('#formBahanAction').val('tambah');
         $('#bahanId').val('');
@@ -489,7 +500,7 @@ include '../templates/sidebar.php';
                             <label>Mata Pelajaran</label>
                             <select name="id_mapel" id="inp_mapel" class="form-control">
                                 <option value="">-- Pilih Mapel --</option>
-                                <?php foreach ($all_mapel_modal as $m): ?>
+                                <?php foreach ($mapel_list as $m): ?>
                                     <option value="<?= (int)$m['id_mapel'] ?>"><?= htmlspecialchars($m['nama_mapel']) ?></option>
                                 <?php endforeach; ?>
                             </select>
@@ -498,7 +509,7 @@ include '../templates/sidebar.php';
                             <label>Kelas</label>
                             <select name="id_kelas" id="inp_kelas" class="form-control">
                                 <option value="">-- Pilih Kelas --</option>
-                                <?php foreach ($all_kelas_modal as $k): ?>
+                                <?php foreach ($kelas_list as $k): ?>
                                     <option value="<?= (int)$k['id_kelas'] ?>"><?= htmlspecialchars($k['nama_kelas']) ?></option>
                                 <?php endforeach; ?>
                             </select>

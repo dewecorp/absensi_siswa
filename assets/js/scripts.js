@@ -345,6 +345,30 @@ $(function() {
     $(".select2").select2(select2Opts || {});
   }
 
+  // Global Select2 initializer for all <select> inside modals
+  if(jQuery().select2) {
+    $(document).on('shown.bs.modal', '.modal', function(e) {
+      var $modal = $(this);
+      $modal.find('select').each(function() {
+        var $sel = $(this);
+        // Skip jika sudah ada Select2 atau masuk blacklist
+        if ($sel.hasClass('select2-hidden-accessible')) return;
+        if ($sel.hasClass('no-select2')) return;
+        if ($sel.closest('.no-select2').length) return;
+        
+        // Init Select2 dengan dropdownParent ke modal ini
+        try {
+          $sel.select2({
+            width: '100%',
+            dropdownParent: $modal
+          });
+        } catch(e) {
+          // Ignore jika Select2 belum ready
+        }
+      });
+    });
+  }
+
   // Selectric
   if(jQuery().selectric) {
     $(".selectric").selectric({

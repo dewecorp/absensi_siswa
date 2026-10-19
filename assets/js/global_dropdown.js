@@ -456,23 +456,87 @@
   // Select2 mobile: panel sudah tampil center dialog, jadi TIDAK pakai backdrop overlay
   // (overlay gelap+blur ini yang bikin tampilan rusak, terutama saat select2 ada di dalam modal)
   if (window.jQuery) {
-    window.jQuery(document).on('select2:open', function() {
+    window.jQuery(document).on('select2:opening', function(e) {
       if (window.innerWidth <= 767.98) {
-        setTimeout(function() {
-          var dps = document.querySelectorAll('.select2-dropdown');
-          dps.forEach(function(dp) {
-            dp.classList.add('select2-touch-shield');
-            setTimeout(function() {
-              dp.classList.remove('select2-touch-shield');
-            }, 300);
-          });
-        }, 0);
+        var bd = document.getElementById('gdsBackdropMobile');
+        if (bd) {
+          bd.classList.remove('active');
+          bd.style.display = 'none';
+        }
       }
     });
+
+    window.jQuery(document).on('select2:open', function(e) {
+      if (window.innerWidth > 767.98) return;
+
+      var bd = document.getElementById('gdsBackdropMobile');
+      if (bd) {
+        bd.classList.remove('active');
+        bd.style.display = 'none';
+      }
+
+      // Select2 di dalam modal: JANGAN override posisi (dropdownParent sudah benar).
+      // Override posisi di sini memicu loop reposition Select2 -> berkedip di mobile.
+      var $el = window.jQuery(e.target);
+      var $modal = $el.closest('.modal');
+      if ($modal.length) {
+        // Ukuran adaptif: sesuaikan tinggi panel dengan ruang yang tersedia di viewport
+        setTimeout(function() {
+          try {
+            var node = $el[0];
+            var modal = $modal.get(0);
+            if (!node || !modal) return;
+            var dd = modal.querySelector('.select2-dropdown');
+            if (!dd) return;
+            var results = dd.querySelector('.select2-results > .select2-results__options');
+
+            var rect = node.getBoundingClientRect();
+            var vh = window.innerHeight || document.documentElement.clientHeight;
+            var margin = 14;
+            var searchH = dd.querySelector('.select2-search--dropdown') ? 56 : 0;
+
+            var spaceBelow = vh - rect.bottom - margin;
+            var spaceAbove = rect.top - margin;
+            var avail = Math.max(spaceBelow, spaceAbove);
+
+            // Tinggi opsi menyesuaikan isi, dibatasi ruang tersedia (min 132px)
+            var optsH = Math.max(132, Math.min(avail - searchH - 16, Math.round(vh * 0.7)));
+            if (results) results.style.setProperty('max-height', optsH + 'px', 'important');
+            dd.style.setProperty('max-height', (optsH + searchH + 24) + 'px', 'important');
+
+            // Minta Select2 menghitung ulang posisi/arah berdasarkan tinggi baru
+            window.jQuery(window).trigger('resize');
+          } catch (err) {}
+        }, 0);
+        return;
+      }
+
+      // Select2 di luar modal: tampilkan sebagai center dialog
+      var dps = document.querySelectorAll('.select2-dropdown');
+      dps.forEach(function(dp) {
+        if (dp.closest('.modal')) return;
+        dp.classList.add('select2-touch-shield');
+        var container = dp.closest('.select2-container');
+        if (container) {
+          container.style.setProperty('z-index', '100001', 'important');
+        }
+        dp.style.setProperty('position', 'fixed', 'important');
+        dp.style.setProperty('top', '50%', 'important');
+        dp.style.setProperty('left', '50%', 'important');
+        dp.style.setProperty('transform', 'translate(-50%, -50%)', 'important');
+        dp.style.setProperty('pointer-events', 'auto', 'important');
+        dp.style.setProperty('z-index', '100002', 'important');
+
+        setTimeout(function() {
+          dp.classList.remove('select2-touch-shield');
+        }, 320);
+      });
+    });
     window.jQuery(document).on('select2:close', function() {
+      var bd = document.getElementById('gdsBackdropMobile');
+      if (bd) bd.style.display = '';
       var anyGdsOpen = document.querySelectorAll('.gds-wrap.open').length > 0;
       if (anyGdsOpen) return;
-      var bd = document.getElementById('gdsBackdropMobile');
       if (bd) bd.classList.remove('active');
       if (!document.querySelector('.modal.show')) {
         document.body.style.overflow = '';
