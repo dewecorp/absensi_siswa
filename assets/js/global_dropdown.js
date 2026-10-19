@@ -458,13 +458,15 @@
   if (window.jQuery) {
     window.jQuery(document).on('select2:open', function() {
       if (window.innerWidth <= 767.98) {
-        var dp = document.querySelector('.select2-dropdown');
-        if (dp) {
-          dp.classList.add('select2-touch-shield');
-          setTimeout(function() {
-            dp.classList.remove('select2-touch-shield');
-          }, 250);
-        }
+        setTimeout(function() {
+          var dps = document.querySelectorAll('.select2-dropdown');
+          dps.forEach(function(dp) {
+            dp.classList.add('select2-touch-shield');
+            setTimeout(function() {
+              dp.classList.remove('select2-touch-shield');
+            }, 300);
+          });
+        }, 0);
       }
     });
     window.jQuery(document).on('select2:close', function() {

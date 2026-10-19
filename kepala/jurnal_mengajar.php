@@ -295,7 +295,7 @@ include '../templates/header.php';
                                 <div class="col-md-3">
                                     <div class="form-group">
                                         <label>Pilih Kelas</label>
-                                        <select class="form-control select2" name="kelas" onchange="this.form.submit()">
+                                        <select class="form-control" name="kelas" onchange="this.form.submit()">
                                             <option value="">-- Semua Kelas --</option>
                                             <?php foreach ($classes as $class): ?>
                                                 <option value="<?php echo $class['id_kelas']; ?>" <?php echo (isset($_GET['kelas']) && $_GET['kelas'] == $class['id_kelas']) ? 'selected' : ''; ?>>
@@ -308,7 +308,7 @@ include '../templates/header.php';
                                 <div class="col-md-3">
                                     <div class="form-group">
                                         <label>Pilih Guru</label>
-                                        <select class="form-control select2" name="guru" onchange="this.form.submit()">
+                                        <select class="form-control" name="guru" onchange="this.form.submit()">
                                             <option value="">-- Semua Guru --</option>
                                             <?php foreach ($teachers as $teacher): ?>
                                                 <option value="<?php echo $teacher['id_guru']; ?>" <?php echo (isset($_GET['guru']) && $_GET['guru'] == $teacher['id_guru']) ? 'selected' : ''; ?>>
@@ -321,7 +321,7 @@ include '../templates/header.php';
                                 <div class="col-md-3">
                                     <div class="form-group">
                                         <label>Pilih Jam Ke</label>
-                                        <select class="form-control select2" name="jam_ke" onchange="this.form.submit()">
+                                        <select class="form-control" name="jam_ke" onchange="this.form.submit()">
                                             <option value="">-- Semua Jam --</option>
                                             <?php foreach ($jam_ke_options as $jam): ?>
                                                 <option value="<?php echo $jam; ?>" <?php echo (isset($_GET['jam_ke']) && $_GET['jam_ke'] == $jam) ? 'selected' : ''; ?>>
@@ -334,7 +334,7 @@ include '../templates/header.php';
                                 <div class="col-md-3">
                                     <div class="form-group">
                                         <label>Jenis Jadwal</label>
-                                        <select class="form-control select2" name="jenis" onchange="this.form.submit()">
+                                        <select class="form-control" name="jenis" onchange="this.form.submit()">
                                             <option value="">-- Semua Jenis --</option>
                                             <option value="Reguler" <?php echo (isset($_GET['jenis']) && $_GET['jenis'] == 'Reguler') ? 'selected' : ''; ?>>Reguler</option>
                                             <option value="Ramadhan" <?php echo (isset($_GET['jenis']) && $_GET['jenis'] == 'Ramadhan') ? 'selected' : ''; ?>>Ramadhan</option>
