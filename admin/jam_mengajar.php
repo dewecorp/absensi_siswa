@@ -92,8 +92,8 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
     }
 }
 
-// Get all teaching hours
-$stmt = $pdo->query("SELECT * FROM tb_jam_mengajar ORDER BY jam_ke ASC");
+// Get all teaching hours ordered by start time
+$stmt = $pdo->query("SELECT * FROM tb_jam_mengajar ORDER BY waktu_mulai ASC, jam_ke ASC");
 $all_jam = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
 $jam_reguler = [];
@@ -109,17 +109,12 @@ foreach ($all_jam as $row) {
 
 // Define CSS libraries for this page
 $css_libs = [
-    'https://cdn.datatables.net/1.10.25/css/dataTables.bootstrap4.min.css',
-    'https://cdnjs.cloudflare.com/ajax/libs/bootstrap-timepicker/0.5.2/css/bootstrap-timepicker.min.css',
-    'https://cdn.datatables.net/select/1.3.3/css/select.bootstrap4.min.css'
+    'https://cdnjs.cloudflare.com/ajax/libs/bootstrap-timepicker/0.5.2/css/bootstrap-timepicker.min.css'
 ];
 
 // Define JS libraries for this page
 $js_libs = [
-    'https://cdn.datatables.net/1.10.25/js/jquery.dataTables.min.js',
-    'https://cdn.datatables.net/1.10.25/js/dataTables.bootstrap4.min.js',
-    'https://cdnjs.cloudflare.com/ajax/libs/bootstrap-timepicker/0.5.2/js/bootstrap-timepicker.min.js',
-    'https://cdn.datatables.net/select/1.3.3/js/dataTables.select.min.js'
+    'https://cdnjs.cloudflare.com/ajax/libs/bootstrap-timepicker/0.5.2/js/bootstrap-timepicker.min.js'
 ];
 
 // Define page-specific JS
@@ -135,30 +130,6 @@ echo '<style>
 // Add JavaScript
 $js_page[] = "
 $(document).ready(function() {
-    // Initialize DataTables
-    var tableOptions = {
-        \"columnDefs\": [
-            { \"sortable\": false, \"targets\": [3] }
-        ],
-        \"language\": {
-            \"lengthMenu\": \"Tampilkan _MENU_ entri\",
-            \"zeroRecords\": \"Tidak ada data yang ditemukan\",
-            \"info\": \"Menampilkan _START_ sampai _END_ dari _TOTAL_ entri\",
-            \"infoEmpty\": \"Menampilkan 0 sampai 0 dari 0 entri\",
-            \"infoFiltered\": \"(disaring dari _MAX_ total entri)\",
-            \"search\": \"Cari:\",
-            \"paginate\": {
-                \"first\": \"Pertama\",
-                \"last\": \"Terakhir\",
-                \"next\": \"Selanjutnya\",
-                \"previous\": \"Sebelumnya\"
-            }
-        }
-    };
-
-    $('#table-reguler').DataTable(tableOptions);
-    $('#table-ramadhan').DataTable(tableOptions);
-
     // Initialize Timepicker
     $('.timepicker').timepicker({
         showMeridian: false,
@@ -181,13 +152,11 @@ $(document).ready(function() {
         }
         
         $('#add_jenis_hidden').val(jenis);
-        $('#add_jenis_view').val(jenis);
-        $('#add_jenis_view').val(jenis);
         $('#addModalLabel').text('Tambah Jam Mengajar (' + jenis + ')');
         $('#addModal').modal('show');
     });
 
-    // Handle Edit Button (Delegate to document for both tables)
+    // Handle Edit Button (Delegate to document for both tables/cards)
     $(document).on('click', '.edit-btn', function() {
         var id = $(this).data('id');
         var jam = $(this).data('jam');
@@ -200,7 +169,6 @@ $(document).ready(function() {
         $('#edit_waktu_mulai').val(mulai);
         $('#edit_waktu_selesai').val(selesai);
         
-        $('#edit_jenis_view').val(jenis);
         $('#edit_jenis_hidden').val(jenis);
         $('#editModalLabel').text('Edit Jam Mengajar (' + jenis + ')');
         
@@ -235,23 +203,28 @@ $(document).ready(function() {
         });
     });
 
+    // Live search filter kartu jam mengajar
+    $('#jam-search-input').on('input', function() {
+        var q = $(this).val().toLowerCase().trim();
+        $('.tab-pane.active .jam-app-card').each(function() {
+            var text = $(this).text().toLowerCase();
+            var match = (q === '' || text.indexOf(q) !== -1);
+            $(this).toggle(match);
+        });
+    });
+
     // Handle Export
     $('.export-btn').on('click', function(e) {
         e.preventDefault();
         var type = $(this).data('type');
         
         // Determine active tab
-        var activeTabId = $('.tab-pane.active table').attr('id');
-        var jenisTitle = activeTabId === 'table-ramadhan' ? 'Bulan Ramadhan' : 'Reguler';
+        var activeTab = $('.nav-pills .active').attr('id');
+        var isRamadhan = activeTab === 'pills-ramadhan-tab';
+        var tableId = isRamadhan ? '#export-table-ramadhan' : '#export-table-reguler';
+        var jenisTitle = isRamadhan ? 'Bulan Ramadhan' : 'Reguler';
         
-        // Clone table to remove action column
-        var table = $('#' + activeTabId).clone();
-        table.find('th:last-child, td:last-child').remove();
-        
-        // Replace badges with text for export
-        table.find('.badge').each(function() {
-            $(this).replaceWith($(this).text());
-        });
+        var table = $(tableId).clone();
         
         if (type === 'pdf') {
             var printWindow = window.open('', '_blank');
@@ -293,6 +266,8 @@ $(document).ready(function() {
     // Persist Tab
     $('a[data-toggle=\"pill\"]').on('shown.bs.tab', function (e) {
         localStorage.setItem('activeTab_jam', $(e.target).attr('id'));
+        $('#jam-search-input').val('');
+        $('.jam-app-card').show();
     });
 
     var activeTab = localStorage.getItem('activeTab_jam');
@@ -331,142 +306,552 @@ if ($message) {
     }
 }
 
+// Function helper untuk menghitung durasi waktu dan label slot
+function getSlotDurationText($start, $end) {
+    $t1 = strtotime($start);
+    $t2 = strtotime($end);
+    if ($t2 > $t1) {
+        $diff = round(($t2 - $t1) / 60);
+        return $diff . ' Menit';
+    }
+    return '';
+}
+
+function getSlotBadgeMeta($jam_ke) {
+    $jk = trim(strtoupper((string)$jam_ke));
+    if ($jk === 'A') {
+        return [
+            'type' => 'Asmaul Husna, Tadarus dan Upacara',
+            'icon' => 'fa-mosque',
+            'theme' => 'slot-special'
+        ];
+    } elseif ($jk === 'B') {
+        return [
+            'type' => 'Istirahat I',
+            'icon' => 'fa-coffee',
+            'theme' => 'slot-special'
+        ];
+    } elseif ($jk === 'C') {
+        return [
+            'type' => 'Istirahat II',
+            'icon' => 'fa-utensils',
+            'theme' => 'slot-special'
+        ];
+    }
+    return [
+        'type' => 'Jam Pelajaran',
+        'icon' => 'fa-book-open',
+        'theme' => 'slot-standard'
+    ];
+}
+
 include '../templates/header.php';
 include '../templates/sidebar.php';
 ?>
+
+<style>
+/* Modern Mobile App Styling - Jam Mengajar */
+.jam-toolbar {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    margin-bottom: 18px;
+}
+.jam-nav-pills {
+    display: inline-flex;
+    background: #f1f5f9;
+    padding: 4px;
+    border-radius: 999px;
+    border: 1px solid #e2e8f0;
+}
+.jam-nav-pills .nav-link {
+    border-radius: 999px;
+    padding: 8px 18px;
+    font-size: 13px;
+    font-weight: 700;
+    color: #64748b;
+    transition: all .2s ease;
+    border: 0;
+}
+.jam-nav-pills .nav-link.active {
+    background: #4f46e5;
+    color: #ffffff !important;
+    box-shadow: 0 4px 12px rgba(79, 70, 229, .28);
+}
+.jam-search-wrap {
+    position: relative;
+    max-width: 320px;
+    width: 100%;
+}
+.jam-search-wrap input {
+    width: 100%;
+    padding: 9px 16px 9px 38px;
+    border-radius: 999px;
+    border: 1.5px solid #cbd5e1;
+    font-size: 13px;
+    font-weight: 600;
+    color: #0f172a;
+    background: #ffffff;
+    outline: none;
+    transition: all .2s ease;
+}
+.jam-search-wrap input:focus {
+    border-color: #4f46e5;
+    box-shadow: 0 0 0 3px rgba(79, 70, 229, .15);
+}
+.jam-search-wrap i {
+    position: absolute;
+    left: 14px;
+    top: 50%;
+    transform: translateY(-50%);
+    color: #64748b;
+    font-size: 13px;
+}
+
+/* App Grid & Card */
+.jam-grid {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 16px;
+}
+@media (max-width: 767.98px) {
+    .jam-grid {
+        grid-template-columns: 1fr;
+        gap: 12px;
+    }
+}
+
+.jam-app-card {
+    position: relative;
+    background: #ffffff;
+    border: 1.5px solid #e2e8f0;
+    border-radius: 20px;
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+    box-shadow: 0 4px 18px rgba(15, 23, 42, .04);
+    transition: transform .18s cubic-bezier(0.4, 0, 0.2, 1), box-shadow .18s ease, border-color .18s ease;
+}
+.jam-app-card:hover {
+    transform: translateY(-3px);
+    box-shadow: 0 12px 28px rgba(15, 23, 42, .08);
+    border-color: #cbd5e1;
+}
+
+/* Aksen atas kartu */
+.jam-app-card::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 4px;
+}
+.jam-app-card.slot-standard::before { background: linear-gradient(90deg, #4f46e5, #3b82f6); }
+.jam-app-card.slot-special::before { background: linear-gradient(90deg, #f59e0b, #ef4444); }
+
+.jam-card-top {
+    padding: 14px 16px 10px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+}
+.jam-slot-tag {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 5px 12px;
+    border-radius: 999px;
+    font-size: 11px;
+    font-weight: 800;
+    letter-spacing: .2px;
+}
+.jam-slot-tag.slot-standard {
+    background: #eff6ff;
+    color: #2563eb;
+    border: 1px solid #bfdbfe;
+}
+.jam-slot-tag.slot-special {
+    background: #fffbeb;
+    color: #d97706;
+    border: 1px solid #fde68a;
+}
+.jam-duration-pill {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    padding: 4px 10px;
+    border-radius: 999px;
+    background: #f8fafc;
+    border: 1px solid #e2e8f0;
+    color: #0f172a;
+    font-size: 11.5px;
+    font-weight: 800;
+}
+
+.jam-card-main {
+    padding: 4px 16px 14px;
+    display: flex;
+    align-items: center;
+    gap: 16px;
+}
+.jam-circle-ke {
+    width: 54px;
+    height: 54px;
+    border-radius: 16px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+    color: #ffffff;
+    box-shadow: 0 4px 12px rgba(15, 23, 42, .12);
+}
+.jam-circle-ke.slot-standard { background: linear-gradient(135deg, #4f46e5, #3b82f6); }
+.jam-circle-ke.slot-special { background: linear-gradient(135deg, #f59e0b, #d97706); }
+.jam-ke-label {
+    font-size: 9px;
+    font-weight: 700;
+    letter-spacing: .5px;
+    opacity: .85;
+    text-transform: uppercase;
+    line-height: 1;
+}
+.jam-ke-val {
+    font-size: 20px;
+    font-weight: 900;
+    line-height: 1.1;
+}
+
+.jam-range-box {
+    min-width: 0;
+    flex: 1 1 auto;
+}
+.jam-time-badge-wrap {
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 8px;
+}
+.jam-time-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    background: #0f172a;
+    color: #ffffff;
+    padding: 6px 12px;
+    border-radius: 10px;
+    font-size: 13.5px;
+    font-weight: 800;
+    letter-spacing: .5px;
+    box-shadow: 0 2px 6px rgba(15, 23, 42, .15);
+}
+.jam-time-badge.end-time {
+    background: #334155;
+}
+.jam-time-arrow {
+    font-size: 12px;
+    color: #94a3b8;
+    font-weight: 700;
+}
+
+.jam-card-bottom {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 10px;
+    padding: 10px 16px;
+    background: #f8fafc;
+    border-top: 1px solid #f1f5f9;
+}
+.jam-index-text {
+    font-size: 11.5px;
+    font-weight: 800;
+    color: #94a3b8;
+}
+
+.jam-actions {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+.jam-app-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 6px 14px;
+    border-radius: 999px;
+    font-size: 12px;
+    font-weight: 700;
+    border: 0;
+    cursor: pointer;
+    transition: all .15s ease;
+    text-decoration: none !important;
+}
+.jam-app-btn:active { transform: scale(0.96); }
+
+.jam-btn-edit {
+    background: linear-gradient(135deg, #4f46e5, #4338ca);
+    color: #ffffff !important;
+    box-shadow: 0 2px 8px rgba(79, 70, 229, .25);
+}
+.jam-btn-edit:hover {
+    box-shadow: 0 4px 12px rgba(79, 70, 229, .35);
+    color: #ffffff !important;
+    transform: translateY(-1px);
+}
+
+.jam-btn-del {
+    background: #ffffff;
+    color: #ef4444 !important;
+    border: 1.5px solid #fecaca !important;
+}
+.jam-btn-del:hover {
+    background: #fef2f2;
+    border-color: #f87171 !important;
+    color: #dc2626 !important;
+    transform: translateY(-1px);
+}
+</style>
 
 <!-- Main Content -->
 <div class="main-content">
     <section class="section">
         <div class="section-header">
-            <h1>Jam Mengajar</h1>
+            <h1><i class="fas fa-clock mr-2"></i>Jam Mengajar</h1>
             <?php echo render_breadcrumb(); ?>
         </div>
 
         <div class="section-body">
-            <div class="row">
-                <div class="col-12">
-                    <div class="card">
-                        <div class="card-header">
-                            <h4>Data Jam Mengajar</h4>
-                            <div class="card-header-action">
-                                <button class="btn btn-primary" id="btn-add-jam">
-                                    <i class="fas fa-plus"></i> Tambah Jam
-                                </button>
-                                <div class="dropdown d-inline mr-2">
-                                    <button class="btn btn-success dropdown-toggle" type="button" id="exportDropdown" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
-                                        <i class="fas fa-file-export"></i> Export
-                                    </button>
-                                    <div class="dropdown-menu" aria-labelledby="exportDropdown">
-                                        <a class="dropdown-item export-btn" href="#" data-type="excel"><i class="fas fa-file-excel"></i> Excel</a>
-                                        <a class="dropdown-item export-btn" href="#" data-type="pdf"><i class="fas fa-file-pdf"></i> PDF</a>
-                                    </div>
-                                </div>
+            <div class="card">
+                <div class="card-header">
+                    <h4>Data Jam Mengajar</h4>
+                    <div class="card-header-action">
+                        <button class="btn btn-primary" id="btn-add-jam">
+                            <i class="fas fa-plus"></i> Tambah Jam
+                        </button>
+                        <div class="dropdown d-inline mr-2">
+                            <button class="btn btn-success dropdown-toggle" type="button" id="exportDropdown" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
+                                <i class="fas fa-file-export"></i> Export
+                            </button>
+                            <div class="dropdown-menu" aria-labelledby="exportDropdown">
+                                <a class="dropdown-item export-btn" href="#" data-type="excel"><i class="fas fa-file-excel"></i> Excel</a>
+                                <a class="dropdown-item export-btn" href="#" data-type="pdf"><i class="fas fa-file-pdf"></i> PDF</a>
                             </div>
                         </div>
-                        <div class="card-body">
-                            <ul class="nav nav-pills mb-3" id="pills-tab" role="tablist">
-                                <li class="nav-item">
-                                    <a class="nav-link active" id="pills-reguler-tab" data-toggle="pill" href="#pills-reguler" role="tab" aria-controls="pills-reguler" aria-selected="true">Reguler</a>
-                                </li>
-                                <li class="nav-item">
-                                    <a class="nav-link" id="pills-ramadhan-tab" data-toggle="pill" href="#pills-ramadhan" role="tab" aria-controls="pills-ramadhan" aria-selected="false">Ramadhan</a>
-                                </li>
-                            </ul>
-                            
-                            <div class="tab-content" id="pills-tabContent">
-                                <div class="tab-pane fade show active" id="pills-reguler" role="tabpanel" aria-labelledby="pills-reguler-tab">
-                                    <div class="table-responsive">
-                                        <table class="table table-striped" id="table-reguler" style="width:100%">
-                                            <thead>
-                                                <tr>
-                                                    <th class="text-center" width="5%">No</th>
-                                                    <th width="15%">Jam Ke</th>
-                                                    <th>Waktu</th>
-                                                    <th width="15%">Aksi</th>
-                                                </tr>
-                                            </thead>
-                                            <tbody>
-                                                <?php 
-                                                $no = 1;
-                                                foreach ($jam_reguler as $row): 
-                                                ?>
-                                                <tr>
-                                                    <td class="text-center"><?= $no++ ?></td>
-                                                    <td><?= $row['jam_ke'] ?></td>
-                                                    <td>
-                                                        <span class="badge badge-info"><?= date('H:i', strtotime($row['waktu_mulai'])) ?></span> 
-                                                        s/d 
-                                                        <span class="badge badge-info"><?= date('H:i', strtotime($row['waktu_selesai'])) ?></span>
-                                                    </td>
-                                                    <td>
-                                                        <button class="btn btn-warning btn-sm edit-btn" 
-                                                                data-id="<?= $row['id_jam'] ?>"
-                                                                data-jam="<?= $row['jam_ke'] ?>"
-                                                                data-mulai="<?= date('H:i', strtotime($row['waktu_mulai'])) ?>"
-                                                                data-selesai="<?= date('H:i', strtotime($row['waktu_selesai'])) ?>"
-                                                                data-jenis="Reguler">
-                                                            <i class="fas fa-edit"></i>
-                                                        </button>
-                                                        <button class="btn btn-danger btn-sm delete-btn" 
-                                                                data-id="<?= $row['id_jam'] ?>"
-                                                                data-jam="<?= $row['jam_ke'] ?>"
-                                                                data-jenis="Reguler">
-                                                            <i class="fas fa-trash"></i>
-                                                        </button>
-                                                    </td>
-                                                </tr>
-                                                <?php endforeach; ?>
-                                            </tbody>
-                                        </table>
-                                    </div>
+                    </div>
+                </div>
+                <div class="card-body">
+                    <div class="jam-toolbar">
+                        <ul class="nav nav-pills jam-nav-pills" id="pills-tab" role="tablist">
+                            <li class="nav-item">
+                                <a class="nav-link active" id="pills-reguler-tab" data-toggle="pill" href="#pills-reguler" role="tab" aria-controls="pills-reguler" aria-selected="true">
+                                    <i class="fas fa-sun mr-1"></i> Reguler (<?= count($jam_reguler) ?>)
+                                </a>
+                            </li>
+                            <li class="nav-item">
+                                <a class="nav-link" id="pills-ramadhan-tab" data-toggle="pill" href="#pills-ramadhan" role="tab" aria-controls="pills-ramadhan" aria-selected="false">
+                                    <i class="fas fa-moon mr-1"></i> Ramadhan (<?= count($jam_ramadhan) ?>)
+                                </a>
+                            </li>
+                        </ul>
+
+                        <div class="jam-search-wrap">
+                            <i class="fas fa-search"></i>
+                            <input type="search" id="jam-search-input" placeholder="Cari jam ke atau waktu..." autocomplete="off">
+                        </div>
+                    </div>
+                    
+                    <div class="tab-content" id="pills-tabContent">
+                        <!-- Tab Reguler -->
+                        <div class="tab-pane fade show active" id="pills-reguler" role="tabpanel" aria-labelledby="pills-reguler-tab">
+                            <?php if (empty($jam_reguler)): ?>
+                                <div class="text-center py-5" style="color: #64748b;">
+                                    <i class="fas fa-clock fa-3x mb-3 text-muted"></i>
+                                    <p class="mb-0 font-weight-bold">Belum ada data jam mengajar reguler.</p>
                                 </div>
-                                <div class="tab-pane fade" id="pills-ramadhan" role="tabpanel" aria-labelledby="pills-ramadhan-tab">
-                                    <div class="table-responsive">
-                                        <table class="table table-striped" id="table-ramadhan" style="width:100%">
-                                            <thead>
-                                                <tr>
-                                                    <th class="text-center" width="5%">No</th>
-                                                    <th width="15%">Jam Ke</th>
-                                                    <th>Waktu</th>
-                                                    <th width="15%">Aksi</th>
-                                                </tr>
-                                            </thead>
-                                            <tbody>
-                                                <?php 
-                                                $no = 1;
-                                                foreach ($jam_ramadhan as $row): 
-                                                ?>
-                                                <tr>
-                                                    <td class="text-center"><?= $no++ ?></td>
-                                                    <td><?= $row['jam_ke'] ?></td>
-                                                    <td>
-                                                        <span class="badge badge-info"><?= date('H:i', strtotime($row['waktu_mulai'])) ?></span> 
-                                                        s/d 
-                                                        <span class="badge badge-info"><?= date('H:i', strtotime($row['waktu_selesai'])) ?></span>
-                                                    </td>
-                                                    <td>
-                                                        <button class="btn btn-warning btn-sm edit-btn" 
-                                                                data-id="<?= $row['id_jam'] ?>"
-                                                                data-jam="<?= $row['jam_ke'] ?>"
-                                                                data-mulai="<?= date('H:i', strtotime($row['waktu_mulai'])) ?>"
-                                                                data-selesai="<?= date('H:i', strtotime($row['waktu_selesai'])) ?>"
-                                                                data-jenis="Ramadhan">
-                                                            <i class="fas fa-edit"></i>
-                                                        </button>
-                                                        <button class="btn btn-danger btn-sm delete-btn" 
-                                                                data-id="<?= $row['id_jam'] ?>"
-                                                                data-jam="<?= $row['jam_ke'] ?>"
-                                                                data-jenis="Ramadhan">
-                                                            <i class="fas fa-trash"></i>
-                                                        </button>
-                                                    </td>
-                                                </tr>
-                                                <?php endforeach; ?>
-                                            </tbody>
-                                        </table>
+                            <?php else: ?>
+                                <div class="jam-grid">
+                                    <?php $no = 1; foreach ($jam_reguler as $row): 
+                                        $meta = getSlotBadgeMeta($row['jam_ke']);
+                                        $waktu_mulai = date('H:i', strtotime($row['waktu_mulai']));
+                                        $waktu_selesai = date('H:i', strtotime($row['waktu_selesai']));
+                                        $durasi = getSlotDurationText($row['waktu_mulai'], $row['waktu_selesai']);
+                                    ?>
+                                    <div class="jam-app-card <?= $meta['theme'] ?>">
+                                        <div>
+                                            <div class="jam-card-top">
+                                                <span class="jam-slot-tag <?= $meta['theme'] ?>">
+                                                    <i class="fas <?= $meta['icon'] ?>"></i> <?= $meta['type'] ?>
+                                                </span>
+                                                <?php if ($durasi): ?>
+                                                <span class="jam-duration-pill">
+                                                    <i class="far fa-hourglass text-primary"></i> <?= $durasi ?>
+                                                </span>
+                                                <?php endif; ?>
+                                            </div>
+                                            <div class="jam-card-main">
+                                                <div class="jam-circle-ke <?= $meta['theme'] ?>">
+                                                    <span class="jam-ke-label">Jam</span>
+                                                    <span class="jam-ke-val"><?= htmlspecialchars($row['jam_ke']) ?></span>
+                                                </div>
+                                                <div class="jam-range-box">
+                                                    <div class="jam-time-badge-wrap">
+                                                        <div class="jam-time-badge">
+                                                            <i class="far fa-clock text-warning"></i> <?= $waktu_mulai ?>
+                                                        </div>
+                                                        <span class="jam-time-arrow"><i class="fas fa-arrow-right"></i></span>
+                                                        <div class="jam-time-badge end-time">
+                                                            <i class="far fa-clock text-info"></i> <?= $waktu_selesai ?>
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </div>
+                                        <div class="jam-card-bottom">
+                                            <span class="jam-index-text">#<?= $no++ ?> Reguler</span>
+                                            <div class="jam-actions">
+                                                <button class="jam-app-btn jam-btn-edit edit-btn" 
+                                                        data-id="<?= $row['id_jam'] ?>"
+                                                        data-jam="<?= htmlspecialchars($row['jam_ke'], ENT_QUOTES) ?>"
+                                                        data-mulai="<?= $waktu_mulai ?>"
+                                                        data-selesai="<?= $waktu_selesai ?>"
+                                                        data-jenis="Reguler" title="Edit Jam">
+                                                    <i class="fas fa-edit"></i> Edit
+                                                </button>
+                                                <button class="jam-app-btn jam-btn-del delete-btn" 
+                                                        data-id="<?= $row['id_jam'] ?>"
+                                                        data-jam="<?= htmlspecialchars($row['jam_ke'], ENT_QUOTES) ?>"
+                                                        data-jenis="Reguler" title="Hapus Jam">
+                                                    <i class="fas fa-trash"></i> Hapus
+                                                </button>
+                                            </div>
+                                        </div>
                                     </div>
+                                    <?php endforeach; ?>
                                 </div>
+                            <?php endif; ?>
+
+                            <!-- Hidden Table for Export Reguler -->
+                            <div style="display:none">
+                                <table id="export-table-reguler" border="1">
+                                    <thead>
+                                        <tr>
+                                            <th>No</th>
+                                            <th>Jam Ke</th>
+                                            <th>Waktu Mulai</th>
+                                            <th>Waktu Selesai</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        <?php $ne = 1; foreach ($jam_reguler as $row): ?>
+                                        <tr>
+                                            <td><?= $ne++ ?></td>
+                                            <td><?= $row['jam_ke'] ?></td>
+                                            <td><?= date('H:i', strtotime($row['waktu_mulai'])) ?></td>
+                                            <td><?= date('H:i', strtotime($row['waktu_selesai'])) ?></td>
+                                        </tr>
+                                        <?php endforeach; ?>
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+
+                        <!-- Tab Ramadhan -->
+                        <div class="tab-pane fade" id="pills-ramadhan" role="tabpanel" aria-labelledby="pills-ramadhan-tab">
+                            <?php if (empty($jam_ramadhan)): ?>
+                                <div class="text-center py-5" style="color: #64748b;">
+                                    <i class="fas fa-moon fa-3x mb-3 text-muted"></i>
+                                    <p class="mb-0 font-weight-bold">Belum ada data jam mengajar Ramadhan.</p>
+                                </div>
+                            <?php else: ?>
+                                <div class="jam-grid">
+                                    <?php $no = 1; foreach ($jam_ramadhan as $row): 
+                                        $meta = getSlotBadgeMeta($row['jam_ke']);
+                                        $waktu_mulai = date('H:i', strtotime($row['waktu_mulai']));
+                                        $waktu_selesai = date('H:i', strtotime($row['waktu_selesai']));
+                                        $durasi = getSlotDurationText($row['waktu_mulai'], $row['waktu_selesai']);
+                                    ?>
+                                    <div class="jam-app-card <?= $meta['theme'] ?>">
+                                        <div>
+                                            <div class="jam-card-top">
+                                                <span class="jam-slot-tag <?= $meta['theme'] ?>">
+                                                    <i class="fas <?= $meta['icon'] ?>"></i> <?= $meta['type'] ?>
+                                                </span>
+                                                <?php if ($durasi): ?>
+                                                <span class="jam-duration-pill">
+                                                    <i class="far fa-hourglass text-primary"></i> <?= $durasi ?>
+                                                </span>
+                                                <?php endif; ?>
+                                            </div>
+                                            <div class="jam-card-main">
+                                                <div class="jam-circle-ke <?= $meta['theme'] ?>">
+                                                    <span class="jam-ke-label">Jam</span>
+                                                    <span class="jam-ke-val"><?= htmlspecialchars($row['jam_ke']) ?></span>
+                                                </div>
+                                                <div class="jam-range-box">
+                                                    <div class="jam-time-badge-wrap">
+                                                        <div class="jam-time-badge">
+                                                            <i class="far fa-clock text-warning"></i> <?= $waktu_mulai ?>
+                                                        </div>
+                                                        <span class="jam-time-arrow"><i class="fas fa-arrow-right"></i></span>
+                                                        <div class="jam-time-badge end-time">
+                                                            <i class="far fa-clock text-info"></i> <?= $waktu_selesai ?>
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </div>
+                                        <div class="jam-card-bottom">
+                                            <span class="jam-index-text">#<?= $no++ ?> Ramadhan</span>
+                                            <div class="jam-actions">
+                                                <button class="jam-app-btn jam-btn-edit edit-btn" 
+                                                        data-id="<?= $row['id_jam'] ?>"
+                                                        data-jam="<?= htmlspecialchars($row['jam_ke'], ENT_QUOTES) ?>"
+                                                        data-mulai="<?= $waktu_mulai ?>"
+                                                        data-selesai="<?= $waktu_selesai ?>"
+                                                        data-jenis="Ramadhan" title="Edit Jam">
+                                                    <i class="fas fa-edit"></i> Edit
+                                                </button>
+                                                <button class="jam-app-btn jam-btn-del delete-btn" 
+                                                        data-id="<?= $row['id_jam'] ?>"
+                                                        data-jam="<?= htmlspecialchars($row['jam_ke'], ENT_QUOTES) ?>"
+                                                        data-jenis="Ramadhan" title="Hapus Jam">
+                                                    <i class="fas fa-trash"></i> Hapus
+                                                </button>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <?php endforeach; ?>
+                                </div>
+                            <?php endif; ?>
+
+                            <!-- Hidden Table for Export Ramadhan -->
+                            <div style="display:none">
+                                <table id="export-table-ramadhan" border="1">
+                                    <thead>
+                                        <tr>
+                                            <th>No</th>
+                                            <th>Jam Ke</th>
+                                            <th>Waktu Mulai</th>
+                                            <th>Waktu Selesai</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        <?php $ne = 1; foreach ($jam_ramadhan as $row): ?>
+                                        <tr>
+                                            <td><?= $ne++ ?></td>
+                                            <td><?= $row['jam_ke'] ?></td>
+                                            <td><?= date('H:i', strtotime($row['waktu_mulai'])) ?></td>
+                                            <td><?= date('H:i', strtotime($row['waktu_selesai'])) ?></td>
+                                        </tr>
+                                        <?php endforeach; ?>
+                                    </tbody>
+                                </table>
                             </div>
                         </div>
                     </div>

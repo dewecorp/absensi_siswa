@@ -1143,8 +1143,9 @@ body,
     background: linear-gradient(135deg, #fffbeb 0%, #fef3c7 100%);
     border-color: #fde68a;
 }
-.pu-status-main { display: flex; align-items: center; gap: 14px; min-width: 0; flex: 1 1 auto; }
-.pu-status-action { flex-shrink: 0; }
+.pu-status-main { display: flex; align-items: flex-start; gap: 14px; min-width: 0; flex: 1 1 auto; }
+.pu-status-content { min-width: 0; flex: 1 1 auto; }
+.pu-status-action { flex-shrink: 0; display: flex; align-items: center; }
 .pu-status-icon {
     width: 44px;
     height: 44px;
@@ -1154,6 +1155,7 @@ body,
     justify-content: center;
     font-size: 20px;
     flex-shrink: 0;
+    margin-top: 2px;
 }
 .pu-status-banner.is-active .pu-status-icon { background: #dcfce7; color: #15803d; }
 .pu-status-banner.is-inactive .pu-status-icon { background: #fef3c7; color: #b45309; }
@@ -1171,24 +1173,108 @@ body,
 .pu-status-banner.is-inactive .pu-status-pill { background: #f59e0b; color: #ffffff; }
 .pu-status-title { font-size: 14.5px; font-weight: 800; color: #0f172a; line-height: 1.3; }
 .pu-status-desc { font-size: 12.5px; color: #334155; line-height: 1.45; margin-top: 2px; }
-.pu-status-chips { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 6px; }
+.pu-status-chips { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 8px; }
 .pu-status-chip {
     display: inline-flex;
     align-items: center;
     gap: 6px;
-    padding: 3px 10px;
+    padding: 4px 10px;
     border-radius: 8px;
     background: #ffffff;
     border: 1px solid rgba(0, 0, 0, .08);
     font-size: 11.5px;
     font-weight: 700;
     color: #1e293b;
+    line-height: 1.35;
+}
+
+@media (max-width: 991.98px) {
+    /* Mode Tablet & Mobile: Tombol Atur Waktu Rata Kiri */
+    .card .card-header {
+        align-items: flex-start !important;
+        gap: 12px 16px !important;
+    }
+    .pu-header-actions {
+        width: 100% !important;
+        margin-left: 0 !important;
+        justify-content: flex-start !important;
+    }
+    .pu-header-actions .pu-btn-app {
+        width: auto !important;
+    }
+}
+
+@media (max-width: 767.98px) {
+    .card .card-header {
+        padding: 14px 16px !important;
+        gap: 12px !important;
+    }
+    .pu-header-left {
+        width: 100% !important;
+        flex-direction: column !important;
+        align-items: flex-start !important;
+        gap: 10px !important;
+    }
+    .pu-header-left h4 {
+        width: 100% !important;
+        display: flex !important;
+        align-items: center !important;
+        justify-content: space-between !important;
+        font-size: 15px !important;
+    }
+    .pu-filter-inline {
+        width: 100% !important;
+        display: flex !important;
+        align-items: center !important;
+        justify-content: space-between !important;
+    }
+    .pu-filter-inline .pu-select-pill {
+        flex: 1 1 auto !important;
+        max-width: none !important;
+    }
+    .pu-header-actions {
+        width: 100% !important;
+        margin-left: 0 !important;
+        justify-content: flex-start !important;
+    }
+    .pu-header-actions .pu-btn-app {
+        width: 100% !important;
+    }
+
+    /* Banner mobile stacking */
+    .pu-status-banner {
+        flex-direction: column !important;
+        align-items: stretch !important;
+        gap: 14px !important;
+        padding: 15px 16px !important;
+    }
+    .pu-status-main {
+        width: 100% !important;
+        gap: 12px !important;
+    }
+    .pu-status-action {
+        width: 100% !important;
+    }
+    .pu-status-action form {
+        width: 100% !important;
+    }
+    .pu-status-action .pu-btn-app {
+        width: 100% !important;
+        padding: 10px 16px !important;
+    }
+    .pu-status-chips {
+        flex-direction: column !important;
+        align-items: stretch !important;
+        gap: 6px !important;
+    }
+    .pu-status-chip {
+        width: 100% !important;
+    }
 }
 
 @media (max-width: 575.98px) {
-    .pu-app-card { border-radius: 16px; }
-    .pu-app-card > .card-header { padding: 15px; }
-    .pu-app-card > .card-body { padding: 12px; }
+    .card-body { padding: 14px 12px !important; }
+    .pu-settings-box { padding: 16px 14px !important; border-radius: 14px !important; }
     .pu-card-body { gap: 12px; padding: 13px; }
     .pu-card-photo { width: 68px; height: 84px; flex-basis: 68px; }
     .pu-card-top, .pu-card-footer { padding-left: 13px; padding-right: 13px; }
@@ -1292,7 +1378,7 @@ body,
                                     <div class="pu-status-icon">
                                         <i class="fas <?= $tampil_global_siswa ? 'fa-broadcast-tower' : 'fa-eye-slash' ?>"></i>
                                     </div>
-                                    <div>
+                                    <div class="pu-status-content">
                                         <div>
                                             <span class="pu-status-pill"><?= $tampil_global_siswa ? 'Aktif Tayang' : 'Belum Ditampilkan' ?></span>
                                         </div>
@@ -1300,7 +1386,7 @@ body,
                                         <div class="pu-status-desc">
                                             <?= $tampil_global_siswa
                                                 ? 'Siswa kelas VI sudah dapat melihat pengumuman kelulusan di akun masing-masing.'
-                                                : 'Siswa belum bisa melihat status kelulusan sampai Anda mengaktifkannya lewat tombol di samping.'
+                                                : 'Siswa belum bisa melihat status kelulusan sampai Anda mengaktifkannya lewat tombol di bawah/samping.'
                                             ?>
                                         </div>
                                         <div class="pu-status-chips">
