@@ -81,7 +81,7 @@ $grade6_teachers = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
 // Get Jadwal Les Data
 $stmt = $pdo->query("
-    SELECT j.*, g.nama_guru 
+    SELECT j.*, g.nama_guru, g.foto 
     FROM tb_jadwal_les j 
     JOIN tb_guru g ON j.id_guru = g.id_guru 
     ORDER BY j.tanggal ASC, j.waktu_mulai ASC
@@ -234,8 +234,10 @@ include '../templates/sidebar.php';
     font-size: 14px;
     font-weight: 800;
     flex-shrink: 0;
+    overflow: hidden;
     box-shadow: 0 2px 6px rgba(0,0,0,.15);
 }
+.tl-avatar img { width: 100%; height: 100%; object-fit: cover; display: block; border-radius: inherit; }
 .tl-time-box {
     display: inline-flex;
     align-items: center;
@@ -336,7 +338,7 @@ include '../templates/sidebar.php';
                                         <div class="d-flex justify-content-between align-items-start mb-2 pb-2 border-bottom">
                                             <div class="d-flex align-items-center" style="gap: 12px; min-width: 0;">
                                                 <div class="tl-avatar" style="background: <?= $tl_color ?>;">
-                                                    <?= htmlspecialchars($initials) ?>
+                                                    <?= getPersonAvatarHtml($s['foto'] ?? '', htmlspecialchars($initials)) ?>
                                                 </div>
                                                 <div style="min-width: 0;">
                                                     <h6 class="mb-0 font-weight-bold text-truncate" style="font-size: 15px; line-height: 1.3;" title="<?= htmlspecialchars($s['nama_guru']) ?>">

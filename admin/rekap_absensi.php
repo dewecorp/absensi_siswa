@@ -155,7 +155,7 @@ if ($class_id > 0) {
         $month = substr($selected_month, 5, 2);
         
         // Get all students in the class
-        $stmt = $pdo->prepare("SELECT id_siswa, nama_siswa, nisn FROM tb_siswa WHERE id_kelas = ? ORDER BY nama_siswa ASC");
+        $stmt = $pdo->prepare("SELECT id_siswa, nama_siswa, nisn, foto FROM tb_siswa WHERE id_kelas = ? ORDER BY nama_siswa ASC");
         $stmt->execute([$class_id]);
         $all_students = $stmt->fetchAll(PDO::FETCH_ASSOC);
         
@@ -201,6 +201,7 @@ if ($class_id > 0) {
             $student_data = [
                 'nama_siswa' => $student['nama_siswa'],
                 'nisn' => $student['nisn'],
+                'foto' => $student['foto'] ?? '',
                 'days' => array_fill(1, 31, ''), // Initialize all days as empty
                 'summary' => ['Hadir' => 0, 'Sakit' => 0, 'Izin' => 0, 'Alpa' => 0, 'Berhalangan' => 0]
             ];
@@ -724,7 +725,7 @@ include '../templates/sidebar.php';
                                                         <div class="att-monthly-card">
                                                             <div class="att-monthly-head">
                                                                 <div class="att-monthly-avatar">
-                                                                    <?= $index + 1 ?>
+                                                                    <?= getPersonAvatarHtml($student['foto'] ?? '', (string)($index + 1), 'att-monthly-avatar-img') ?>
                                                                 </div>
                                                                 <div class="att-monthly-title">
                                                                     <div class="att-monthly-name"><?= htmlspecialchars($student['nama_siswa']) ?></div>

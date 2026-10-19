@@ -149,12 +149,12 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['single_absensi'])) {
 
 // Get Grade 6 Teachers
 $stmt = $pdo->prepare("
-    SELECT DISTINCT g.id_guru, g.nama_guru 
+    SELECT DISTINCT g.id_guru, g.nama_guru, g.foto 
     FROM tb_guru g
     JOIN tb_jadwal_pelajaran j ON g.id_guru = j.guru_id
     WHERE j.kelas_id = 6
     UNION
-    SELECT id_guru, nama_guru
+    SELECT id_guru, nama_guru, foto
     FROM tb_guru
     WHERE nama_guru IN (SELECT wali_kelas FROM tb_kelas WHERE id_kelas = 6)
     ORDER BY nama_guru ASC
@@ -445,7 +445,7 @@ include '../templates/sidebar.php';
                                     <div class="att-grid" style="grid-template-columns: minmax(280px, 440px); justify-content: center;">
                                         <div class="att-card">
                                             <div class="att-card-head">
-                                                <div class="att-avatar att-avatar--<?= $status_lower ?>"><?= htmlspecialchars($ini !== '' ? $ini : '?') ?></div>
+                                                <div class="att-avatar att-avatar--<?= $status_lower ?>"><?= getPersonAvatarHtml($teacher['foto'] ?? '', htmlspecialchars($ini !== '' ? $ini : '?')) ?></div>
                                                 <div class="att-card-id">
                                                     <div class="att-name"><?= htmlspecialchars($nm) ?></div>
                                                     <div class="att-sub">
@@ -484,7 +484,7 @@ include '../templates/sidebar.php';
                                     ?>
                                     <div class="att-card">
                                         <div class="att-card-head">
-                                            <div class="att-avatar att-avatar--<?= $status_lower ?>"><?= htmlspecialchars($ini !== '' ? $ini : '?') ?></div>
+                                            <div class="att-avatar att-avatar--<?= $status_lower ?>"><?= getPersonAvatarHtml($teacher['foto'] ?? '', htmlspecialchars($ini !== '' ? $ini : '?')) ?></div>
                                             <div class="att-card-id">
                                                 <div class="att-name"><?= htmlspecialchars($nm) ?></div>
                                                 <div class="att-sub">

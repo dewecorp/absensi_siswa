@@ -286,7 +286,7 @@ include '../templates/sidebar.php';
                                     ?>
                                     <div class="att-card">
                                         <div class="att-card-head">
-                                            <div class="att-avatar att-avatar--<?= htmlspecialchars($stat_slug) ?>"><?= htmlspecialchars($ini !== '' ? $ini : '?') ?></div>
+                                            <div class="att-avatar att-avatar--<?= htmlspecialchars($stat_slug) ?>"><?= getPersonAvatarHtml($student['foto'] ?? '', htmlspecialchars($ini !== '' ? $ini : '?')) ?></div>
                                             <div class="att-card-id">
                                                 <div class="att-name"><?= htmlspecialchars($nm) ?></div>
                                                 <div class="att-sub">

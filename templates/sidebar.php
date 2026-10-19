@@ -1879,10 +1879,35 @@ if (!function_exists('get_bottom_nav_quick_links')) {
 
 <div class="main-sidebar">
     <style>
+        .main-sidebar .sidebar-menu li.menu-header {
+            color: #475569 !important;
+            font-weight: 700 !important;
+            letter-spacing: 1.3px !important;
+        }
         .main-sidebar .sidebar-menu li a {
             display: flex !important;
             align-items: center !important;
             white-space: nowrap !important;
+            color: #1e293b !important;
+            font-weight: 600 !important;
+        }
+        .main-sidebar .sidebar-menu li a i {
+            color: #334155 !important;
+        }
+        .main-sidebar .sidebar-menu li a:hover {
+            color: #6777ef !important;
+            background-color: #f1f5f9 !important;
+        }
+        .main-sidebar .sidebar-menu li a:hover i {
+            color: #6777ef !important;
+        }
+        .main-sidebar .sidebar-menu li.active > a {
+            color: #6777ef !important;
+            font-weight: 700 !important;
+            background-color: #eef2ff !important;
+        }
+        .main-sidebar .sidebar-menu li.active > a i {
+            color: #6777ef !important;
         }
         .main-sidebar .sidebar-menu li a span {
             white-space: nowrap !important;
@@ -1914,6 +1939,11 @@ if (!function_exists('get_bottom_nav_quick_links')) {
             align-items: center !important;
             justify-content: space-between !important;
             padding-right: 15px !important;
+            color: #334155 !important;
+            font-weight: 500 !important;
+        }
+        .main-sidebar .sidebar-menu ul.dropdown-menu li a:hover {
+            color: #6777ef !important;
         }
         .main-sidebar .sidebar-menu ul.dropdown-menu li a .badge-circle {
             margin-left: 8px !important;

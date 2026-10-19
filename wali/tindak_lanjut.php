@@ -360,7 +360,7 @@ if ($f_siswa > 0) {
 
 $where_sql = implode(' AND ', $where);
 $stmt = $pdo->prepare("
-    SELECT t.*, s.nama_siswa, s.nisn, k.nama_kelas,
+    SELECT t.*, s.nama_siswa, s.nisn, s.foto AS foto_siswa, k.nama_kelas,
            b.tanggal AS b_tanggal, b.jenis_pembinaan AS b_jenis, b.permasalahan AS b_masalah, b.status AS b_status,
            c.tanggal AS c_tanggal, c.topik AS c_topik, c.ringkasan_masalah AS c_masalah, c.status AS c_status
     FROM tb_tindak_lanjut_wali t
@@ -820,8 +820,10 @@ include '../templates/sidebar.php';
     font-size: 14px;
     font-weight: 800;
     flex-shrink: 0;
+    overflow: hidden;
     box-shadow: 0 2px 6px rgba(0,0,0,.15);
 }
+.tl-avatar img { width: 100%; height: 100%; object-fit: cover; display: block; border-radius: inherit; }
 .tl-preview-box {
     background: #f8fafc;
     border-left: 3.5px solid #6777ef;
@@ -1032,7 +1034,7 @@ include '../templates/sidebar.php';
                                         <div class="d-flex justify-content-between align-items-start mb-2.5 pb-2 border-bottom">
                                             <div class="d-flex align-items-center" style="gap: 12px; min-width: 0;">
                                                 <div class="tl-avatar" style="background: <?= $tl_color ?>;">
-                                                    <?= htmlspecialchars($initials) ?>
+                                                    <?= getPersonAvatarHtml($r['foto_siswa'] ?? '', htmlspecialchars($initials)) ?>
                                                 </div>
                                                 <div style="min-width: 0;">
                                                     <h6 class="mb-0 font-weight-bold text-truncate" style="font-size: 15px; line-height: 1.3;" title="<?= htmlspecialchars($r['nama_siswa']) ?>">

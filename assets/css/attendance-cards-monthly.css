@@ -50,6 +50,15 @@
     font-size: 16px;
     font-weight: 800;
     flex: 0 0 42px;
+    overflow: hidden;
+}
+
+.att-monthly-avatar-img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    display: block;
+    border-radius: inherit;
 }
 
 .att-monthly-title {

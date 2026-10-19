@@ -140,7 +140,7 @@ $class_info = $wali_kelas;
 
 // Process search based on filter type
 if ($class_id > 0) {
-    $stmt = $pdo->prepare("SELECT id_siswa, nama_siswa, nisn, jenis_kelamin FROM tb_siswa WHERE id_kelas = ? ORDER BY nama_siswa ASC");
+    $stmt = $pdo->prepare("SELECT id_siswa, nama_siswa, nisn, jenis_kelamin, foto FROM tb_siswa WHERE id_kelas = ? ORDER BY nama_siswa ASC");
     $stmt->execute([$class_id]);
     $all_students = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
@@ -249,6 +249,7 @@ if ($class_id > 0) {
                 'nama_siswa' => $student['nama_siswa'],
                 'nisn' => $student['nisn'],
                 'jenis_kelamin' => $student['jenis_kelamin'] ?? '',
+                'foto' => $student['foto'] ?? '',
                 'days' => $days,
                 'summary' => $summary
             ];
@@ -589,7 +590,7 @@ echo "<script>
                                 <div class="att-monthly-card">
                                     <div class="att-monthly-head">
                                         <div class="att-monthly-avatar">
-                                            <?= $no++ ?>
+                                            <?= getPersonAvatarHtml($r['foto'] ?? '', (string)($no++), 'att-monthly-avatar-img') ?>
                                         </div>
                                         <div class="att-monthly-title">
                                             <div class="att-monthly-name"><?= htmlspecialchars($r['nama_siswa']) ?></div>

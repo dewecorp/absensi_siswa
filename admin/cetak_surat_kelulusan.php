@@ -10,11 +10,80 @@ if (!isAuthorized(['admin', 'tata_usaha', 'wali'])) {
     redirect('../login.php');
 }
 
+/**
+ * Tampilkan notifikasi SweetAlert penuh layar untuk halaman cetak yang tidak bisa diproses.
+ */
+function renderCetakSuratNotice(string $title, string $text, string $icon, string $backUrl, string $backLabel = 'Kembali ke Data Peserta Ujian'): void
+{
+    header('Content-Type: text/html; charset=utf-8');
+    ?>
+    <!DOCTYPE html>
+    <html lang="id">
+    <head>
+        <meta charset="UTF-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1">
+        <title><?= htmlspecialchars($title, ENT_QUOTES, 'UTF-8') ?></title>
+        <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+        <style>
+            html, body { height: 100%; margin: 0; }
+            body {
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                min-height: 100vh;
+                padding: 18px;
+                box-sizing: border-box;
+                background: linear-gradient(135deg, #eef2ff 0%, #e0f2fe 100%);
+                font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Arial, sans-serif;
+            }
+            .swal2-popup { border-radius: 18px !important; box-shadow: 0 18px 45px rgba(20, 30, 70, .16) !important; }
+            .swal2-title { font-size: 20px !important; }
+            .swal2-html-container { font-size: 14px !important; line-height: 1.6 !important; color: #475569 !important; }
+            .swal2-confirm, .swal2-cancel { border-radius: 10px !important; }
+        </style>
+    </head>
+    <body>
+    <script>
+        document.addEventListener('DOMContentLoaded', function () {
+            Swal.fire({
+                icon: <?= json_encode($icon) ?>,
+                title: <?= json_encode($title) ?>,
+                html: <?= json_encode($text) ?>,
+                confirmButtonText: <?= json_encode($backLabel) ?>,
+                confirmButtonColor: '#6777ef',
+                showCancelButton: true,
+                cancelButtonText: 'Tutup',
+                cancelButtonColor: '#94a3b8',
+                reverseButtons: true,
+                allowOutsideClick: false,
+                allowEscapeKey: false
+            }).then(function (result) {
+                if (result.isConfirmed) {
+                    window.location.href = <?= json_encode($backUrl) ?>;
+                } else if (window.opener) {
+                    window.close();
+                } else {
+                    window.location.href = <?= json_encode($backUrl) ?>;
+                }
+            });
+        });
+    </script>
+    </body>
+    </html>
+    <?php
+    exit;
+}
+
 $ta = trim((string) ($_GET['ta'] ?? ''));
 $mode = trim((string) ($_GET['mode'] ?? 'single'));
 $idSiswaFilter = (int) ($_GET['id_siswa'] ?? 0);
 if (!isTahunAjaranFormatValid($ta)) {
-    die('Tahun ajaran tidak valid.');
+    renderCetakSuratNotice(
+        'Tahun ajaran tidak valid',
+        'Tahun ajaran yang diminta tidak dikenali. Silakan pilih tahun ajaran yang benar dari halaman Data Peserta Ujian.',
+        'error',
+        'data_peserta_ujian.php'
+    );
 }
 
 $school = getSchoolProfile($pdo);
@@ -37,7 +106,13 @@ if ($kotaSurat === '') {
     $kotaSurat = 'Jepara';
 }
 if ($tanggalSurat === '') {
-    die('Tanggal surat belum diatur di Data Peserta Ujian.');
+    renderCetakSuratNotice(
+        'Tanggal surat belum diatur',
+        'Tanggal surat kelulusan belum diatur. Buka <strong>Data Peserta Ujian</strong>, isi <strong>tanggal surat</strong> dan kota, lalu simpan sebelum mencetak.',
+        'warning',
+        'data_peserta_ujian.php?ta=' . urlencode($ta),
+        'Atur Sekarang'
+    );
 }
 $tanggalSuratIndo = formatDateIndonesia($tanggalSurat);
 
@@ -56,7 +131,12 @@ $st = $pdo->prepare($sql);
 $st->execute($params);
 $rows = $st->fetchAll(PDO::FETCH_ASSOC);
 if (!$rows) {
-    die('Data peserta ujian tidak ditemukan.');
+    renderCetakSuratNotice(
+        'Data peserta ujian tidak ditemukan',
+        'Belum ada peserta ujian untuk tahun ajaran ini. Pastikan nomor ujian sudah digenerate di halaman Data Peserta Ujian.',
+        'info',
+        'data_peserta_ujian.php?ta=' . urlencode($ta)
+    );
 }
 
 $isCetakSemua = ($mode === 'all' || $idSiswaFilter <= 0);

@@ -642,11 +642,13 @@ if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
 
 
 
-$sql = 'SELECT s.id_siswa, s.nisn, s.nama_siswa, pu.nomor_ujian, pu.is_lulus, pu.keterangan_kelulusan
+$sql = 'SELECT s.id_siswa, s.nisn, s.nama_siswa, s.foto, k.nama_kelas, pu.nomor_ujian, pu.is_lulus, pu.keterangan_kelulusan
 
     FROM tb_peserta_ujian pu
 
     INNER JOIN tb_siswa s ON s.id_siswa = pu.id_siswa
+
+    LEFT JOIN tb_kelas k ON k.id_kelas = s.id_kelas
 
     WHERE pu.tahun_ajaran = ?
 
@@ -748,7 +750,13 @@ if ($jadwal_waktu) {
 
 $page_title = 'Data Peserta Ujian';
 
-
+$pu_logo_path = '';
+$pu_logo_file = trim((string) ($school_profile['logo'] ?? ''));
+if ($pu_logo_file !== '' && is_file(__DIR__ . '/../assets/img/' . $pu_logo_file)) {
+    $pu_logo_path = '../assets/img/' . $pu_logo_file;
+} elseif (is_file(__DIR__ . '/../assets/img/logo_madrasah.png')) {
+    $pu_logo_path = '../assets/img/logo_madrasah.png';
+}
 
 require_once '../templates/header.php';
 
@@ -756,7 +764,436 @@ require_once '../templates/sidebar.php';
 
 ?>
 
+<style>
+/* Global Crisp Dark Fonts — Hilangkan Font Grey Pudar di Seluruh Sistem */
+body,
+.main-sidebar,
+.main-sidebar .sidebar-menu li a,
+.main-sidebar .sidebar-menu li ul.dropdown-menu li a,
+.main-content,
+.main-content p,
+.main-content label,
+.main-content table,
+.card,
+.card-header,
+.card-body,
+.card-footer,
+.form-group label,
+.form-inline label,
+.breadcrumb-item,
+.breadcrumb-item a,
+.section-title,
+.section-lead {
+    color: #0f172a !important;
+}
 
+/* Sidebar Menu Font & Headers */
+.main-sidebar .sidebar-menu li.menu-header {
+    color: #475569 !important;
+    font-weight: 700 !important;
+    letter-spacing: 1.4px !important;
+}
+.main-sidebar .sidebar-menu li a {
+    color: #1e293b !important;
+    font-weight: 600 !important;
+}
+.main-sidebar .sidebar-menu li a i {
+    color: #334155 !important;
+}
+.main-sidebar .sidebar-menu li a:hover {
+    color: #6777ef !important;
+    background-color: #f1f5f9 !important;
+}
+.main-sidebar .sidebar-menu li a:hover i {
+    color: #6777ef !important;
+}
+.main-sidebar .sidebar-menu li.active > a {
+    color: #6777ef !important;
+    font-weight: 700 !important;
+    background-color: #eef2ff !important;
+}
+.main-sidebar .sidebar-menu li.active > a i {
+    color: #6777ef !important;
+}
+.main-sidebar .sidebar-menu li ul.dropdown-menu li a {
+    color: #334155 !important;
+    font-weight: 500 !important;
+}
+.main-sidebar .sidebar-menu li ul.dropdown-menu li a:hover,
+.main-sidebar .sidebar-menu li ul.dropdown-menu li.active > a,
+.main-sidebar .sidebar-menu li ul.dropdown-menu li a.active {
+    color: #6777ef !important;
+    font-weight: 700 !important;
+}
+
+/* Seluruh text-muted dibuat kontras gelap (#334155), bukan abu-abu pudar */
+.text-muted, .text-secondary {
+    color: #334155 !important;
+}
+.small, small {
+    color: #334155 !important;
+}
+
+/* Navbar Top Header: Text putih bersih kontras tinggi di atas latar biru */
+.main-navbar,
+.main-navbar .text-white,
+.main-navbar .navbar-nav,
+.main-navbar .navbar-nav li,
+.main-navbar .navbar-nav span,
+.main-navbar .navbar-nav a,
+.main-navbar #header-date-time {
+    color: #ffffff !important;
+}
+.main-navbar .navbar-nav a:hover {
+    color: #e0e7ff !important;
+}
+
+/* Badge Status: Font PUTIH bersih agar kontras dengan latar badge */
+.badge,
+.badge-danger,
+.badge-success,
+.badge-warning,
+.badge-primary,
+.badge-info,
+.badge-dark,
+.pu-ket-teks,
+.pu-card-status .badge {
+    color: #ffffff !important;
+    font-weight: 700 !important;
+}
+.badge.badge-light,
+.badge.badge-white {
+    color: #0f172a !important;
+}
+
+/* Header Card Bar — Judul & Filter Kiri, Tombol Aksi Kanan */
+.card .card-header {
+    display: flex !important;
+    align-items: center !important;
+    justify-content: space-between !important;
+    flex-wrap: wrap !important;
+    gap: 12px 20px !important;
+    padding: 18px 22px !important;
+    min-height: auto !important;
+}
+.pu-header-left {
+    display: flex !important;
+    align-items: center !important;
+    flex-wrap: wrap !important;
+    gap: 12px 16px !important;
+}
+.card .card-header h4 {
+    margin: 0 !important;
+    line-height: 1.3 !important;
+    color: #0f172a !important;
+    font-size: 16px !important;
+    font-weight: 800 !important;
+}
+.pu-header-actions {
+    display: flex !important;
+    align-items: center !important;
+    flex-wrap: wrap !important;
+    gap: 10px !important;
+    margin-left: auto !important;
+}
+.pu-filter-inline {
+    display: inline-flex !important;
+    align-items: center !important;
+    gap: 8px !important;
+    margin: 0 !important;
+}
+.pu-filter-inline label {
+    margin: 0 !important;
+    font-size: 13px !important;
+    font-weight: 700 !important;
+    color: #1e293b !important;
+    white-space: nowrap !important;
+}
+.pu-filter-inline .pu-select-pill {
+    margin: 0 !important;
+    background: #f8fafc !important;
+    border: 1.5px solid #cbd5e1 !important;
+    color: #0f172a !important;
+    font-weight: 700 !important;
+}
+
+/* Mobile App Button Styles */
+.pu-btn-app {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 7px;
+    border-radius: 999px;
+    font-weight: 700;
+    font-size: 13px;
+    line-height: 1.2;
+    padding: 8px 16px;
+    border: 0;
+    cursor: pointer;
+    transition: transform .12s ease, box-shadow .15s ease, background .15s ease;
+    text-decoration: none !important;
+    user-select: none;
+    white-space: nowrap;
+}
+.pu-btn-app:active { transform: scale(0.96); }
+.pu-btn-app-sm { padding: 6px 14px; font-size: 12px; gap: 5px; }
+.pu-btn-app-lg { padding: 11px 22px; font-size: 13.5px; gap: 8px; }
+.pu-btn-app-primary {
+    background: linear-gradient(135deg, #6777ef 0%, #3abaf4 100%);
+    color: #fff !important;
+    box-shadow: 0 4px 12px rgba(103, 119, 239, .28);
+}
+.pu-btn-app-primary:hover {
+    box-shadow: 0 6px 16px rgba(103, 119, 239, .38);
+    color: #fff !important;
+    transform: translateY(-1px);
+}
+.pu-btn-app-success {
+    background: linear-gradient(135deg, #47c363 0%, #2ecc71 100%);
+    color: #fff !important;
+    box-shadow: 0 4px 12px rgba(71, 195, 99, .28);
+}
+.pu-btn-app-success:hover {
+    box-shadow: 0 6px 16px rgba(71, 195, 99, .38);
+    color: #fff !important;
+    transform: translateY(-1px);
+}
+.pu-btn-app-warning {
+    background: linear-gradient(135deg, #ffa426 0%, #f39c12 100%);
+    color: #fff !important;
+    box-shadow: 0 4px 12px rgba(255, 164, 38, .28);
+}
+.pu-btn-app-warning:hover {
+    box-shadow: 0 6px 16px rgba(255, 164, 38, .38);
+    color: #fff !important;
+    transform: translateY(-1px);
+}
+.pu-btn-app-outline {
+    background: #ffffff;
+    color: #6777ef !important;
+    border: 1.5px solid #dbe4f0;
+    box-shadow: 0 2px 6px rgba(20, 30, 70, .04);
+}
+.pu-btn-app-outline:hover {
+    background: #f4f6f9;
+    border-color: #6777ef;
+    color: #6777ef !important;
+    transform: translateY(-1px);
+}
+.pu-select-pill {
+    border-radius: 999px !important;
+    padding: 6px 14px !important;
+    font-weight: 600 !important;
+    font-size: 13px !important;
+    height: auto !important;
+}
+
+.pu-toolbar {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    margin-bottom: 18px;
+    padding: 12px 16px;
+    background: #ffffff;
+    border: 1px solid #e2e8f0;
+    border-radius: 14px;
+    box-shadow: 0 2px 8px rgba(20, 30, 70, .04);
+}
+.pu-master-label { display: inline-flex; align-items: center; gap: 8px; font-weight: 700; font-size: 13px; color: #334155; cursor: pointer; user-select: none; }
+.pu-master-label input { width: 17px; height: 17px; margin: 0; accent-color: #4f46e5; }
+.pu-toolbar-info { color: #64748b; font-size: 13px; font-weight: 700; white-space: nowrap; }
+.pu-search { position: relative; flex: 1 1 240px; min-width: 180px; }
+.pu-search input { width: 100%; padding: 9px 14px 9px 38px; border: 1.5px solid #e2e8f0; border-radius: 999px; background: #f8fafc; color: #334155; font-size: 13px; font-weight: 600; outline: none; transition: border-color .15s ease, box-shadow .15s ease, background .15s ease; }
+.pu-search input:focus { background: #fff; border-color: #818cf8; box-shadow: 0 0 0 3px rgba(99, 102, 241, .15); }
+.pu-search i { position: absolute; left: 14px; top: 50%; transform: translateY(-50%); color: #94a3b8; font-size: 13px; }
+
+/* Grid 2 Kolom */
+.pu-card-grid {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 16px;
+    margin-bottom: 24px;
+}
+@media (max-width: 767.98px) {
+    .pu-card-grid { grid-template-columns: 1fr; gap: 12px; }
+}
+
+.pu-card {
+    position: relative;
+    display: flex;
+    flex-direction: column;
+    background: #fff;
+    border: 1px solid #dfe6f0;
+    border-radius: 16px;
+    box-shadow: 0 4px 16px rgba(20, 30, 70, .05);
+    overflow: hidden;
+    transition: transform .18s ease, box-shadow .18s ease;
+}
+.pu-card:hover { transform: translateY(-2px); box-shadow: 0 10px 24px rgba(20, 30, 70, .10); }
+.pu-card::before { content: ''; position: absolute; inset: 0 0 auto 0; height: 4px; background: linear-gradient(90deg, #4f46e5, #3abaf4); }
+.pu-card-top {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 10px;
+    padding: 14px 16px 11px;
+    border-bottom: 1px dashed #e2e8f0;
+}
+.pu-card-school { display: flex; align-items: center; gap: 10px; min-width: 0; }
+.pu-card-logo { width: 36px; height: 36px; object-fit: contain; flex: 0 0 36px; }
+.pu-card-logo-icon { display: inline-flex; align-items: center; justify-content: center; border-radius: 9px; background: #eef2ff; color: #4f46e5; font-size: 16px; }
+.pu-card-title { font-size: 12px; line-height: 1.2; font-weight: 800; letter-spacing: .45px; color: #1e293b; text-transform: uppercase; }
+.pu-card-school-name { margin-top: 3px; font-size: 11px; line-height: 1.3; color: #64748b; }
+.pu-card-number { flex-shrink: 0; padding: 4px 10px; border-radius: 999px; background: #eef2ff; color: #4338ca; font-size: 11px; font-weight: 800; white-space: nowrap; }
+.pu-card-body { display: flex; gap: 14px; padding: 15px 16px; flex: 1 1 auto; }
+.pu-card-photo {
+    width: 76px;
+    height: 94px;
+    flex: 0 0 76px;
+    border-radius: 12px;
+    overflow: hidden;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: linear-gradient(135deg, #eef2ff 0%, #e0f2fe 100%);
+    border: 1px solid #dbe4f0;
+    color: #4f46e5;
+    font-size: 22px;
+    font-weight: 800;
+}
+.pu-card-photo-img { width: 100%; height: 100%; object-fit: cover; display: block; }
+.pu-card-photo-initials { line-height: 1; }
+.pu-card-info { min-width: 0; flex: 1 1 auto; }
+.pu-card-name { margin-bottom: 9px; color: #0f172a; font-size: 15px; line-height: 1.35; font-weight: 800; word-break: break-word; }
+.pu-card-meta { display: flex; flex-direction: column; gap: 5px; }
+.pu-card-meta-row { display: flex; justify-content: space-between; gap: 10px; font-size: 12px; line-height: 1.4; }
+.pu-card-meta-row span { color: #64748b; white-space: nowrap; }
+.pu-card-meta-row strong { color: #1e293b; text-align: right; word-break: break-word; }
+.pu-card-footer {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 10px;
+    padding: 11px 16px;
+    background: #f8fafc;
+    border-top: 1px solid #eef2f7;
+}
+.pu-card-status { display: flex; flex-wrap: wrap; align-items: center; gap: 7px; min-width: 0; }
+.pu-card-status input { width: 17px; height: 17px; margin: 0; flex-shrink: 0; accent-color: #10b981; }
+.pu-card-status .badge { font-size: 10.5px; padding: 4px 9px; border-radius: 999px; font-weight: 700; }
+.pu-card-note { flex-basis: 100%; color: #64748b; font-size: 10.5px; line-height: 1.35; }
+
+.pu-card-print {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 6px 14px;
+    border-radius: 999px;
+    background: linear-gradient(135deg, #4f46e5 0%, #3b82f6 100%);
+    color: #fff !important;
+    font-size: 11.5px;
+    font-weight: 700;
+    letter-spacing: .25px;
+    border: 0;
+    box-shadow: 0 3px 10px rgba(79, 70, 229, .28);
+    transition: transform .12s ease, box-shadow .15s ease;
+    text-decoration: none !important;
+    white-space: nowrap;
+}
+.pu-card-print:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 5px 14px rgba(79, 70, 229, .38);
+    color: #fff !important;
+}
+.pu-card-print:active { transform: scale(0.96); }
+
+.pu-settings-box {
+    background: #ffffff;
+    border: 1.5px solid #cbd5e1;
+    border-radius: 18px;
+    padding: 22px 24px;
+    margin-bottom: 22px;
+    box-shadow: 0 4px 18px rgba(15, 23, 42, .06);
+}
+.pu-settings-box h5 { font-size: 16px; font-weight: 800; color: #0f172a; }
+.pu-settings-box .form-control { border-radius: 12px; border: 1.5px solid #cbd5e1; font-size: 13.5px; color: #0f172a; font-weight: 600; padding: 10px 14px; height: auto; }
+.pu-settings-box .form-control:focus { border-color: #6366f1; box-shadow: 0 0 0 3px rgba(99, 102, 241, .18); }
+.pu-settings-desc { font-size: 13px; color: #334155; line-height: 1.5; margin-bottom: 16px; font-weight: 500; }
+.pu-field-label { display: block; font-size: 12.5px; font-weight: 700; color: #1e293b; margin-bottom: 6px; letter-spacing: .2px; }
+
+/* Status Banner ala Mobile Apps */
+.pu-status-banner {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 16px;
+    padding: 16px 20px;
+    border-radius: 16px;
+    margin-bottom: 20px;
+    border: 1.5px solid;
+    box-shadow: 0 4px 16px rgba(15, 23, 42, .05);
+}
+.pu-status-banner.is-active {
+    background: linear-gradient(135deg, #f0fdf4 0%, #ecfdf5 100%);
+    border-color: #86efac;
+}
+.pu-status-banner.is-inactive {
+    background: linear-gradient(135deg, #fffbeb 0%, #fef3c7 100%);
+    border-color: #fde68a;
+}
+.pu-status-main { display: flex; align-items: center; gap: 14px; min-width: 0; flex: 1 1 auto; }
+.pu-status-action { flex-shrink: 0; }
+.pu-status-icon {
+    width: 44px;
+    height: 44px;
+    border-radius: 12px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 20px;
+    flex-shrink: 0;
+}
+.pu-status-banner.is-active .pu-status-icon { background: #dcfce7; color: #15803d; }
+.pu-status-banner.is-inactive .pu-status-icon { background: #fef3c7; color: #b45309; }
+.pu-status-pill {
+    display: inline-block;
+    padding: 3px 10px;
+    border-radius: 999px;
+    font-size: 11px;
+    font-weight: 800;
+    letter-spacing: .4px;
+    text-transform: uppercase;
+    margin-bottom: 3px;
+}
+.pu-status-banner.is-active .pu-status-pill { background: #22c55e; color: #ffffff; }
+.pu-status-banner.is-inactive .pu-status-pill { background: #f59e0b; color: #ffffff; }
+.pu-status-title { font-size: 14.5px; font-weight: 800; color: #0f172a; line-height: 1.3; }
+.pu-status-desc { font-size: 12.5px; color: #334155; line-height: 1.45; margin-top: 2px; }
+.pu-status-chips { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 6px; }
+.pu-status-chip {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 3px 10px;
+    border-radius: 8px;
+    background: #ffffff;
+    border: 1px solid rgba(0, 0, 0, .08);
+    font-size: 11.5px;
+    font-weight: 700;
+    color: #1e293b;
+}
+
+@media (max-width: 575.98px) {
+    .pu-app-card { border-radius: 16px; }
+    .pu-app-card > .card-header { padding: 15px; }
+    .pu-app-card > .card-body { padding: 12px; }
+    .pu-card-body { gap: 12px; padding: 13px; }
+    .pu-card-photo { width: 68px; height: 84px; flex-basis: 68px; }
+    .pu-card-top, .pu-card-footer { padding-left: 13px; padding-right: 13px; }
+}
+</style>
 
 <div class="main-content">
 
@@ -809,45 +1246,17 @@ require_once '../templates/sidebar.php';
 
                         <div class="card-header">
 
-                            <h4 class="mb-0">Data Peserta Ujian Kelas VI — Tahun Ajaran <?= htmlspecialchars($tahun_ajaran_filter) ?>
+                            <div class="pu-header-left">
 
-                                <span class="badge badge-info align-middle ml-2" title="Jumlah peserta untuk tahun ajaran ini"><?= (int) $jumlah_peserta_ujian ?> peserta</span>
+                                <h4 class="mb-0">Data Peserta Ujian Kelas VI
+                                    <span class="badge badge-info align-middle ml-2" title="Jumlah peserta untuk tahun ajaran ini"><?= (int) $jumlah_peserta_ujian ?> peserta</span>
+                                </h4>
 
-                            </h4>
+                                <form method="get" class="pu-filter-inline">
 
-                            <div class="card-header-action d-flex flex-wrap align-items-center justify-content-end">
+                                    <label>Tahun Ajaran:</label>
 
-                                <?php if ($can_crud): ?>
-                                <form method="post" class="mb-2 mb-md-0 mr-2">
-
-                                    <input type="hidden" name="simpan_toggle_tampil_akun_siswa" value="1">
-
-                                    <input type="hidden" name="tahun_ajaran" value="<?= htmlspecialchars($tahun_ajaran_filter, ENT_QUOTES, 'UTF-8') ?>">
-
-                                    <input type="hidden" name="aktif_global" value="<?= $tampil_global_siswa ? '0' : '1' ?>">
-
-                                    <button type="submit" class="btn btn-sm <?= $tampil_global_siswa ? 'btn-warning' : 'btn-outline-success' ?>">
-
-                                        <?= $tampil_global_siswa ? 'Sembunyikan dari akun siswa' : 'Tampilkan di akun siswa' ?>
-
-                                    </button>
-
-                                </form>
-                                <?php endif; ?>
-
-                                <?php if ($can_crud): ?>
-                                <button type="button" class="btn btn-outline-secondary btn-sm mr-2 mb-2 mb-md-0" data-toggle="modal" data-target="#modalJadwalKelulusan">
-
-                                    <i class="fas fa-clock mr-1"></i> Atur waktu pengumuman
-
-                                </button>
-                                <?php endif; ?>
-
-                                <form method="get" class="form-inline mb-0">
-
-                                    <label class="mr-2 mb-0 d-none d-md-inline-block">Filter Tahun Ajaran</label>
-
-                                    <select name="ta" class="form-control mr-2 mb-2 mb-md-0" onchange="this.form.submit()">
+                                    <select name="ta" class="form-control pu-select-pill" onchange="this.form.submit()">
 
                                         <?php foreach ($tahun_ajaran_options as $optTa): ?>
 
@@ -861,46 +1270,73 @@ require_once '../templates/sidebar.php';
 
                             </div>
 
+                            <div class="pu-header-actions">
+
+                                <?php if ($can_crud): ?>
+                                <button type="button" class="pu-btn-app pu-btn-app-sm pu-btn-app-outline" data-toggle="modal" data-target="#modalJadwalKelulusan">
+
+                                    <i class="fas fa-clock"></i> Atur Waktu Pengumuman
+
+                                </button>
+                                <?php endif; ?>
+
+                            </div>
+
                         </div>
 
                         <div class="card-body">
 
                             <?php if ($can_crud): ?>
-                            <p class="text-muted small mb-3">
-
-                                <strong>Jadwal &amp; tayang (TA <?= htmlspecialchars($tahun_ajaran_filter) ?>):</strong>
-
-                                <?php if ($tampil_global_siswa): ?>
-
-                                    Pengaturan <span class="text-success font-weight-bold">tampil di akun siswa</span> sedang aktif.
-
-                                <?php else: ?>
-
-                                    Pengaturan <span class="text-secondary font-weight-bold">tampilan di akun siswa dinonaktifkan</span> — siswa tidak melihat info kelulusan hingga Anda menekan tombol «Tampilkan di akun siswa».
-
-                                <?php endif; ?>
-
-                                <?php if ($jadwal_waktu): ?>
-
-                                    Waktu mulai tayang konten pengumuman: <strong><?= htmlspecialchars((string) $jadwal_waktu) ?></strong> (server). Sebelum itu, siswa hanya melihat penundaan (jika tampilan global aktif).
-
-                                <?php else: ?>
-
-                                    Tanpa jadwal penundaan: jika tampilan global aktif, isi pengumuman langsung bisa tampil (setelah Anda simpan status lulus tiap siswa).
-
-                                <?php endif; ?>
-
-                            </p>
+                            <div class="pu-status-banner <?= $tampil_global_siswa ? 'is-active' : 'is-inactive' ?>">
+                                <div class="pu-status-main">
+                                    <div class="pu-status-icon">
+                                        <i class="fas <?= $tampil_global_siswa ? 'fa-broadcast-tower' : 'fa-eye-slash' ?>"></i>
+                                    </div>
+                                    <div>
+                                        <div>
+                                            <span class="pu-status-pill"><?= $tampil_global_siswa ? 'Aktif Tayang' : 'Belum Ditampilkan' ?></span>
+                                        </div>
+                                        <div class="pu-status-title">Status Pengumuman di Akun Siswa (TA <?= htmlspecialchars($tahun_ajaran_filter) ?>)</div>
+                                        <div class="pu-status-desc">
+                                            <?= $tampil_global_siswa
+                                                ? 'Siswa kelas VI sudah dapat melihat pengumuman kelulusan di akun masing-masing.'
+                                                : 'Siswa belum bisa melihat status kelulusan sampai Anda mengaktifkannya lewat tombol di samping.'
+                                            ?>
+                                        </div>
+                                        <div class="pu-status-chips">
+                                            <span class="pu-status-chip">
+                                                <i class="far fa-clock text-primary"></i>
+                                                <?= $jadwal_waktu ? 'Mulai tayang: ' . htmlspecialchars((string) $jadwal_waktu) : 'Tanpa jadwal tunda (langsung tampil jika aktif)' ?>
+                                            </span>
+                                            <span class="pu-status-chip">
+                                                <i class="fas fa-users text-info"></i>
+                                                <?= (int) $jumlah_peserta_ujian ?> peserta terdata
+                                            </span>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="pu-status-action">
+                                    <form method="post" class="m-0">
+                                        <input type="hidden" name="simpan_toggle_tampil_akun_siswa" value="1">
+                                        <input type="hidden" name="tahun_ajaran" value="<?= htmlspecialchars($tahun_ajaran_filter, ENT_QUOTES, 'UTF-8') ?>">
+                                        <input type="hidden" name="aktif_global" value="<?= $tampil_global_siswa ? '0' : '1' ?>">
+                                        <button type="submit" class="pu-btn-app pu-btn-app-sm <?= $tampil_global_siswa ? 'pu-btn-app-warning' : 'pu-btn-app-success' ?>">
+                                            <i class="fas <?= $tampil_global_siswa ? 'fa-eye-slash' : 'fa-eye' ?>"></i>
+                                            <?= $tampil_global_siswa ? 'Sembunyikan dari siswa' : 'Tampilkan di akun siswa' ?>
+                                        </button>
+                                    </form>
+                                </div>
+                            </div>
                             <?php endif; ?>
 
                             <?php if ($can_crud): ?>
-                            <div class="card border mb-4 bg-light">
+                            <div class="pu-settings-box">
 
-                                <div class="card-body pb-4">
+                                <div>
 
-                                    <h5 class="mb-3 text-dark"><i class="fas fa-file-signature mr-2"></i>Cetak Surat Kelulusan (TA <?= htmlspecialchars($tahun_ajaran_filter) ?>)</h5>
+                                    <h5 class="mb-2"><i class="fas fa-file-signature text-primary mr-2"></i>Pengaturan Cetak Surat Kelulusan (TA <?= htmlspecialchars($tahun_ajaran_filter) ?>)</h5>
 
-                                    <p class="text-muted small mb-3">Atur tanggal pada surat (<strong>bukan otomatis tanggal cetak</strong>) dan tempat kota surat untuk halaman cetak siswa.</p>
+                                    <p class="pu-settings-desc">Tentukan tanggal dan kota yang akan tercetak pada surat keterangan kelulusan siswa (bukan tanggal otomatis printer).</p>
 
                                     <form method="post" class="">
 
@@ -914,7 +1350,7 @@ require_once '../templates/sidebar.php';
 
                                                 <div class="form-group mb-3">
 
-                                                    <label for="tanggal_surat_kelulusan">Tanggal surat</label>
+                                                    <label for="tanggal_surat_kelulusan" class="pu-field-label">Tanggal Surat</label>
 
                                                     <input type="date" class="form-control" id="tanggal_surat_kelulusan" name="tanggal_surat_kelulusan" value="<?= htmlspecialchars($tanggal_surat_form_value, ENT_QUOTES, 'UTF-8') ?>">
 
@@ -926,7 +1362,7 @@ require_once '../templates/sidebar.php';
 
                                                 <div class="form-group mb-3">
 
-                                                    <label for="kota_surat">Kota pada tanggal surat</label>
+                                                    <label for="kota_surat" class="pu-field-label">Kota Pada Tanggal Surat</label>
 
                                                     <input type="text" class="form-control" id="kota_surat" name="kota_surat" value="<?= htmlspecialchars($kota_surat_kelulusan, ENT_QUOTES, 'UTF-8') ?>" placeholder="Contoh: Jepara" maxlength="80">
 
@@ -936,14 +1372,16 @@ require_once '../templates/sidebar.php';
 
                                         </div>
 
-                                        <button type="submit" class="btn btn-primary"><i class="fas fa-save mr-1"></i> Simpan pengaturan surat</button>
-                                        <a class="btn btn-outline-primary ml-2" target="_blank" rel="noopener noreferrer" href="cetak_surat_kelulusan.php?session_type=<?= urlencode($current_level) ?>&ta=<?= urlencode($tahun_ajaran_filter) ?>&mode=all"><i class="fas fa-print mr-1"></i> Cetak Semua</a>
+                                        <div class="d-flex flex-wrap align-items-center gap-2" style="gap: 10px;">
+                                            <button type="submit" class="pu-btn-app pu-btn-app-primary"><i class="fas fa-save"></i> Simpan Pengaturan</button>
+                                            <a class="pu-btn-app pu-btn-app-outline" target="_blank" rel="noopener noreferrer" href="cetak_surat_kelulusan.php?session_type=<?= urlencode($current_level) ?>&ta=<?= urlencode($tahun_ajaran_filter) ?>&mode=all"><i class="fas fa-print"></i> Cetak Semua</a>
 
-                                        <?php if ($tanggal_surat_kelulusan): ?>
+                                            <?php if ($tanggal_surat_kelulusan): ?>
 
-                                            <span class="text-muted small ml-2 align-middle">Tersimpan : <?= htmlspecialchars(formatDateIndonesia((string) $tanggal_surat_kelulusan), ENT_QUOTES, 'UTF-8') ?></span>
+                                                <span class="ml-md-2 align-middle font-weight-bold" style="color: #0f172a; font-size: 13px;"><i class="fas fa-check-circle text-success mr-1"></i>Tersimpan: <?= htmlspecialchars(formatDateIndonesia((string) $tanggal_surat_kelulusan), ENT_QUOTES, 'UTF-8') ?></span>
 
-                                        <?php endif; ?>
+                                            <?php endif; ?>
+                                        </div>
 
                                     </form>
 
@@ -961,7 +1399,7 @@ require_once '../templates/sidebar.php';
 
                                 <input type="hidden" name="tahun_ajaran" value="<?= htmlspecialchars($tahun_ajaran_filter, ENT_QUOTES, 'UTF-8') ?>">
 
-                                <button type="submit" class="btn btn-primary"><i class="fas fa-sync-alt mr-1"></i> Generate Nomor Ujian</button>
+                                <button type="submit" class="pu-btn-app pu-btn-app-outline"><i class="fas fa-sync-alt"></i> Generate Ulang Nomor Ujian</button>
 
                             </form>
                             <?php endif; ?>
@@ -987,7 +1425,7 @@ require_once '../templates/sidebar.php';
 
                                 <?php if (!$can_crud): ?>
                                 <div class="mb-3">
-                                    <a class="btn btn-outline-primary" target="_blank" rel="noopener noreferrer" href="cetak_surat_kelulusan.php?session_type=<?= urlencode($current_level) ?>&ta=<?= urlencode($tahun_ajaran_filter) ?>&mode=all"><i class="fas fa-print mr-1"></i> Cetak Semua Surat</a>
+                                    <a class="pu-btn-app pu-btn-app-primary" target="_blank" rel="noopener noreferrer" href="cetak_surat_kelulusan.php?session_type=<?= urlencode($current_level) ?>&ta=<?= urlencode($tahun_ajaran_filter) ?>&mode=all"><i class="fas fa-print"></i> Cetak Semua Surat</a>
                                 </div>
                                 <?php endif; ?>
 
@@ -1002,99 +1440,88 @@ require_once '../templates/sidebar.php';
                             <div class="mb-3">
                                 <?php endif; ?>
 
-                                <div class="table-responsive">
+                                <div id="pu-card-area">
+                                    <div class="pu-toolbar">
+                                        <div class="pu-search">
+                                            <i class="fas fa-search"></i>
+                                            <input type="search" id="pu-search-input" placeholder="Cari nama, NISN, atau nomor ujian..." autocomplete="off">
+                                        </div>
+                                        <?php if ($can_crud): ?>
+                                        <label class="pu-master-label mb-0">
+                                            <input type="checkbox" id="pu-cb-master-lulus" class="pu-cb-master-lulus" title="Centang atau uncentang semua siswa" aria-label="Pilih semua status lulus">
+                                            <span>Pilih semua lulus</span>
+                                        </label>
+                                        <?php endif; ?>
+                                        <span class="pu-toolbar-info"><i class="fas fa-id-card mr-1"></i><span id="pu-toolbar-count"><?= (int) $jumlah_peserta_ujian ?> kartu peserta</span></span>
+                                    </div>
 
-                                    <table class="table table-striped table-bordered mb-3" id="table-peserta-ujian" style="width:100%">
-
-                                        <thead>
-
-                                            <tr>
-
-                                                <th style="width:48px;">No</th>
-
-                                                <th>NISN</th>
-
-                                                <th>Nomor Ujian</th>
-
-                                                <th>Nama Siswa</th>
-
-                                                <th class="text-center align-middle" style="min-width:96px;">
-                                                    <div class="small font-weight-bold mb-1">Status Lulus</div>
-                                                    <?php if ($can_crud): ?>
-                                                    <input type="checkbox" id="pu-cb-master-lulus" class="pu-cb-master-lulus" title="Centang atau uncentang semua siswa" aria-label="Pilih semua status lulus">
+                                    <div class="pu-card-grid" id="pu-card-grid">
+                                        <?php
+                                        $nomorUrut = 0;
+                                        foreach ($rows as $r):
+                                            $nomorUrut++;
+                                            $nu = $r['nomor_ujian'] ?? '';
+                                            $idS = (int) ($r['id_siswa'] ?? 0);
+                                            $isL = !empty($r['is_lulus']);
+                                            $pu_nama = trim((string) ($r['nama_siswa'] ?? '-'));
+                                            $pu_parts = preg_split('/\s+/', $pu_nama);
+                                            $pu_ini = '';
+                                            foreach (array_slice($pu_parts, 0, 2) as $pu_w) {
+                                                if ($pu_w !== '') $pu_ini .= strtoupper(substr($pu_w, 0, 1));
+                                            }
+                                            if ($pu_ini === '') $pu_ini = 'S';
+                                        ?>
+                                        <div class="pu-card">
+                                            <div class="pu-card-top">
+                                                <div class="pu-card-school">
+                                                    <?php if ($pu_logo_path): ?>
+                                                        <img src="<?= htmlspecialchars($pu_logo_path, ENT_QUOTES, 'UTF-8') ?>" alt="Logo" class="pu-card-logo">
+                                                    <?php else: ?>
+                                                        <span class="pu-card-logo pu-card-logo-icon"><i class="fas fa-graduation-cap"></i></span>
                                                     <?php endif; ?>
-                                                </th>
+                                                    <div>
+                                                        <div class="pu-card-title">Kartu Peserta Ujian</div>
+                                                        <div class="pu-card-school-name"><?= htmlspecialchars($school_profile['nama_madrasah'] ?? 'Madrasah', ENT_QUOTES, 'UTF-8') ?></div>
+                                                    </div>
+                                                </div>
+                                                <span class="pu-card-number">#<?= (int) $nomorUrut ?> &middot; <?= htmlspecialchars($tahun_ajaran_filter, ENT_QUOTES, 'UTF-8') ?></span>
+                                            </div>
+                                            <div class="pu-card-body">
+                                                <div class="pu-card-photo">
+                                                    <?= getPersonAvatarHtml($r['foto'] ?? '', '<span class="pu-card-photo-initials">' . htmlspecialchars($pu_ini, ENT_QUOTES, 'UTF-8') . '</span>', 'pu-card-photo-img') ?>
+                                                </div>
+                                                <div class="pu-card-info">
+                                                    <div class="pu-card-name"><?= htmlspecialchars($pu_nama, ENT_QUOTES, 'UTF-8') ?></div>
 
-                                                <?php if ($can_crud): ?>
-                                                <th style="min-width:120px;">Keterangan</th>
-                                                <?php endif; ?>
-                                                <th style="min-width:120px;">Aksi</th>
-
-                                            </tr>
-
-                                        </thead>
-
-                                        <tbody>
-
-                                            <?php
-
-                                            $nomorUrut = 0;
-
-foreach ($rows as $r):
-
-    $nomorUrut++;
-
-    $nu = $r['nomor_ujian'] ?? '';
-
-    $idS = (int) ($r['id_siswa'] ?? 0);
-
-    $isL = !empty($r['is_lulus']);
-
-                                            ?>
-
-                                            <tr>
-
-                                                <td class="align-middle"><?= $nomorUrut ?></td>
-
-                                                <td class="align-middle"><?= htmlspecialchars($r['nisn'] ?? '-') ?></td>
-
-                                                <td class="align-middle font-weight-bold text-dark"><?php if ($nu !== ''): ?><?= htmlspecialchars($nu) ?><?php else: ?><span class="text-muted font-weight-normal">—</span><?php endif; ?></td>
-
-                                                <td class="align-middle"><?= htmlspecialchars($r['nama_siswa'] ?? '-') ?></td>
-
-                                                <td class="align-middle text-center">
+                                                    <div class="pu-card-meta">
+                                                        <div class="pu-card-meta-row"><span>NISN</span><strong><?= htmlspecialchars($r['nisn'] ?? '-', ENT_QUOTES, 'UTF-8') ?></strong></div>
+                                                        <div class="pu-card-meta-row"><span>No. Ujian</span><strong class="<?= $nu === '' ? 'text-muted' : '' ?>"><?= $nu !== '' ? htmlspecialchars($nu, ENT_QUOTES, 'UTF-8') : '&mdash;' ?></strong></div>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                            <div class="pu-card-footer">
+                                                <div class="pu-card-status">
                                                     <?php if ($can_crud): ?>
                                                     <input type="checkbox" class="pu-cb-lulus" id="lu<?= $idS ?>" name="pu[<?= $idS ?>][lulus]" value="1" <?= $isL ? 'checked' : '' ?> aria-label="Status Lulus" title="Centang jika lulus">
-                                                    <?php else: ?>
-                                                    <span class="pu-ket-teks badge <?= $isL ? 'badge-success' : 'badge-danger' ?>"><?= $isL ? 'Lulus' : 'Tidak lulus' ?></span>
                                                     <?php endif; ?>
-                                                </td>
-
-                                                <?php if ($can_crud): ?>
-                                                <td class="align-middle">
-
                                                     <span class="pu-ket-teks badge <?= $isL ? 'badge-success' : 'badge-danger' ?>"><?= $isL ? 'Lulus' : 'Tidak lulus' ?></span>
-
-                                                </td>
-                                                <?php endif; ?>
-                                                <td class="align-middle">
-                                                    <a class="btn btn-sm btn-outline-primary" target="_blank" rel="noopener noreferrer" href="cetak_surat_kelulusan.php?session_type=<?= urlencode($current_level) ?>&ta=<?= urlencode($tahun_ajaran_filter) ?>&id_siswa=<?= (int) $idS ?>">
-                                                        <i class="fas fa-print mr-1"></i> Cetak
-                                                    </a>
-                                                </td>
-
-                                            </tr>
+                                                    <?php if (!empty($r['keterangan_kelulusan'])): ?>
+                                                        <span class="pu-card-note"><?= htmlspecialchars($r['keterangan_kelulusan'], ENT_QUOTES, 'UTF-8') ?></span>
+                                                    <?php endif; ?>
+                                                </div>
+                                                <a class="pu-card-print" target="_blank" rel="noopener noreferrer" href="cetak_surat_kelulusan.php?session_type=<?= urlencode($current_level) ?>&ta=<?= urlencode($tahun_ajaran_filter) ?>&id_siswa=<?= (int) $idS ?>">
+                                                    <i class="fas fa-print"></i> Cetak Surat
+                                                </a>
+                                            </div>
+                                        </div>
 
                                             <?php endforeach; ?>
 
-                                        </tbody>
-
-                                    </table>
-
+                                    </div>
                                 </div>
 
                                 <?php if ($can_crud): ?>
-                                <button type="submit" class="btn btn-success"><i class="fas fa-save mr-1"></i> Simpan status kelulusan</button>
+                                <button type="submit" class="pu-btn-app pu-btn-app-success pu-btn-app-lg"><i class="fas fa-save"></i> Simpan Status Kelulusan</button>
                                 <?php endif; ?>
 
                                 <?php if ($can_crud): ?>
@@ -1180,9 +1607,9 @@ foreach ($rows as $r):
 
                 <div class="modal-footer">
 
-                    <button type="button" class="btn btn-light" data-dismiss="modal">Batal</button>
+                    <button type="button" class="pu-btn-app pu-btn-app-sm pu-btn-app-outline" data-dismiss="modal">Batal</button>
 
-                    <button type="submit" class="btn btn-primary">Simpan jadwal</button>
+                    <button type="submit" class="pu-btn-app pu-btn-app-sm pu-btn-app-primary"><i class="fas fa-save"></i> Simpan Jadwal</button>
 
                 </div>
 
@@ -1227,9 +1654,9 @@ foreach ($rows as $r):
 
 document.addEventListener('DOMContentLoaded', function() {
 
-    var tbl = document.getElementById('table-peserta-ujian');
+    var area = document.getElementById('pu-card-area');
 
-    if (!tbl) {
+    if (!area) {
 
         return;
 
@@ -1245,9 +1672,9 @@ document.addEventListener('DOMContentLoaded', function() {
 
         }
 
-        var tr = cb.closest('tr');
+        var card = cb.closest('.pu-card');
 
-        var span = tr && tr.querySelector('.pu-ket-teks');
+        var span = card && card.querySelector('.pu-ket-teks');
 
         if (!span) {
 
@@ -1283,7 +1710,7 @@ document.addEventListener('DOMContentLoaded', function() {
 
         }
 
-        var boxes = tbl.querySelectorAll('tbody .pu-cb-lulus');
+        var boxes = area.querySelectorAll('.pu-cb-lulus');
 
         if (!boxes.length) {
 
@@ -1317,7 +1744,7 @@ document.addEventListener('DOMContentLoaded', function() {
 
 
 
-    tbl.addEventListener('change', function(e) {
+    area.addEventListener('change', function(e) {
 
         var t = e.target;
 
@@ -1325,7 +1752,7 @@ document.addEventListener('DOMContentLoaded', function() {
 
             var on = !!t.checked;
 
-            tbl.querySelectorAll('tbody .pu-cb-lulus').forEach(function(cb) {
+            area.querySelectorAll('.pu-cb-lulus').forEach(function(cb) {
 
                 cb.checked = on;
 
@@ -1421,6 +1848,75 @@ document.addEventListener('DOMContentLoaded', function() {
 
 });
 
+document.addEventListener('DOMContentLoaded', function() {
+    var input = document.getElementById('pu-search-input');
+    var grid = document.getElementById('pu-card-grid');
+    if (!input || !grid) {
+        return;
+    }
+    var cards = Array.prototype.slice.call(grid.querySelectorAll('.pu-card'));
+    var countEl = document.getElementById('pu-toolbar-count');
+    input.addEventListener('keydown', function(e) {
+        if (e.key === 'Enter') {
+            e.preventDefault();
+        }
+    });
+    input.addEventListener('input', function() {
+        var q = input.value.trim().toLowerCase();
+        var visible = 0;
+        cards.forEach(function(card) {
+            var match = q === '' || card.innerText.toLowerCase().indexOf(q) !== -1;
+            card.style.display = match ? '' : 'none';
+            if (match) {
+                visible++;
+            }
+        });
+        if (countEl) {
+            countEl.textContent = visible + ' kartu peserta';
+        }
+    });
+});
+
+document.addEventListener('DOMContentLoaded', function() {
+    var tanggalSuratSudahDiatur = <?= $tanggal_surat_kelulusan ? 'true' : 'false' ?>;
+    if (tanggalSuratSudahDiatur) {
+        return;
+    }
+    var backUrl = 'data_peserta_ujian.php?ta=' + encodeURIComponent(<?= json_encode((string) $tahun_ajaran_filter) ?>);
+    document.addEventListener('click', function(e) {
+        var link = e.target && e.target.closest ? e.target.closest('a[href*="cetak_surat_kelulusan.php"]') : null;
+        if (!link) {
+            return;
+        }
+        e.preventDefault();
+        if (typeof Swal === 'undefined') {
+            window.location.href = link.href;
+            return;
+        }
+        Swal.fire({
+            icon: 'warning',
+            title: 'Tanggal surat belum diatur',
+            html: 'Isi <strong>tanggal surat kelulusan</strong> terlebih dahulu agar surat dapat dicetak.',
+            showCancelButton: true,
+            confirmButtonText: 'Atur Sekarang',
+            cancelButtonText: 'Tutup',
+            confirmButtonColor: '#6777ef',
+            cancelButtonColor: '#94a3b8',
+            reverseButtons: true
+        }).then(function(result) {
+            if (!result.isConfirmed) {
+                return;
+            }
+            var el = document.getElementById('tanggal_surat_kelulusan');
+            if (el) {
+                el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                el.focus();
+            } else {
+                window.location.href = backUrl;
+            }
+        });
+    });
+});
 </script>
 
 

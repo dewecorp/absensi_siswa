@@ -153,7 +153,7 @@ if (!$is_monitor) {
 $where_sql = implode(' AND ', $where);
 $field_hari = implode(',', array_map([$pdo, 'quote'], $days_order));
 $stmt = $pdo->prepare("
-    SELECT p.*, s.nama_siswa, s.nisn, k.nama_kelas
+    SELECT p.*, s.nama_siswa, s.nisn, s.foto AS foto_siswa, k.nama_kelas
     FROM tb_jadwal_piket_kelas p
     JOIN tb_siswa s ON s.id_siswa = p.id_siswa
     LEFT JOIN tb_kelas k ON k.id_kelas = p.id_kelas
@@ -331,7 +331,8 @@ include '../templates/sidebar.php';
             .piket-item { display: flex; align-items: center; gap: 10px; padding: 8px 10px; border: 1px solid #eef1f6; border-radius: 10px; margin-bottom: 8px; background: #fff; }
             .piket-item:last-child { margin-bottom: 0; }
             .piket-num { width: 24px; height: 24px; border-radius: 50%; background: #eef2ff; color: #4338ca; font-size: 12px; font-weight: 800; display: inline-flex; align-items: center; justify-content: center; flex-shrink: 0; }
-            .piket-avatar { width: 34px; height: 34px; border-radius: 50%; display: inline-flex; align-items: center; justify-content: center; font-size: 13px; font-weight: 800; color: #fff; flex-shrink: 0; }
+            .piket-avatar { width: 34px; height: 34px; border-radius: 50%; display: inline-flex; align-items: center; justify-content: center; font-size: 13px; font-weight: 800; color: #fff; flex-shrink: 0; overflow: hidden; }
+            .piket-avatar img { width: 100%; height: 100%; object-fit: cover; display: block; border-radius: inherit; }
             .piket-name { font-size: 13px; line-height: 1.3; word-break: break-word; white-space: normal; }
             .piket-nisn { font-size: 11.5px; }
             </style>
@@ -404,7 +405,7 @@ include '../templates/sidebar.php';
                                                 ?>
                                                 <div class="piket-item" data-piket-id="<?= (int)$p['id'] ?>">
                                                     <span class="piket-num"><?= (int)$p['urutan'] ?></span>
-                                                    <span class="piket-avatar" style="background:<?= $bg ?>;"><?= htmlspecialchars($inisial) ?></span>
+                                                    <span class="piket-avatar" style="background:<?= $bg ?>;"><?= getPersonAvatarHtml($p['foto_siswa'] ?? '', htmlspecialchars($inisial)) ?></span>
                                                     <div class="flex-grow-1" style="min-width:0;">
                                                         <div class="piket-name font-weight-bold text-dark"><?= htmlspecialchars($p['nama_siswa']) ?></div>
                                                         <div class="piket-nisn text-muted">NISN: <?= htmlspecialchars($p['nisn'] ?? '-') ?></div>

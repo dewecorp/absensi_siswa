@@ -73,7 +73,7 @@ foreach ($jadwal as $j) {
 }
 
 // All teachers for dropdown
-$stmt_g = $pdo->query("SELECT id_guru, nama_guru FROM tb_guru ORDER BY nama_guru ASC");
+$stmt_g = $pdo->query("SELECT id_guru, nama_guru, foto FROM tb_guru ORDER BY nama_guru ASC");
 $all_guru = $stmt_g->fetchAll(PDO::FETCH_ASSOC);
 
 $page_title = 'Jadwal Guru Piket';
@@ -161,7 +161,9 @@ include '../templates/sidebar.php';
     justify-content: center;
     font-size: 11px;
     flex-shrink: 0;
+    overflow: hidden;
 }
+.piket-teacher-chip .chip-avatar img { width: 100%; height: 100%; object-fit: cover; display: block; border-radius: inherit; }
 </style>
 
 <div class="main-content">
@@ -225,10 +227,12 @@ include '../templates/sidebar.php';
                                 $pi++;
                                 $ids = array_filter(explode(',', $j['id_guru']));
                                 $nama_guru = [];
+                                $guru_piket = [];
                                 foreach ($ids as $id) {
                                     foreach ($all_guru as $g) {
                                         if ($g['id_guru'] == $id) {
                                             $nama_guru[] = $g['nama_guru'];
+                                            $guru_piket[] = $g;
                                             break;
                                         }
                                     }
@@ -255,10 +259,10 @@ include '../templates/sidebar.php';
                                                 <i class="fas fa-user-check text-primary mr-2" style="font-size: 11px;"></i> Guru Bertugas:
                                             </div>
                                             <div class="d-flex flex-wrap">
-                                                <?php foreach ($nama_guru as $nm): ?>
+                                                <?php foreach ($guru_piket as $gp): ?>
                                                     <span class="piket-teacher-chip">
-                                                        <span class="chip-avatar"><?= strtoupper(mb_substr(trim($nm), 0, 1)) ?></span>
-                                                        <?= htmlspecialchars($nm) ?>
+                                                        <span class="chip-avatar"><?= getPersonAvatarHtml($gp['foto'] ?? '', strtoupper(mb_substr(trim((string)$gp['nama_guru']), 0, 1))) ?></span>
+                                                        <?= htmlspecialchars($gp['nama_guru']) ?>
                                                     </span>
                                                 <?php endforeach; ?>
                                             </div>

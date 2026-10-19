@@ -2961,6 +2961,31 @@ function verifyPassword(string $password, string $hash): bool {
     return password_verify($password, $hash);
 }
 
+/**
+ * Render avatar content (img jika foto ada, fallback jika tidak).
+ * Dipakai kartu/timeline yang menampilkan avatar siswa/guru.
+ */
+function getPersonAvatarHtml($foto, string $fallbackHtml = '', string $imgClass = 'att-avatar-img'): string {
+    $foto = trim((string)$foto);
+    if ($foto !== '') {
+        $file = basename(str_replace('\\', '/', $foto));
+        if ($file !== '') {
+            // Guru: uploads/ | Siswa: assets/img/siswa/
+            $locations = [
+                ['uploads/' . $file, '../uploads/' . rawurlencode($file)],
+                ['assets/img/siswa/' . $file, '../assets/img/siswa/' . rawurlencode($file)],
+            ];
+            foreach ($locations as $loc) {
+                if (is_file(dirname(__DIR__) . '/' . $loc[0])) {
+                    return '<img class="' . htmlspecialchars($imgClass, ENT_QUOTES, 'UTF-8') . '" src="'
+                        . $loc[1] . '" alt="">';
+                }
+            }
+        }
+    }
+    return $fallbackHtml;
+}
+
 // Function to get teacher avatar
 /** @param mixed $teacher */
 function getTeacherAvatarImage($teacher, int $size = 30): string {

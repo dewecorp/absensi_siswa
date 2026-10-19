@@ -165,13 +165,13 @@ if ($class_id > 0) {
         $month = substr($selected_month, 5, 2);
         
         // Get all students in the class
-        $stmt = $pdo->prepare("SELECT id_siswa, nama_siswa, nisn FROM tb_siswa WHERE id_kelas = ? ORDER BY nama_siswa ASC");
+        $stmt = $pdo->prepare("SELECT id_siswa, nama_siswa, nisn, foto FROM tb_siswa WHERE id_kelas = ? ORDER BY nama_siswa ASC");
         $stmt->execute([$class_id]);
         $students = $stmt->fetchAll(PDO::FETCH_ASSOC);
         
         // Get attendance data for the month
         $sqlWm = "
-            SELECT s.id_siswa, s.nama_siswa, s.nisn, a.keterangan, DAY(a.tanggal) as day
+            SELECT s.id_siswa, s.nama_siswa, s.nisn, s.foto, a.keterangan, DAY(a.tanggal) as day
             FROM tb_absensi a
             LEFT JOIN tb_siswa s ON a.id_siswa = s.id_siswa
             WHERE s.id_kelas = ? AND YEAR(a.tanggal) = ? AND MONTH(a.tanggal) = ?";
@@ -194,6 +194,7 @@ if ($class_id > 0) {
                 $student_attendance[$student_id] = [
                     'nama_siswa' => $record['nama_siswa'],
                     'nisn' => $record['nisn'],
+                    'foto' => $record['foto'] ?? '',
                     'days' => array_fill(1, 31, ''), // Initialize all days as empty
                     'summary' => ['Hadir' => 0, 'Sakit' => 0, 'Izin' => 0, 'Alpa' => 0, 'Berhalangan' => 0]
                 ];
@@ -264,7 +265,7 @@ if ($class_id > 0) {
         error_log("Semester filter debug: Semester=$active_semester, Academic Year=$academic_year, Query Year=$query_year, Months=$start_month-$end_month");
         
         // Get all students in the class
-        $stmt = $pdo->prepare("SELECT id_siswa, nama_siswa, nisn FROM tb_siswa WHERE id_kelas = ? ORDER BY nama_siswa ASC");
+        $stmt = $pdo->prepare("SELECT id_siswa, nama_siswa, nisn, foto FROM tb_siswa WHERE id_kelas = ? ORDER BY nama_siswa ASC");
         $stmt->execute([$class_id]);
         $students = $stmt->fetchAll(PDO::FETCH_ASSOC);
         
@@ -475,7 +476,7 @@ include '../templates/user_header.php';
                                                     <option value="">Pilih Siswa...</option>
                                                     <?php 
                                                     if ($class_id > 0) {
-                                                        $stmt = $pdo->prepare("SELECT id_siswa, nama_siswa, nisn FROM tb_siswa WHERE id_kelas = ? ORDER BY nama_siswa ASC");
+                                                        $stmt = $pdo->prepare("SELECT id_siswa, nama_siswa, nisn, foto FROM tb_siswa WHERE id_kelas = ? ORDER BY nama_siswa ASC");
                                                         $stmt->execute([$class_id]);
                                                         $class_students = $stmt->fetchAll(PDO::FETCH_ASSOC);
                                                         foreach ($class_students as $student):
@@ -716,7 +717,7 @@ include '../templates/user_header.php';
                                                         <div class="att-monthly-card">
                                                             <div class="att-monthly-head">
                                                                 <div class="att-monthly-avatar">
-                                                                    <?= $index + 1 ?>
+                                                                    <?= getPersonAvatarHtml($student['foto'] ?? '', (string)($index + 1), 'att-monthly-avatar-img') ?>
                                                                 </div>
                                                                 <div class="att-monthly-title">
                                                                     <div class="att-monthly-name"><?= htmlspecialchars($student['nama_siswa']) ?></div>

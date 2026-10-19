@@ -13,7 +13,7 @@ $school_profile = getSchoolProfile($pdo);
 // Get Schedule Data
 $fieldHari7 = getSqlFieldUrutanHari7($pdo);
 $stmt = $pdo->query("
-    SELECT j.*, g.nama_guru 
+    SELECT j.*, g.nama_guru, g.foto 
     FROM tb_jadwal_imam j 
     JOIN tb_guru g ON j.id_guru = g.id_guru 
     ORDER BY FIELD(j.hari, $fieldHari7)
@@ -197,6 +197,7 @@ include '../templates/sidebar.php';
     box-shadow: 0 8px 24px rgba(103, 119, 239, 0.08) !important;
     border-color: #cbd5e1 !important;
 }
+.jadwal-avatar img { width: 100%; height: 100%; object-fit: cover; display: block; border-radius: inherit; }
 .jadwal-avatar {
     width: 48px;
     height: 48px;
@@ -272,8 +273,8 @@ include '../templates/sidebar.php';
                                 <div class="col-12 col-md-6 col-xl-4 d-flex align-items-stretch">
                                     <div class="card w-100 border-0 shadow-sm jadwal-card mb-0" style="overflow: hidden;">
                                         <div class="card-body p-3 d-flex align-items-center" style="gap: 14px;">
-                                            <div class="jadwal-avatar flex-shrink-0" style="background: linear-gradient(135deg, <?= $pal[0] ?>, <?= $pal[1] ?>);">
-                                                <i class="fas fa-mosque"></i>
+                                            <div class="jadwal-avatar flex-shrink-0" style="background: linear-gradient(135deg, <?= $pal[0] ?>, <?= $pal[1] ?>); overflow: hidden;">
+                                                <?= getPersonAvatarHtml($row['foto'] ?? '', '<i class="fas fa-mosque"></i>') ?>
                                             </div>
                                             <div style="min-width: 0; flex: 1;">
                                                 <span class="badge badge-light border text-dark font-weight-bold px-2 py-1 mb-1" style="border-radius: 5px; font-size: 11px;">

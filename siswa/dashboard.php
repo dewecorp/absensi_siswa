@@ -312,8 +312,17 @@ include_once '../templates/sidebar.php';
                     <div style="position: absolute; bottom: -30px; right: 50px; width: 120px; height: 120px; border-radius: 50%; background: rgba(255, 255, 255, 0.06); pointer-events: none;"></div>
                     <div class="card-body p-3" style="position: relative; z-index: 1;">
                         <div class="d-flex flex-column align-items-center text-center">
-                            <div class="rounded-circle bg-white text-primary d-flex align-items-center justify-content-center mb-2 flex-shrink-0" style="width: 96px; height: 96px; font-weight: 700; font-size: 2.2rem; box-shadow: 0 4px 12px rgba(0, 0, 0, .2); border: 3px solid #fff;">
-                                <?php echo strtoupper(substr($student['nama_siswa'], 0, 1)); ?>
+                            <?php
+                            $mob_foto = !empty($student['foto']) && file_exists('../assets/img/siswa/' . $student['foto'])
+                                ? '../assets/img/siswa/' . rawurlencode($student['foto'])
+                                : '';
+                            ?>
+                            <div class="rounded-circle bg-white text-primary d-flex align-items-center justify-content-center mb-2 flex-shrink-0" style="width: 96px; height: 96px; font-weight: 700; font-size: 2.2rem; overflow: hidden; box-shadow: 0 4px 12px rgba(0, 0, 0, .2); border: 3px solid #fff;">
+                                <?php if ($mob_foto): ?>
+                                    <img src="<?php echo $mob_foto; ?>" alt="<?php echo htmlspecialchars($student['nama_siswa']); ?>" style="width: 100%; height: 100%; object-fit: cover;">
+                                <?php else: ?>
+                                    <?php echo strtoupper(substr($student['nama_siswa'], 0, 1)); ?>
+                                <?php endif; ?>
                             </div>
                             <div>
                                 <div class="mb-1 text-white" style="font-size: 1.25rem; font-weight: 700; text-shadow: 0 1px 3px rgba(0,0,0,0.35);">Assalamualaikum, <span class="font-weight-bold" style="font-size: 1.45rem; color: #ffffff; text-shadow: 0 1px 3px rgba(0,0,0,0.4);"><?php echo htmlspecialchars($student['nama_siswa']); ?></span></div>

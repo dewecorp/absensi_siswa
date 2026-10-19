@@ -207,7 +207,7 @@ if ($class_id > 0) {
         $month = substr($selected_month, 5, 2);
         
         // Get all students in the class
-        $stmt = $pdo->prepare("SELECT id_siswa, nama_siswa, nisn FROM tb_siswa WHERE id_kelas = ? ORDER BY nama_siswa ASC");
+        $stmt = $pdo->prepare("SELECT id_siswa, nama_siswa, nisn, foto FROM tb_siswa WHERE id_kelas = ? ORDER BY nama_siswa ASC");
         $stmt->execute([$class_id]);
         $students = $stmt->fetchAll(PDO::FETCH_ASSOC);
         
@@ -228,7 +228,7 @@ if ($class_id > 0) {
         $student_attendance = [];
         
         // First, ensure all students in the class are in the list
-        $stmt_students = $pdo->prepare("SELECT id_siswa, nama_siswa, nisn FROM tb_siswa WHERE id_kelas = ? ORDER BY nama_siswa ASC");
+        $stmt_students = $pdo->prepare("SELECT id_siswa, nama_siswa, nisn, foto FROM tb_siswa WHERE id_kelas = ? ORDER BY nama_siswa ASC");
         $stmt_students->execute([$class_id]);
         $all_students_in_class = $stmt_students->fetchAll(PDO::FETCH_ASSOC);
         
@@ -236,6 +236,7 @@ if ($class_id > 0) {
             $student_attendance[$s['id_siswa']] = [
                 'nama_siswa' => $s['nama_siswa'],
                 'nisn' => $s['nisn'],
+                'foto' => $s['foto'] ?? '',
                 'days' => array_fill(1, 31, ''),
                 'summary' => ['Hadir' => 0, 'Sakit' => 0, 'Izin' => 0, 'Alpa' => 0, 'Berhalangan' => 0]
             ];
@@ -524,7 +525,7 @@ include '../templates/user_header.php';
                                         <option value="">Pilih Siswa...</option>
                                         <?php 
                                         if ($class_id > 0) {
-                                            $stmt = $pdo->prepare("SELECT id_siswa, nama_siswa, nisn FROM tb_siswa WHERE id_kelas = ? ORDER BY nama_siswa ASC");
+                                            $stmt = $pdo->prepare("SELECT id_siswa, nama_siswa, nisn, foto FROM tb_siswa WHERE id_kelas = ? ORDER BY nama_siswa ASC");
                                             $stmt->execute([$class_id]);
                                             $class_students = $stmt->fetchAll(PDO::FETCH_ASSOC);
                                             foreach ($class_students as $student):
@@ -747,7 +748,7 @@ include '../templates/user_header.php';
                                             <div class="att-monthly-card">
                                                 <div class="att-monthly-head">
                                                     <div class="att-monthly-avatar">
-                                                        <?= $index + 1 ?>
+                                                        <?= getPersonAvatarHtml($student['foto'] ?? '', (string)($index + 1), 'att-monthly-avatar-img') ?>
                                                     </div>
                                                     <div class="att-monthly-title">
                                                         <div class="att-monthly-name"><?= htmlspecialchars($student['nama_siswa']) ?></div>

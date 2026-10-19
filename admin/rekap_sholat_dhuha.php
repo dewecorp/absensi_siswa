@@ -79,7 +79,7 @@ if ($class_id > 0) {
 // Process search based on filter type
 if ($class_id > 0) {
     // Fetch all students in class for dropdowns and processing
-    $stmt = $pdo->prepare("SELECT id_siswa, nama_siswa, nisn, jenis_kelamin FROM tb_siswa WHERE id_kelas = ? ORDER BY nama_siswa ASC");
+    $stmt = $pdo->prepare("SELECT id_siswa, nama_siswa, nisn, jenis_kelamin, foto FROM tb_siswa WHERE id_kelas = ? ORDER BY nama_siswa ASC");
     $stmt->execute([$class_id]);
     $all_students = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
@@ -139,7 +139,7 @@ if ($class_id > 0) {
         // Ambil data libur
         $holidays = getHolidays($pdo, $year, $month);
         
-        $stmt = $pdo->prepare("SELECT id_siswa, nama_siswa, nisn, jenis_kelamin FROM tb_siswa WHERE id_kelas = ? ORDER BY nama_siswa ASC");
+        $stmt = $pdo->prepare("SELECT id_siswa, nama_siswa, nisn, jenis_kelamin, foto FROM tb_siswa WHERE id_kelas = ? ORDER BY nama_siswa ASC");
         $stmt->execute([$class_id]);
         $all_students = $stmt->fetchAll(PDO::FETCH_ASSOC);
         
@@ -202,6 +202,7 @@ if ($class_id > 0) {
                 'nama_siswa' => $student['nama_siswa'],
                 'nisn' => $student['nisn'],
                 'jenis_kelamin' => $student['jenis_kelamin'] ?? '',
+                'foto' => $student['foto'] ?? '',
                 'days' => $days,
                 'summary' => $summary
             ];
@@ -543,7 +544,7 @@ include '../templates/sidebar.php';
                                 <div class="att-monthly-card">
                                     <div class="att-monthly-head">
                                         <div class="att-monthly-avatar">
-                                            <?= $idx + 1 ?>
+                                            <?= getPersonAvatarHtml($r['foto'] ?? '', (string)($idx + 1), 'att-monthly-avatar-img') ?>
                                         </div>
                                         <div class="att-monthly-title">
                                             <div class="att-monthly-name"><?= htmlspecialchars($r['nama_siswa']) ?></div>
