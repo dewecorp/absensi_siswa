@@ -1309,7 +1309,7 @@ include_once '../templates/sidebar.php';
                     });
                     </script>
 
-                    <?php $today_label_wali = date('d M Y'); ?>
+
 
                     <!-- ── RINGKASAN KELAS ── -->
                     <div class="dash-section-head">
@@ -1317,7 +1317,7 @@ include_once '../templates/sidebar.php';
                             <span class="dsh-dot" style="background:#2563eb;"></span>
                             Ringkasan Kelas <?= $wali_kelas ? htmlspecialchars($wali_kelas['nama_kelas']) : '' ?>
                         </div>
-                        <span class="dsh-date"><?= $today_label_wali ?></span>
+
                     </div>
                     <div class="row dash-stat-row">
                         <div class="col-12 col-sm-6 col-lg-4">
@@ -1361,7 +1361,7 @@ include_once '../templates/sidebar.php';
                             <span class="dsh-dot" style="background:#15803d;"></span>
                             Kehadiran Siswa — Hari Ini
                         </div>
-                        <span class="dsh-date"><?= $today_label_wali ?></span>
+                        <span class="dsh-date"><?= date('d M Y') ?></span>
                     </div>
                     <div class="row dash-stat-row">
                         <div class="col-6 col-sm-3 col-lg-3">

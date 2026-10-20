@@ -1287,7 +1287,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     });
                     </script>
 
-                    <?php $today_label_guru = date('d M Y'); ?>
+
 
                     <!-- ── RINGKASAN KELAS ── -->
                     <div class="dash-section-head">
@@ -1295,7 +1295,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                             <span class="dsh-dot" style="background:#2563eb;"></span>
                             Ringkasan Kelas
                         </div>
-                        <span class="dsh-date"><?= $today_label_guru ?></span>
+
                     </div>
                     <div class="row dash-stat-row">
                         <div class="col-12 col-sm-4 col-lg-4">
@@ -1336,7 +1336,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                             <span class="dsh-dot" style="background:#15803d;"></span>
                             Kehadiran Siswa — Hari Ini
                         </div>
-                        <span class="dsh-date"><?= $today_label_guru ?></span>
+                        <span class="dsh-date"><?= date('d M Y') ?></span>
                     </div>
                     <div class="row dash-stat-row">
                         <div class="col-6 col-sm-3 col-lg-3">

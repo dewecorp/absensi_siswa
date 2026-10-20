@@ -649,17 +649,13 @@ include_once '../templates/sidebar.php';
                         </div>
                     </div>
 
-                    <?php
-                    $today_label_tu = date('d M Y');
-                    ?>
-
                     <!-- ── RINGKASAN SEKOLAH ── -->
                     <div class="dash-section-head">
                         <div class="dsh-title">
                             <span class="dsh-dot" style="background:#2563eb;"></span>
                             Ringkasan Sekolah
                         </div>
-                        <span class="dsh-date"><?= $today_label_tu ?></span>
+
                     </div>
                     <div class="row dash-stat-row">
                         <div class="col-12 col-sm-4 col-lg-4">
@@ -706,7 +702,7 @@ include_once '../templates/sidebar.php';
                             <span class="dsh-dot" style="background:#15803d;"></span>
                             Kehadiran Siswa — Hari Ini
                         </div>
-                        <span class="dsh-date"><?= $today_label_tu ?></span>
+                        <span class="dsh-date"><?= date('d M Y') ?></span>
                     </div>
                     <div class="row dash-stat-row">
                         <div class="col-6 col-sm-3 col-lg-3">
@@ -757,7 +753,7 @@ include_once '../templates/sidebar.php';
                             <span class="dsh-dot" style="background:#0891b2;"></span>
                             Kehadiran Guru — Hari Ini
                         </div>
-                        <span class="dsh-date"><?= $today_label_tu ?></span>
+                        <span class="dsh-date"><?= date('d M Y') ?></span>
                     </div>
                     <div class="row dash-stat-row">
                         <div class="col-12 col-sm-4 col-lg-4">

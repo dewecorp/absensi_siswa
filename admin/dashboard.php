@@ -705,10 +705,7 @@ include_once '../templates/sidebar.php';
                         @media (min-width: 768px) { .chart-canvas { height: 360px !important; } }
                     </style>
 
-                    <?php
-                    $today_label = date('d M Y');
-                    $bulan_label = date('F Y');
-                    ?>
+
 
                     <!-- ── RINGKASAN SEKOLAH ── -->
                     <div class="dash-section-head">
@@ -716,7 +713,7 @@ include_once '../templates/sidebar.php';
                             <span class="dsh-dot" style="background:#2563eb;"></span>
                             Ringkasan Sekolah
                         </div>
-                        <span class="dsh-date"><?= $today_label ?></span>
+
                     </div>
                     <div class="row dash-stat-row">
                         <div class="col-12 col-sm-4 col-lg-4">
@@ -765,7 +762,7 @@ include_once '../templates/sidebar.php';
                             <span class="dsh-dot" style="background:#15803d;"></span>
                             Kehadiran Siswa — Hari Ini
                         </div>
-                        <span class="dsh-date"><?= $today_label ?></span>
+                        <span class="dsh-date"><?= date('d M Y') ?></span>
                     </div>
                     <div class="row dash-stat-row">
                         <div class="col-6 col-sm-3 col-lg-3">
@@ -816,7 +813,7 @@ include_once '../templates/sidebar.php';
                             <span class="dsh-dot" style="background:#0891b2;"></span>
                             Kehadiran Guru — Hari Ini
                         </div>
-                        <span class="dsh-date"><?= $today_label ?></span>
+                        <span class="dsh-date"><?= date('d M Y') ?></span>
                     </div>
                     <div class="row dash-stat-row">
                         <div class="col-12 col-sm-4 col-lg-4">
