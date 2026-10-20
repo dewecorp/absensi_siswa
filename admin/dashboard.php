@@ -898,70 +898,195 @@ include_once '../templates/sidebar.php';
                     
 
                     
-                    <div class="row mapp-hide-mobile">
+                    <?php
+                    /* ── colour map Bootstrap class → token modern ── */
+                    $act_color_map = [
+                        'bg-success'   => ['bg'=>'#16a34a','shadow'=>'rgba(22,163,74,.22)'],
+                        'bg-warning'   => ['bg'=>'#d97706','shadow'=>'rgba(217,119,6,.22)'],
+                        'bg-danger'    => ['bg'=>'#dc2626','shadow'=>'rgba(220,38,38,.22)'],
+                        'bg-info'      => ['bg'=>'#0891b2','shadow'=>'rgba(8,145,178,.22)'],
+                        'bg-secondary' => ['bg'=>'#64748b','shadow'=>'rgba(100,116,139,.22)'],
+                        'bg-primary'   => ['bg'=>'#2563eb','shadow'=>'rgba(37,99,235,.22)'],
+                    ];
+                    $act_border_map = [
+                        'bg-success'   => '#bbf7d0',
+                        'bg-warning'   => '#fde68a',
+                        'bg-danger'    => '#fecaca',
+                        'bg-info'      => '#a5f3fc',
+                        'bg-secondary' => '#e2e8f0',
+                        'bg-primary'   => '#bfdbfe',
+                    ];
+                    $act_bg_map = [
+                        'bg-success'   => '#f0fdf4',
+                        'bg-warning'   => '#fffbeb',
+                        'bg-danger'    => '#fff1f2',
+                        'bg-info'      => '#ecfeff',
+                        'bg-secondary' => '#f8fafc',
+                        'bg-primary'   => '#eff6ff',
+                    ];
+                    ?>
+                    <style>
+                    .act-feed { position: relative; padding: 4px 0; }
+                    .act-feed::before {
+                        content: '';
+                        position: absolute;
+                        left: 23px;
+                        top: 8px; bottom: 8px;
+                        width: 2px;
+                        border-radius: 2px;
+                        background: #e2e8f0;
+                    }
+                    .act-item {
+                        position: relative;
+                        display: flex;
+                        gap: 14px;
+                        margin-bottom: 14px;
+                    }
+                    .act-item:last-child { margin-bottom: 0; }
+                    .act-dot {
+                        flex: 0 0 auto;
+                        width: 46px; height: 46px;
+                        border-radius: 14px;
+                        display: grid; place-items: center;
+                        font-size: 1rem;
+                        color: #fff !important;
+                        box-shadow: 0 4px 12px var(--act-shadow, rgba(37,99,235,.22));
+                        background: var(--act-bg, #2563eb);
+                        z-index: 1;
+                        position: relative;
+                    }
+                    .act-dot i { color: #fff !important; }
+                    .act-body {
+                        flex: 1; min-width: 0;
+                        background: var(--act-card-bg, #eff6ff);
+                        border: 1.5px solid var(--act-card-border, #bfdbfe);
+                        border-radius: 14px;
+                        padding: 12px 14px;
+                        transition: box-shadow .18s, transform .18s;
+                    }
+                    .act-body:hover {
+                        box-shadow: 0 6px 20px rgba(15,23,42,.08);
+                        transform: translateY(-1px);
+                    }
+                    .act-top {
+                        display: flex;
+                        align-items: center;
+                        justify-content: space-between;
+                        gap: 8px;
+                        flex-wrap: wrap;
+                        margin-bottom: 6px;
+                    }
+                    .act-name {
+                        font-size: .88rem;
+                        font-weight: 800;
+                        color: #0f172a;
+                        white-space: nowrap;
+                        overflow: hidden;
+                        text-overflow: ellipsis;
+                    }
+                    .act-ago {
+                        font-size: .72rem;
+                        font-weight: 700;
+                        color: #94a3b8;
+                        white-space: nowrap;
+                        display: flex; align-items: center; gap: 4px;
+                    }
+                    .act-action-pill {
+                        display: inline-flex; align-items: center; gap: 5px;
+                        font-size: .7rem; font-weight: 800;
+                        padding: 3px 10px; border-radius: 999px;
+                        background: var(--act-bg, #2563eb);
+                        color: #fff;
+                        margin-bottom: 6px;
+                    }
+                    .act-desc {
+                        font-size: .82rem;
+                        color: #334155;
+                        line-height: 1.5;
+                        margin-bottom: 6px;
+                        word-break: break-word;
+                    }
+                    .act-footer {
+                        display: flex; align-items: center; gap: 12px;
+                        font-size: .7rem; color: #94a3b8; font-weight: 600;
+                        border-top: 1px solid rgba(15,23,42,.06);
+                        padding-top: 6px; margin-top: 2px;
+                        flex-wrap: wrap;
+                    }
+                    .act-footer span { display: flex; align-items: center; gap: 4px; }
+                    /* scrollbar tipis */
+                    .act-scroll::-webkit-scrollbar { width: 5px; }
+                    .act-scroll::-webkit-scrollbar-track { background: #f1f5f9; border-radius: 5px; }
+                    .act-scroll::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 5px; }
+                    .act-scroll::-webkit-scrollbar-thumb:hover { background: #94a3b8; }
+                    @media (max-width: 575.98px) {
+                        .act-dot { width: 38px; height: 38px; border-radius: 11px; font-size: .88rem; }
+                        .act-feed::before { left: 18px; }
+                        .act-body { padding: 10px 12px; }
+                    }
+                    </style>
+
+                    <div class="row">
                         <div class="col-12">
                             <div class="card">
-                                <div class="card-header">
-                                    <h4>Aktivitas Pengguna <span class="badge badge-primary"><?php echo $total_activities; ?></span></h4>
-                                                                <div class="card-header-action">
-                                                                    <a href="activity_log.php" class="btn btn-primary">Lihat Semua</a>
-                                                                </div>
+                                <div class="card-header d-flex align-items-center justify-content-between flex-wrap" style="gap:8px;">
+                                    <h4 class="mb-0 d-flex align-items-center" style="gap:10px;">
+                                        <i class="fas fa-bolt" style="color:#2563eb;"></i>
+                                        Aktivitas Pengguna
+                                        <span style="display:inline-flex;align-items:center;justify-content:center;background:#2563eb;color:#fff;font-size:.72rem;font-weight:900;border-radius:999px;padding:2px 10px;"><?= $total_activities ?></span>
+                                    </h4>
+                                    <a href="activity_log.php" class="btn btn-sm btn-primary" style="border-radius:10px;font-weight:700;">
+                                        <i class="fas fa-list mr-1"></i>Lihat Semua
+                                    </a>
                                 </div>
-                                <div class="card-body">
-                                    <div class="activities" style="max-height: 600px; overflow-y: auto;">
-                                        <?php 
-                                        if (!empty($activities)):
-                                            foreach ($activities as $activity): 
-                                        ?>
-                                        <div class="activity">
-                                            <?php 
-                                                $actColor = function_exists('getActivityColor') ? getActivityColor(htmlspecialchars($activity['action'])) : 'bg-primary';
-                                                $actShadow = str_replace('bg-', 'shadow-', $actColor);
+                                <div class="card-body" style="padding: 16px 20px;">
+                                    <div class="act-feed act-scroll" style="max-height:620px; overflow-y:auto; padding-right:4px;">
+                                        <?php if (!empty($activities)): ?>
+                                            <?php foreach ($activities as $activity):
+                                                $actClass  = function_exists('getActivityColor') ? getActivityColor($activity['action']) : 'bg-primary';
+                                                $actIcon   = function_exists('getActivityIcon')  ? getActivityIcon($activity['action'])  : 'fas fa-info-circle';
+                                                $actToken  = $act_color_map[$actClass]  ?? $act_color_map['bg-primary'];
+                                                $actBorder = $act_border_map[$actClass] ?? '#bfdbfe';
+                                                $actCardBg = $act_bg_map[$actClass]     ?? '#eff6ff';
+                                                $actTs     = strtotime($activity['created_at']);
                                             ?>
-                                            <div class="activity-icon <?php echo $actColor; ?> text-white <?php echo $actShadow; ?>">
-                                                <i class="<?php 
-                                                    if (function_exists('getActivityIcon')) {
-                                                        echo getActivityIcon(htmlspecialchars($activity['action']));
-                                                    } else {
-                                                        echo 'fas fa-info-circle';
-                                                    }
-                                                ?>"></i>
-                                            </div>
-                                            <div class="activity-detail w-100">
-                                                <div class="card shadow-sm border-0 mb-0 w-100" style="background-color: #f8f9fa;">
-                                                    <div class="card-body p-3">
-                                                        <div class="d-flex justify-content-between align-items-center mb-2">
-                                                            <span class="text-job text-primary font-weight-bold text-capitalize" style="font-size: 14px;">
-                                                                <?php echo htmlspecialchars($activity['display_name']); ?>
-                                                            </span>
-                                                            <small class="text-muted font-weight-bold">
-                                                                <i class="far fa-clock mr-1"></i><?php echo timeAgo($activity['created_at']); ?>
-                                                            </small>
-                                                        </div>
-                                                        <div class="mb-2">
-                                                            <span class="badge badge-white border text-primary font-weight-bold shadow-sm" style="font-size: 11px;">
-                                                                <?php echo htmlspecialchars($activity['action']); ?>
-                                                            </span>
-                                                        </div>
-                                                        <p class="mb-2 text-dark" style="line-height: 1.5; font-size: 13px;">
-                                                            <?php echo htmlspecialchars($activity['description']); ?>
-                                                        </p>
-                                                        <div class="text-muted small border-top pt-2 mt-2 d-flex align-items-center" style="font-size: 11px;">
-                                                            <i class="far fa-calendar-alt mr-1"></i> <?php echo date('d M Y', strtotime($activity['created_at'])); ?>
-                                                            <span class="mx-2">•</span>
-                                                            <i class="far fa-clock mr-1"></i> <?php echo date('H:i:s', strtotime($activity['created_at'])); ?>
-                                                        </div>
+                                            <div class="act-item" style="
+                                                --act-bg: <?= $actToken['bg'] ?>;
+                                                --act-shadow: <?= $actToken['shadow'] ?>;
+                                                --act-card-bg: <?= $actCardBg ?>;
+                                                --act-card-border: <?= $actBorder ?>;
+                                            ">
+                                                <div class="act-dot">
+                                                    <i class="<?= htmlspecialchars($actIcon) ?>"></i>
+                                                </div>
+                                                <div class="act-body">
+                                                    <div class="act-top">
+                                                        <span class="act-name"><?= htmlspecialchars($activity['display_name']) ?></span>
+                                                        <span class="act-ago">
+                                                            <i class="far fa-clock"></i>
+                                                            <?= timeAgo($activity['created_at']) ?>
+                                                        </span>
+                                                    </div>
+                                                    <div class="act-action-pill">
+                                                        <i class="<?= htmlspecialchars($actIcon) ?>"></i>
+                                                        <?= htmlspecialchars($activity['action']) ?>
+                                                    </div>
+                                                    <div class="act-desc"><?= htmlspecialchars($activity['description']) ?></div>
+                                                    <div class="act-footer">
+                                                        <span><i class="far fa-calendar-alt"></i><?= date('d M Y', $actTs) ?></span>
+                                                        <span><i class="far fa-clock"></i><?= date('H:i:s', $actTs) ?></span>
                                                     </div>
                                                 </div>
                                             </div>
-                                        </div>
-                                        <?php 
-                                            endforeach; 
-                                        else: 
-                                        ?>
-                                        <div class="text-center py-4">
-                                            <p class="text-muted">Tidak ada aktivitas terbaru</p>
-                                        </div>
+                                            <?php endforeach; ?>
+                                        <?php else: ?>
+                                            <div class="text-center py-5">
+                                                <div style="width:56px;height:56px;border-radius:16px;background:#eff6ff;display:grid;place-items:center;margin:0 auto 12px;">
+                                                    <i class="fas fa-bolt" style="color:#2563eb;font-size:1.4rem;"></i>
+                                                </div>
+                                                <div style="font-weight:700;color:#334155;font-size:.9rem;">Belum ada aktivitas</div>
+                                                <div style="font-size:.8rem;color:#94a3b8;margin-top:4px;">Aktivitas pengguna akan muncul di sini</div>
+                                            </div>
                                         <?php endif; ?>
                                     </div>
                                 </div>
