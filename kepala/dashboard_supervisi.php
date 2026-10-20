@@ -246,6 +246,12 @@ include '../templates/sidebar.php';
 
             <div class="row">
                 <?php
+                $color_map_sv = [
+                    'primary' => ['dsi-blue', 'tint-blue'],
+                    'info'    => ['dsi-indigo', 'tint-indigo'],
+                    'success' => ['dsi-green', 'tint-green'],
+                    'warning' => ['dsi-amber', 'tint-amber'],
+                ];
                 $cards = [
                     ['Total Guru/PTK', $stats['total_guru'], 'fas fa-users', 'primary'],
                     ['Sasaran Supervisi', $stats['total_sasaran'], 'fas fa-bullseye', 'info'],
@@ -257,15 +263,17 @@ include '../templates/sidebar.php';
                     ['Tindak Lanjut Belum Selesai', $stats['tl_belum'], 'fas fa-tasks', 'warning'],
                     ['Tindak Lanjut Selesai', $stats['tl_selesai'], 'fas fa-clipboard-check', 'success'],
                 ];
-                foreach ($cards as $c): ?>
-                    <div class="col-6 col-md-4 col-lg-3">
-                        <div class="card card-statistic-1">
-                            <div class="card-icon bg-<?= $c[3] ?>">
+                foreach ($cards as $c):
+                    $cm = $color_map_sv[$c[3]] ?? ['dsi-blue', 'tint-blue'];
+                ?>
+                    <div class="col-6 col-md-4 col-lg-4 mb-3">
+                        <div class="dash-stat-card <?= $cm[1] ?>">
+                            <div class="dash-stat-ico <?= $cm[0] ?>">
                                 <i class="<?= $c[2] ?>"></i>
                             </div>
-                            <div class="card-wrap">
-                                <div class="card-header"><h4><?= htmlspecialchars($c[0]) ?></h4></div>
-                                <div class="card-body"><?= htmlspecialchars((string)$c[1]) ?></div>
+                            <div class="dash-stat-body">
+                                <div class="dash-stat-label"><?= htmlspecialchars($c[0]) ?></div>
+                                <div class="dash-stat-value"><?= htmlspecialchars((string)$c[1]) ?></div>
                             </div>
                         </div>
                     </div>

@@ -1309,116 +1309,98 @@ include_once '../templates/sidebar.php';
                     });
                     </script>
 
-                    <div class="row">
-                        <div class="col-4 col-md-6 col-lg-4 mapp-stat-full">
-                            <div class="card card-statistic-1">
-                                <div class="card-icon bg-success">
-                                    <i class="fas fa-users"></i>
-                                </div>
-                                <div class="card-wrap">
-                                    <div class="card-header">
-                                        <h4>Total Siswa</h4>
-                                    </div>
-                                    <div class="card-body">
-                                        <strong><?php echo $total_siswa; ?></strong>
-                                        <div class="text-muted small mt-1">
-                                            <span title="Laki-laki"><i class="fas fa-mars text-info"></i> <strong><?php echo $total_laki; ?></strong></span> &nbsp; 
-                                            <span title="Perempuan"><i class="fas fa-venus text-warning"></i> <strong><?php echo $total_perempuan; ?></strong></span>
-                                        </div>
+                    <?php $today_label_wali = date('d M Y'); ?>
+
+                    <!-- ── RINGKASAN KELAS ── -->
+                    <div class="dash-section-head">
+                        <div class="dsh-title">
+                            <span class="dsh-dot" style="background:#2563eb;"></span>
+                            Ringkasan Kelas <?= $wali_kelas ? htmlspecialchars($wali_kelas['nama_kelas']) : '' ?>
+                        </div>
+                        <span class="dsh-date"><?= $today_label_wali ?></span>
+                    </div>
+                    <div class="row dash-stat-row">
+                        <div class="col-12 col-sm-6 col-lg-4">
+                            <div class="dash-stat-card tint-blue">
+                                <div class="dash-stat-ico dsi-blue"><i class="fas fa-users"></i></div>
+                                <div class="dash-stat-body">
+                                    <div class="dash-stat-label">Total Siswa</div>
+                                    <div class="dash-stat-value"><?= $total_siswa ?></div>
+                                    <div class="dash-stat-sub">
+                                        <span><i class="fas fa-mars" style="color:#3b82f6;"></i> <?= $total_laki ?> L</span>
+                                        <span><i class="fas fa-venus" style="color:#ec4899;"></i> <?= $total_perempuan ?> P</span>
                                     </div>
                                 </div>
                             </div>
                         </div>
-                        <div class="col-4 col-md-6 col-lg-4">
-                            <div class="card card-statistic-1">
-                                <div class="card-icon bg-primary">
-                                    <i class="fas fa-chalkboard"></i>
-                                </div>
-                                <div class="card-wrap">
-                                    <div class="card-header">
-                                        <h4>Total Kelas Ajar</h4>
-                                    </div>
-                                    <div class="card-body">
-                                        <strong><?php echo $total_kelas_ajar; ?></strong>
-                                    </div>
+                        <div class="col-6 col-sm-6 col-lg-4">
+                            <div class="dash-stat-card tint-indigo">
+                                <div class="dash-stat-ico dsi-indigo"><i class="fas fa-chalkboard"></i></div>
+                                <div class="dash-stat-body">
+                                    <div class="dash-stat-label">Kelas Ajar</div>
+                                    <div class="dash-stat-value"><?= $total_kelas_ajar ?></div>
+                                    <div class="dash-stat-sub"><span style="color:#4338ca;">kelas</span></div>
                                 </div>
                             </div>
                         </div>
-                        <div class="col-4 col-md-6 col-lg-4">
-                            <div class="card card-statistic-1">
-                                <div class="card-icon bg-success">
-                                    <i class="fas fa-check-circle"></i>
-                                </div>
-                                <div class="card-wrap">
-                                    <div class="card-header">
-                                        <h4>Siswa Hadir</h4>
-                                    </div>
-                                    <div class="card-body">
-                                        <strong><?php echo $jumlah_hadir; ?></strong>
-                                    </div>
+                        <div class="col-6 col-sm-6 col-lg-4">
+                            <div class="dash-stat-card tint-green">
+                                <div class="dash-stat-ico dsi-green"><i class="fas fa-user-check"></i></div>
+                                <div class="dash-stat-body">
+                                    <div class="dash-stat-label">Siswa Hadir</div>
+                                    <div class="dash-stat-value"><?= $jumlah_hadir ?></div>
+                                    <div class="dash-stat-sub"><span style="color:#15803d;">dari <?= $total_siswa ?></span></div>
                                 </div>
                             </div>
                         </div>
                     </div>
-                    
-                    <div class="row">
-                        <div class="col-3 col-md-6 col-lg-3">
-                            <div class="card card-statistic-1">
-                                <div class="card-icon bg-warning">
-                                    <i class="fas fa-heartbeat"></i>
-                                </div>
-                                <div class="card-wrap">
-                                    <div class="card-header">
-                                        <h4>Siswa Sakit</h4>
-                                    </div>
-                                    <div class="card-body">
-                                        <strong><?php echo $jumlah_sakit; ?></strong>
-                                    </div>
+
+                    <!-- ── KEHADIRAN SISWA HARI INI ── -->
+                    <div class="dash-section-head" style="margin-top:4px;">
+                        <div class="dsh-title">
+                            <span class="dsh-dot" style="background:#15803d;"></span>
+                            Kehadiran Siswa — Hari Ini
+                        </div>
+                        <span class="dsh-date"><?= $today_label_wali ?></span>
+                    </div>
+                    <div class="row dash-stat-row">
+                        <div class="col-6 col-sm-3 col-lg-3">
+                            <div class="dash-stat-card tint-amber">
+                                <div class="dash-stat-ico dsi-amber"><i class="fas fa-heartbeat"></i></div>
+                                <div class="dash-stat-body">
+                                    <div class="dash-stat-label">Sakit</div>
+                                    <div class="dash-stat-value"><?= $jumlah_sakit ?></div>
+                                    <div class="dash-stat-sub"><span style="color:#d97706;">siswa</span></div>
                                 </div>
                             </div>
                         </div>
-                        <div class="col-3 col-md-6 col-lg-3">
-                            <div class="card card-statistic-1">
-                                <div class="card-icon bg-info">
-                                    <i class="fas fa-file-alt"></i>
-                                </div>
-                                <div class="card-wrap">
-                                    <div class="card-header">
-                                        <h4>Izin</h4>
-                                    </div>
-                                    <div class="card-body">
-                                        <strong><?php echo $jumlah_izin; ?></strong>
-                                    </div>
+                        <div class="col-6 col-sm-3 col-lg-3">
+                            <div class="dash-stat-card tint-indigo">
+                                <div class="dash-stat-ico dsi-indigo"><i class="fas fa-file-alt"></i></div>
+                                <div class="dash-stat-body">
+                                    <div class="dash-stat-label">Izin</div>
+                                    <div class="dash-stat-value"><?= $jumlah_izin ?></div>
+                                    <div class="dash-stat-sub"><span style="color:#4338ca;">siswa</span></div>
                                 </div>
                             </div>
                         </div>
-                        <div class="col-3 col-md-6 col-lg-3">
-                            <div class="card card-statistic-1">
-                                <div class="card-icon bg-danger">
-                                    <i class="fas fa-times-circle"></i>
-                                </div>
-                                <div class="card-wrap">
-                                    <div class="card-header">
-                                        <h4>Alpa</h4>
-                                    </div>
-                                    <div class="card-body">
-                                        <strong><?php echo $jumlah_alpa; ?></strong>
-                                    </div>
+                        <div class="col-6 col-sm-3 col-lg-3">
+                            <div class="dash-stat-card tint-rose">
+                                <div class="dash-stat-ico dsi-rose"><i class="fas fa-times-circle"></i></div>
+                                <div class="dash-stat-body">
+                                    <div class="dash-stat-label">Alpa</div>
+                                    <div class="dash-stat-value"><?= $jumlah_alpa ?></div>
+                                    <div class="dash-stat-sub"><span style="color:#be123c;">siswa</span></div>
                                 </div>
                             </div>
                         </div>
-                        <div class="col-3 col-md-6 col-lg-3">
-                            <div class="card card-statistic-1">
-                                <div class="card-icon" style="background-color: #9557f5; color: #fff;">
-                                    <i class="fas fa-ban"></i>
-                                </div>
-                                <div class="card-wrap">
-                                    <div class="card-header">
-                                        <h4>Berhalangan</h4>
-                                    </div>
-                                    <div class="card-body">
-                                        <strong><?php echo $jumlah_berhalangan; ?></strong>
-                                    </div>
+                        <div class="col-6 col-sm-3 col-lg-3">
+                            <div class="dash-stat-card tint-violet">
+                                <div class="dash-stat-ico dsi-violet"><i class="fas fa-ban"></i></div>
+                                <div class="dash-stat-body">
+                                    <div class="dash-stat-label">Berhalangan</div>
+                                    <div class="dash-stat-value"><?= $jumlah_berhalangan ?></div>
+                                    <div class="dash-stat-sub"><span style="color:#7c3aed;">siswa</span></div>
                                 </div>
                             </div>
                         </div>

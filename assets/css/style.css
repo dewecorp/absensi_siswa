@@ -727,7 +727,7 @@ select.form-control:not([size]):not([multiple]) {
 .card {
   box-shadow: 0 4px 8px rgba(0, 0, 0, 0.03);
   background-color: #fff;
-  border-radius: 3px;
+  border-radius: 14px;
   border: none;
   position: relative;
   margin-bottom: 30px;
@@ -765,6 +765,8 @@ select.form-control:not([size]):not([multiple]) {
   padding: 15px 25px;
   display: flex;
   align-items: center;
+  border-top-left-radius: 14px;
+  border-top-right-radius: 14px;
 }
 .card .card-header .btn {
   margin-top: 1px;
@@ -3931,5 +3933,82 @@ body:not(.sidebar-mini) .sidebar-style-2 .sidebar-menu li.active ul.dropdown-men
   .pramuka-summary-chip .val {
     font-size: .82rem;
   }
+}
+
+/* ── Global Dashboard Modern Mobile-App Stat Cards ── */
+.dash-section-head {
+  display: flex; align-items: center; justify-content: space-between;
+  margin: 4px 0 12px;
+}
+.dash-section-head .dsh-title {
+  display: flex; align-items: center; gap: 8px;
+  font-size: .82rem; font-weight: 800; color: #0f172a; letter-spacing: .01em;
+}
+.dash-section-head .dsh-title .dsh-dot {
+  width: 8px; height: 8px; border-radius: 50%;
+}
+.dash-section-head .dsh-date {
+  font-size: .72rem; font-weight: 600; color: #94a3b8;
+}
+.dash-stat-card {
+  position: relative; display: flex; align-items: center; gap: 14px;
+  background: #fff; border: 1.5px solid rgba(15,23,42,.07); border-radius: 16px !important;
+  padding: 14px 16px; height: 100%;
+  box-shadow: 0 4px 14px rgba(15,23,42,.05);
+  overflow: hidden; transition: transform .18s, box-shadow .18s;
+}
+.dash-stat-card:hover { transform: translateY(-2px); box-shadow: 0 8px 22px rgba(15,23,42,.1); }
+.dash-stat-card::after {
+  content: ''; position: absolute; right: -18px; top: -18px;
+  width: 80px; height: 80px; border-radius: 50%;
+  background: currentColor; opacity: .06; pointer-events: none;
+}
+.dash-stat-ico {
+  flex: 0 0 auto; width: 46px; height: 46px; border-radius: 14px;
+  display: grid; place-items: center; font-size: 1.1rem;
+  /* colour set per .dsi-* token */
+}
+.dash-stat-body { min-width: 0; flex: 1; }
+.dash-stat-label {
+  font-size: .7rem; font-weight: 700; color: #64748b;
+  text-transform: uppercase; letter-spacing: .06em; margin-bottom: 1px;
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
+.dash-stat-value {
+  font-size: 1.55rem; font-weight: 900; color: #0f172a; line-height: 1.1;
+}
+.dash-stat-sub {
+  display: flex; align-items: center; gap: 8px; flex-wrap: wrap;
+  margin-top: 4px;
+}
+.dash-stat-sub span {
+  display: inline-flex; align-items: center; gap: 3px;
+  font-size: .68rem; font-weight: 700; color: #475569;
+}
+/* colour tokens — icon box: soft tinted bg + vivid icon colour */
+.dsi-blue   { background: rgba(59,130,246,.15);  color: #2563eb; }
+.dsi-teal   { background: rgba(6,182,212,.15);   color: #0891b2; }
+.dsi-amber  { background: rgba(245,158,11,.15);  color: #b45309; }
+.dsi-green  { background: rgba(34,197,94,.15);   color: #15803d; }
+.dsi-orange { background: rgba(249,115,22,.15);  color: #c2410c; }
+.dsi-indigo { background: rgba(99,102,241,.15);  color: #4338ca; }
+.dsi-rose   { background: rgba(244,63,94,.15);   color: #be123c; }
+.dsi-violet { background: rgba(167,139,250,.18); color: #7c3aed; }
+/* bg tint per group — card border matches icon hue, kept faint */
+.dash-stat-card.tint-blue   { background: #f0f7ff; border-color: rgba(59,130,246,.18); }
+.dash-stat-card.tint-teal   { background: #f0fdff; border-color: rgba(6,182,212,.18); }
+.dash-stat-card.tint-amber  { background: #fffdf0; border-color: rgba(245,158,11,.18); }
+.dash-stat-card.tint-green  { background: #f3fdf5; border-color: rgba(34,197,94,.18); }
+.dash-stat-card.tint-orange { background: #fff8f3; border-color: rgba(249,115,22,.18); }
+.dash-stat-card.tint-indigo { background: #f3f4ff; border-color: rgba(99,102,241,.18); }
+.dash-stat-card.tint-rose   { background: #fff3f5; border-color: rgba(244,63,94,.18); }
+.dash-stat-card.tint-violet { background: #f7f5ff; border-color: rgba(167,139,250,.18); }
+/* row gap */
+.dash-stat-row { margin-bottom: 8px; }
+.dash-stat-row > [class*="col-"] { margin-bottom: 12px; }
+@media (max-width: 575.98px) {
+  .dash-stat-value { font-size: 1.3rem; }
+  .dash-stat-ico { width: 40px; height: 40px; font-size: .95rem; border-radius: 12px; }
+  .dash-stat-card { padding: 11px 13px; gap: 11px; }
 }
 
