@@ -350,18 +350,38 @@ include '../templates/sidebar.php';
                                 </div>
                             </div>
                             <style>
-                            .sv-timeline { position: relative; padding-left: 26px; }
-                            .sv-timeline::before { content: ''; position: absolute; left: 11px; top: 8px; bottom: 8px; width: 3px; border-radius: 3px; background: #e9edf5; }
-                            .sv-stage { position: relative; padding-bottom: 14px; }
+                            .sv-timeline { position: relative; padding-left: 32px; }
+                            .sv-timeline::before { content: ''; position: absolute; left: 13px; top: 12px; bottom: 12px; width: 2px; border-radius: 2px; background: #e2e8f0; }
+                            .sv-stage { position: relative; padding-bottom: 16px; }
                             .sv-stage:last-child { padding-bottom: 2px; }
-                            .sv-dot { position: absolute; left: -26px; top: 1px; width: 25px; height: 25px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 11px; color: #fff; background: var(--sc, #6777ef); box-shadow: 0 2px 6px rgba(0,0,0,.18); }
-                            .sv-stage[data-state="wait"] .sv-dot { background: #cbd5e1 !important; }
-                            .sv-stage[data-state="run"] .sv-dot { animation: sv-pulse 1.6s infinite; }
-                            @keyframes sv-pulse { 0% { box-shadow: 0 0 0 0 rgba(103,119,239,.45); } 70% { box-shadow: 0 0 0 8px rgba(103,119,239,0); } 100% { box-shadow: 0 0 0 0 rgba(103,119,239,0); } }
+                            .sv-dot {
+                                position: absolute; left: -32px; top: 0;
+                                width: 28px; height: 28px; border-radius: 50%;
+                                display: grid; place-items: center; font-size: 11px; font-weight: 900;
+                                background: var(--sc, #2563eb);
+                                color: #ffffff !important;
+                                box-shadow: 0 3px 10px rgba(15,23,42,.18);
+                                transition: all .2s ease;
+                            }
+                            .sv-dot i { color: #ffffff !important; }
+                            .sv-stage[data-state="wait"] .sv-dot {
+                                background: #94a3b8 !important;
+                                color: #ffffff !important;
+                                box-shadow: none !important;
+                            }
+                            .sv-stage[data-state="wait"] .sv-dot i { color: #ffffff !important; }
+                            .sv-stage[data-state="run"] .sv-dot {
+                                animation: sv-pulse 1.6s infinite;
+                            }
+                            @keyframes sv-pulse {
+                                0% { box-shadow: 0 0 0 0 rgba(37,99,235,.45); }
+                                70% { box-shadow: 0 0 0 8px rgba(37,99,235,0); }
+                                100% { box-shadow: 0 0 0 0 rgba(37,99,235,0); }
+                            }
                             .sv-scroll::-webkit-scrollbar { width: 6px; }
                             .sv-scroll::-webkit-scrollbar-track { background: transparent; }
-                            .sv-scroll::-webkit-scrollbar-thumb { background: #b9c4d8; border-radius: 999px; }
-                            .sv-scroll::-webkit-scrollbar-thumb:hover { background: #6777ef; }
+                            .sv-scroll::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 999px; }
+                            .sv-scroll::-webkit-scrollbar-thumb:hover { background: #94a3b8; }
                             </style>
                             <div class="sv-timeline">
                                 <?php foreach ($sv_stages as $sg): ?>
@@ -440,16 +460,19 @@ include '../templates/sidebar.php';
                                 position: absolute;
                                 left: -28px;
                                 top: 2px;
-                                width: 25px;
-                                height: 25px;
+                                width: 26px;
+                                height: 26px;
                                 border-radius: 50%;
-                                display: flex;
-                                align-items: center;
-                                justify-content: center;
+                                display: grid;
+                                place-items: center;
                                 font-size: 11px;
-                                color: #fff;
-                                background: var(--dot-color, #6777ef);
-                                box-shadow: 0 2px 6px rgba(0,0,0,.15);
+                                font-weight: 900;
+                                color: #ffffff !important;
+                                background: var(--dot-color, #2563eb);
+                                box-shadow: 0 3px 10px rgba(15,23,42,.18);
+                            }
+                            .sv-jd-dot i {
+                                color: #ffffff !important;
                             }
                             .sv-jd-card {
                                 background: #f8fafc;
@@ -597,12 +620,29 @@ include '../templates/sidebar.php';
                                 <style>
                                 .sv-guru-step { display: flex; align-items: flex-start; }
                                 .sv-guru-node { flex: 1; min-width: 0; text-align: center; position: relative; padding-top: 30px; }
-                                .sv-guru-node::before { content: ''; position: absolute; top: 12px; left: -50%; width: 100%; height: 3px; border-radius: 3px; background: #e9edf5; }
+                                .sv-guru-node::before { content: ''; position: absolute; top: 13px; left: -50%; width: 100%; height: 3px; border-radius: 3px; background: #e2e8f0; }
                                 .sv-guru-node:first-child::before { display: none; }
-                                .sv-guru-node.done::before { background: #47c363; }
-                                .sv-guru-dot { position: absolute; top: 0; left: 50%; transform: translateX(-50%); width: 27px; height: 27px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 11px; color: #fff; background: #cbd5e1; box-shadow: 0 2px 6px rgba(0,0,0,.15); z-index: 1; }
-                                .sv-guru-node.done .sv-guru-dot { background: #47c363; }
-                                .sv-guru-node.run .sv-guru-dot { background: #6777ef; animation: sv-pulse 1.6s infinite; }
+                                .sv-guru-node.done::before { background: #16a34a; }
+                                .sv-guru-dot {
+                                    position: absolute; top: 0; left: 50%; transform: translateX(-50%);
+                                    width: 28px; height: 28px; border-radius: 50%;
+                                    display: grid; place-items: center;
+                                    font-size: 11px; font-weight: 900;
+                                    color: #ffffff !important;
+                                    background: #64748b;
+                                    box-shadow: 0 3px 10px rgba(15,23,42,.18);
+                                    z-index: 1;
+                                }
+                                .sv-guru-dot i {
+                                    color: #ffffff !important;
+                                }
+                                .sv-guru-node.done .sv-guru-dot {
+                                    background: #16a34a !important;
+                                }
+                                .sv-guru-node.run .sv-guru-dot {
+                                    background: #2563eb !important;
+                                    animation: sv-pulse 1.6s infinite;
+                                }
                                 .sv-guru-lbl { font-size: 10.5px; font-weight: 800; color: #0f172a; line-height: 1.3; }
                                 .sv-guru-node:not(.done):not(.run) .sv-guru-lbl { color: #94a3b8; }
                                 .sv-guru-sub { font-size: 10px; color: #64748b; }

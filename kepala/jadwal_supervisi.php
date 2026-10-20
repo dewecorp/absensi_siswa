@@ -610,10 +610,15 @@ include '../templates/sidebar.php';
     align-items: center;
     justify-content: center;
     font-size: 12px;
-    color: #fff;
-    background: var(--dot-color, #6777ef);
-    box-shadow: 0 3px 8px rgba(0,0,0,.18);
+    color: #ffffff !important;
+    background: var(--dot-color, #2563eb) !important;
+    box-shadow: 0 3px 10px rgba(15,23,42,.18);
     z-index: 1;
+}
+.sv-timeline-dot i,
+.sv-timeline-dot .fas,
+.sv-timeline-dot .far {
+    color: #ffffff !important;
 }
 .sv-timeline-card {
     background: #ffffff;

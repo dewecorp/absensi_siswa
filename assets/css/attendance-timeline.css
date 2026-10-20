@@ -34,10 +34,9 @@
     left: 48px;
     top: 16px;
     bottom: 16px;
-    width: 3px;
+    width: 2px;
     border-radius: 3px;
-    background: linear-gradient(180deg, #6777ef, #3abaf4);
-    opacity: .32;
+    background: linear-gradient(180deg, rgba(103,119,239,.25), rgba(58,186,244,.15));
 }
 
 .att-rekap-item {
@@ -50,6 +49,7 @@
     margin-bottom: 0;
 }
 
+/* ── Nomor / lingkaran kiri ── */
 .att-rekap-num {
     flex: 0 0 66px;
     text-align: center;
@@ -61,13 +61,14 @@
     height: 44px;
     margin: 0 auto;
     border-radius: 50%;
-    background: #fff;
-    border: 3px solid var(--att-tone-color, #6777ef);
+    /* bg tinted soft — warna ikut tone */
+    background: color-mix(in srgb, var(--att-tone-color, #6777ef) 14%, #ffffff);
     color: var(--att-tone-color, #6777ef);
-    font-weight: 800;
+    font-weight: 900;
     font-size: 16px;
-    line-height: 38px;
-    box-shadow: 0 3px 8px rgba(0, 0, 0, .08);
+    line-height: 44px;
+    border: none;
+    box-shadow: 0 2px 8px color-mix(in srgb, var(--att-tone-color, #6777ef) 22%, transparent);
 }
 .att-rekap-num .sub {
     display: block;
@@ -79,15 +80,16 @@
     text-transform: uppercase;
 }
 
+/* ── Card kanan ── */
 .att-rekap-card {
     flex: 1;
     min-width: 0;
     background: #fff;
-    border: 1px solid #e2e8f0;
-    border-radius: 12px;
-    box-shadow: 0 3px 12px rgba(20, 30, 70, .05);
+    border: 1.5px solid rgba(15,23,42,.07);
+    border-radius: 14px;
+    box-shadow: 0 3px 12px rgba(20, 30, 70, .04);
     padding: 12px 16px;
-    border-left: 4.5px solid var(--att-tone-color, #6777ef);
+    border-left: 4px solid var(--att-tone-color, #6777ef);
     transition: box-shadow .2s ease, transform .2s ease;
     display: flex;
     align-items: center;
@@ -124,9 +126,11 @@
     align-items: center;
     gap: 5px;
 }
+/* icon ikut warna tone — bukan hitam/abu */
 .att-rekap-meta i {
     font-size: 11px;
-    color: #94a3b8;
+    color: var(--att-tone-color, #6777ef);
+    opacity: .85;
 }
 
 .att-rekap-badge {
@@ -149,7 +153,7 @@
         width: 36px;
         height: 36px;
         font-size: 14px;
-        line-height: 30px;
+        line-height: 36px;
     }
     .att-rekap-card {
         padding: 10px 12px;

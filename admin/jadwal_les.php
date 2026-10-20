@@ -214,14 +214,14 @@ include '../templates/sidebar.php';
 
 <style>
 .tl-timeline { position: relative; padding: 10px 0 10px 8px; }
-.tl-timeline::before { content: ''; position: absolute; left: 57px; top: 12px; bottom: 12px; width: 3px; border-radius: 3px; background: linear-gradient(180deg, #6777ef, #3abaf4); opacity: .35; }
+.tl-timeline::before { content: ''; position: absolute; left: 57px; top: 12px; bottom: 12px; width: 2px; border-radius: 3px; background: linear-gradient(180deg, rgba(103,119,239,.25), rgba(58,186,244,.12)); }
 .tl-month-header { position: relative; z-index: 1; display: inline-block; margin: 16px 0 16px 34px; padding: 5px 18px; border-radius: 20px; background: #6777ef; color: #fff; font-weight: 800; font-size: 12.5px; letter-spacing: .3px; box-shadow: 0 4px 12px rgba(103,119,239,.35); }
 .tl-month-header:first-child { margin-top: 0; }
 .tl-timeline-item { position: relative; display: flex; gap: 14px; margin-bottom: 16px; }
 .tl-timeline-date { flex: 0 0 76px; text-align: center; z-index: 1; }
-.tl-timeline-date .d { display: block; width: 48px; height: 48px; margin: 0 auto; border-radius: 50%; background: #fff; border: 3px solid var(--tl-color, #6777ef); color: var(--tl-color, #6777ef); font-weight: 800; font-size: 18px; line-height: 42px; box-shadow: 0 3px 8px rgba(0,0,0,.10); }
+.tl-timeline-date .d { display: block; width: 48px; height: 48px; margin: 0 auto; border-radius: 50%; background: color-mix(in srgb, var(--tl-color, #6777ef) 14%, #fff); color: var(--tl-color, #6777ef); font-weight: 900; font-size: 18px; line-height: 48px; border: none; box-shadow: 0 2px 8px color-mix(in srgb, var(--tl-color, #6777ef) 22%, transparent); }
 .tl-timeline-date .m { display: block; margin-top: 4px; font-size: 11px; font-weight: 800; color: #6c757d; text-transform: uppercase; }
-.tl-timeline-card { flex: 1; min-width: 0; background: #fff; border: 1px solid #e2e8f0; border-radius: 12px; box-shadow: 0 4px 14px rgba(20,30,70,.06); padding: 14px 16px; border-left: 4.5px solid var(--tl-color, #6777ef); transition: box-shadow .2s ease, transform .2s ease; }
+.tl-timeline-card { flex: 1; min-width: 0; background: #fff; border: 1.5px solid rgba(15,23,42,.07); border-radius: 14px; box-shadow: 0 4px 14px rgba(20,30,70,.05); padding: 14px 16px; border-left: 4px solid var(--tl-color, #6777ef); transition: box-shadow .2s ease, transform .2s ease; }
 .tl-timeline-card:hover { box-shadow: 0 8px 24px rgba(20,30,70,.12); transform: translateY(-2px); }
 .tl-avatar {
     width: 44px;
@@ -263,7 +263,7 @@ include '../templates/sidebar.php';
     .tl-timeline::before { left: 47px; }
     .tl-timeline-item { gap: 10px; }
     .tl-timeline-date { flex-basis: 60px; }
-    .tl-timeline-date .d { width: 38px; height: 38px; font-size: 15px; line-height: 32px; }
+    .tl-timeline-date .d { width: 38px; height: 38px; font-size: 15px; line-height: 38px; }
 }
 </style>
 
