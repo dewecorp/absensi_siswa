@@ -6,17 +6,17 @@ if (!isAuthorized(['siswa'])) {
     redirect('../login.php');
 }
 
-function rupiahSibayar($amount): string {
+function rupiahPembayaran($amount): string {
     return 'Rp ' . number_format((int)$amount, 0, ',', '.');
 }
 
-function normalizeSibayarItems($items): array {
+function normalizePembayaranItems($items): array {
     return is_array($items) ? array_values(array_filter($items, static function ($item): bool {
         return is_array($item) && (int)($item['sisa_tagihan'] ?? 0) > 0;
     })) : [];
 }
 
-function renderSibayarDetailTagihan(array $row): string {
+function renderPembayaranDetailTagihan(array $row): string {
     $items = $row['item_belum_bayar'] ?? [];
     if (!is_array($items) || empty($items)) {
         return '<span class="text-muted small">Tidak ada rincian tunggakan.</span>';
@@ -30,7 +30,7 @@ function renderSibayarDetailTagihan(array $row): string {
     return $html;
 }
 
-function renderSibayarTagihanCards(array $items): void {
+function renderPembayaranTagihanCards(array $items): void {
     ?>
     <div class="sfin-card-list">
         <?php foreach ($items as $row): ?>
@@ -59,16 +59,16 @@ function renderSibayarTagihanCards(array $items): void {
                 <div class="sfin-bill-meta-grid">
                     <div class="sfin-bill-meta-item">
                         <div class="meta-lbl">Total Biaya</div>
-                        <div class="meta-val"><?php echo rupiahSibayar($total_nom); ?></div>
+                        <div class="meta-val"><?php echo rupiahPembayaran($total_nom); ?></div>
                     </div>
                     <div class="sfin-bill-meta-item">
                         <div class="meta-lbl">Sudah Dibayar</div>
-                        <div class="meta-val text-success"><?php echo rupiahSibayar($total_bay); ?></div>
+                        <div class="meta-val text-success"><?php echo rupiahPembayaran($total_bay); ?></div>
                     </div>
                     <div class="sfin-bill-meta-item" style="grid-column: span 2; border-top: 1px dashed #e2e8f0; padding-top: 6px; margin-top: 2px;">
                         <div class="d-flex justify-content-between align-items-center">
                             <div class="meta-lbl font-weight-bold">Sisa Tagihan</div>
-                            <div class="meta-val text-danger" style="font-size: 15px;"><?php echo rupiahSibayar($sisa); ?></div>
+                            <div class="meta-val text-danger" style="font-size: 15px;"><?php echo rupiahPembayaran($sisa); ?></div>
                         </div>
                     </div>
                 </div>
@@ -76,7 +76,7 @@ function renderSibayarTagihanCards(array $items): void {
                 <?php if (!empty($row['item_belum_bayar'])): ?>
                     <div class="mt-2">
                         <div class="small text-muted font-weight-bold" style="font-size: 10.5px;">Rincian Tunggakan:</div>
-                        <?php echo renderSibayarDetailTagihan($row); ?>
+                        <?php echo renderPembayaranDetailTagihan($row); ?>
                     </div>
                 <?php endif; ?>
             </div>
@@ -85,11 +85,11 @@ function renderSibayarTagihanCards(array $items): void {
     <?php
 }
 
-function renderSibayarTagihanTable(array $items): void {
+function renderPembayaranTagihanTable(array $items): void {
     ?>
     <!-- Mobile Cards View -->
     <div class="d-md-none">
-        <?php renderSibayarTagihanCards($items); ?>
+        <?php renderPembayaranTagihanCards($items); ?>
     </div>
 
     <!-- Desktop Table View -->
@@ -114,21 +114,21 @@ function renderSibayarTagihanTable(array $items): void {
                         <td>
                             <div class="font-weight-bold"><?php echo htmlspecialchars((string)($row['nama_pembayaran'] ?? '-'), ENT_QUOTES, 'UTF-8'); ?></div>
                             <small class="text-muted">
-                                Nominal: <?php echo rupiahSibayar($row['total_nominal'] ?? 0); ?>
+                                Nominal: <?php echo rupiahPembayaran($row['total_nominal'] ?? 0); ?>
                                 <?php if (isset($row['total_bayar'])): ?>
-                                    · Dibayar: <?php echo rupiahSibayar($row['total_bayar']); ?>
+                                    · Dibayar: <?php echo rupiahPembayaran($row['total_bayar']); ?>
                                 <?php endif; ?>
                             </small>
                         </td>
                         <td><?php echo htmlspecialchars((string)($row['tipe_bayar'] ?? '-'), ENT_QUOTES, 'UTF-8'); ?></td>
                         <td><?php echo htmlspecialchars((string)($row['tahun_ajaran'] ?? '-'), ENT_QUOTES, 'UTF-8'); ?></td>
-                        <td><?php echo renderSibayarDetailTagihan($row); ?></td>
-                        <td class="text-right font-weight-bold text-danger"><?php echo rupiahSibayar($sisa); ?></td>
+                        <td><?php echo renderPembayaranDetailTagihan($row); ?></td>
+                        <td class="text-right font-weight-bold text-danger"><?php echo rupiahPembayaran($sisa); ?></td>
                     </tr>
                 <?php endforeach; ?>
                 <tr class="font-weight-bold bg-light">
                     <td colspan="5" class="text-right">Total</td>
-                    <td class="text-right text-danger"><?php echo rupiahSibayar($total); ?></td>
+                    <td class="text-right text-danger"><?php echo rupiahPembayaran($total); ?></td>
                 </tr>
             </tbody>
         </table>
@@ -163,19 +163,19 @@ if (empty($student['tanggal_masuk']) && !empty($student['created_at'])) {
     $student['tanggal_masuk'] = date('Y-m-d', strtotime($student['created_at']));
 }
 
-$sibayar_response = fetchSibayarData($nisn, 'tagihan');
-$api_status = $sibayar_response['status'] ?? 'error';
-$api_message = $sibayar_response['message'] ?? 'Unknown error';
+$pembayaran_response = fetchPembayaranData($nisn, 'tagihan');
+$api_status = $pembayaran_response['status'] ?? 'error';
+$api_message = $pembayaran_response['message'] ?? 'Unknown error';
 
 // Get student entry date to filter bills before enrollment
 $tanggal_masuk = $student['tanggal_masuk'] ?? '';
 $tahun_masuk = $tanggal_masuk ? (int)substr($tanggal_masuk, 0, 4) : 0;
 
-$api_student = is_array($sibayar_response['student'] ?? null) ? $sibayar_response['student'] : [];
-$billing_data = normalizeSibayarItems($sibayar_response['billing'] ?? ($sibayar_response['data'] ?? []));
-$old_arrears = is_array($sibayar_response['tunggakan_tahun_ajaran_lama'] ?? null) ? $sibayar_response['tunggakan_tahun_ajaran_lama'] : [];
-$summary = is_array($sibayar_response['summary'] ?? null) ? $sibayar_response['summary'] : [];
-$tahun_ajaran_aktif = (string)($sibayar_response['tahun_ajaran'] ?? $sibayar_response['tahun_ajaran_aktif'] ?? $school_profile['tahun_ajaran'] ?? '-');
+$api_student = is_array($pembayaran_response['student'] ?? null) ? $pembayaran_response['student'] : [];
+$billing_data = normalizePembayaranItems($pembayaran_response['billing'] ?? ($pembayaran_response['data'] ?? []));
+$old_arrears = is_array($pembayaran_response['tunggakan_tahun_ajaran_lama'] ?? null) ? $pembayaran_response['tunggakan_tahun_ajaran_lama'] : [];
+$summary = is_array($pembayaran_response['summary'] ?? null) ? $pembayaran_response['summary'] : [];
+$tahun_ajaran_aktif = (string)($pembayaran_response['tahun_ajaran'] ?? $pembayaran_response['tahun_ajaran_aktif'] ?? $school_profile['tahun_ajaran'] ?? '-');
 
 // Helper: extract start year from "YYYY/YYYY" format
 $ta_start_year = function($ta) { return $ta && preg_match('/^(\d{4})\//', $ta, $m) ? (int)$m[1] : 0; };
@@ -194,7 +194,7 @@ foreach ($old_arrears as $tahun => $group) {
     $ta = (string)($group['tahun_ajaran'] ?? $tahun);
     // Skip arrears from before student's entry year
     if ($tahun_masuk > 0 && $ta_start_year($ta) < $tahun_masuk) continue;
-    $items = normalizeSibayarItems($group['items'] ?? []);
+    $items = normalizePembayaranItems($group['items'] ?? []);
     $total = (int)($group['total_tunggakan'] ?? array_sum(array_map(static fn($item) => (int)($item['sisa_tagihan'] ?? 0), $items)));
     if ($total <= 0 && empty($items)) continue;
     $computed_old_total += $total;
@@ -238,7 +238,7 @@ include_once '../templates/sidebar.php';
                 <div class="alert alert-warning alert-has-icon mb-3" style="border-radius: 14px;">
                     <div class="alert-icon"><i class="fas fa-plug"></i></div>
                     <div class="alert-body">
-                        <div class="alert-title font-weight-bold">Koneksi Server Sibayar</div>
+                        <div class="alert-title font-weight-bold">Koneksi Server Pembayaran</div>
                         Sistem menampilkan data tagihan lokal. Data realtime belum tersambung.<br>
                         <small class="text-dark"><strong>Catatan:</strong> <?php echo htmlspecialchars((string)$api_message, ENT_QUOTES, 'UTF-8'); ?></small>
                     </div>
@@ -261,7 +261,7 @@ include_once '../templates/sidebar.php';
                     <div>
                         <span class="sfin-badge-pill">
                             <i class="fas fa-<?php echo $api_status === 'success' ? 'sync-alt' : 'exclamation-circle'; ?> mr-1"></i>
-                            <?php echo $api_status === 'success' ? 'Sibayar Live' : 'Offline'; ?>
+                            <?php echo $api_status === 'success' ? 'Pembayaran Live' : 'Offline'; ?>
                         </span>
                     </div>
                 </div>
@@ -269,18 +269,18 @@ include_once '../templates/sidebar.php';
                 <div class="mt-2">
                     <div class="sfin-hero-main-title">Total Seluruh Tunggakan</div>
                     <div class="sfin-hero-amount <?php echo $total_all > 0 ? 'gold' : ''; ?>">
-                        <?php echo rupiahSibayar($total_all); ?>
+                        <?php echo rupiahPembayaran($total_all); ?>
                     </div>
                 </div>
 
                 <div class="sfin-stats-grid cols-3">
                     <div class="sfin-stat-box">
                         <div class="lbl">Tahun Aktif</div>
-                        <div class="val"><?php echo rupiahSibayar($total_active); ?></div>
+                        <div class="val"><?php echo rupiahPembayaran($total_active); ?></div>
                     </div>
                     <div class="sfin-stat-box">
                         <div class="lbl">Tahun Lama</div>
-                        <div class="val"><?php echo rupiahSibayar($total_old); ?></div>
+                        <div class="val"><?php echo rupiahPembayaran($total_old); ?></div>
                     </div>
                     <div class="sfin-stat-box">
                         <div class="lbl">Status</div>
@@ -300,7 +300,7 @@ include_once '../templates/sidebar.php';
             </div>
 
             <?php if (!empty($billing_data)): ?>
-                <?php renderSibayarTagihanTable($billing_data); ?>
+                <?php renderPembayaranTagihanTable($billing_data); ?>
             <?php else: ?>
                 <div class="card border-0 shadow-sm text-center py-4 mb-4" style="border-radius: 14px;">
                     <div class="text-success font-weight-bold">
@@ -323,13 +323,13 @@ include_once '../templates/sidebar.php';
                     <div class="mb-3">
                         <div class="d-flex justify-content-between align-items-center bg-white border px-3 py-2" style="border-radius: 12px 12px 0 0; border-bottom: 2px solid #e2e8f0 !important;">
                             <span class="font-weight-bold text-dark"><i class="fas fa-folder-open text-warning mr-1"></i> TA <?php echo htmlspecialchars($tahun, ENT_QUOTES, 'UTF-8'); ?></span>
-                            <span class="text-danger font-weight-bold"><?php echo rupiahSibayar($group['total']); ?></span>
+                            <span class="text-danger font-weight-bold"><?php echo rupiahPembayaran($group['total']); ?></span>
                         </div>
                         <div class="bg-white border border-top-0 p-2" style="border-radius: 0 0 12px 12px;">
                             <?php if (!empty($group['items'])): ?>
-                                <?php renderSibayarTagihanTable($group['items']); ?>
+                                <?php renderPembayaranTagihanTable($group['items']); ?>
                             <?php else: ?>
-                                <div class="text-muted small p-2">Rincian item tagihan tidak dikirim oleh Sibayar.</div>
+                                <div class="text-muted small p-2">Rincian item tagihan tidak dikirim oleh Pembayaran.</div>
                             <?php endif; ?>
                         </div>
                     </div>

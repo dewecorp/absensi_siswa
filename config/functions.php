@@ -167,7 +167,7 @@ function appCleanQueryString(string $query): string {
 
 function app_base_path(): string {
     $scriptName = str_replace('\\', '/', (string)($_SERVER['SCRIPT_NAME'] ?? ''));
-    $knownDirs = ['admin', 'guru', 'wali', 'kepala', 'tata_usaha', 'bendahara', 'siswa', 'ajax', 'api', 'config'];
+    $knownDirs = ['admin', 'guru', 'wali', 'kepala', 'tata_usaha', 'bendahara', 'siswa', 'ajax', 'api', 'config', 'pembayaran'];
 
     foreach ($knownDirs as $dir) {
         $needle = '/' . $dir . '/';
@@ -1695,10 +1695,10 @@ function endpoint_referer_headers(string $apiUrl, string $apiKey): array {
 }
 
 /**
- * SIBAYAR SPP - INTEGRATION CLIENT FOR SIMAD
+ * PEMBAYARAN SPP - INTEGRATION CLIENT FOR SIMAD
  * Versi: 1.2.0 (URL + key dinamis dari Pengaturan Endpoint, tanpa hardcode domain)
  */
-class SibayarClient {
+class PembayaranClient {
     private string $apiUrl;
     private string $apiKey;
 
@@ -1744,7 +1744,7 @@ class SibayarClient {
         if (json_last_error() !== JSON_ERROR_NONE) {
             $msg = 'Invalid JSON response';
             if (stripos($response, 'imunify') !== false || stripos($response, 'bot-protection') !== false) {
-                $msg = 'Server sibayar memblokir koneksi (Imunify360). Hubungi administrator server.';
+                $msg = 'Server Pembayaran memblokir koneksi (Imunify360). Hubungi administrator server.';
             }
             return [
                 'status' => 'error',
@@ -1757,14 +1757,45 @@ class SibayarClient {
     }
 
     public function checkConnection(): array {
+        if (!function_exists('pembayaran_local_connection')) {
+            require_once __DIR__ . '/pembayaran_local.php';
+        }
+        $koneksi = function_exists('pembayaran_local_connection') ? pembayaran_local_connection() : null;
+        if ($koneksi) {
+            return [
+                'status' => 'success',
+                'message' => 'Pembayaran Siswa (database SIMAD) aktif',
+                'env' => 'simad-local',
+                'tahun_ajaran_aktif' => pembayaran_local_tahun_ajaran_aktif($koneksi),
+                'server_time' => date('Y-m-d H:i:s'),
+            ];
+        }
         return $this->request('check');
     }
 
     public function getTahunAjaran(): array {
+        if (!function_exists('pembayaran_local_get_tahun_ajaran')) {
+            require_once __DIR__ . '/pembayaran_local.php';
+        }
+        $koneksi = function_exists('pembayaran_local_connection') ? pembayaran_local_connection() : null;
+        if ($koneksi) {
+            return [
+                'status' => 'success',
+                'data' => pembayaran_local_get_tahun_ajaran($koneksi),
+                'tahun_ajaran_aktif' => pembayaran_local_tahun_ajaran_aktif($koneksi),
+                'env' => 'simad-local',
+            ];
+        }
         return $this->request('get_tahun_ajaran');
     }
 
     public function getAllStudentSummary(?string $tahunAjaran = null): array {
+        if (!function_exists('pembayaran_local_get_all_summary')) {
+            require_once __DIR__ . '/pembayaran_local.php';
+        }
+        if (function_exists('pembayaran_local_get_all_summary') && pembayaran_local_connection()) {
+            return pembayaran_local_get_all_summary((string)($tahunAjaran ?? ''));
+        }
         $params = [];
         if ($tahunAjaran !== null && trim($tahunAjaran) !== '') {
             $params['tahun_ajaran'] = trim($tahunAjaran);
@@ -1773,6 +1804,12 @@ class SibayarClient {
     }
 
     public function getStudentDetail(string $nisn, ?string $tahunAjaran = null): array {
+        if (!function_exists('pembayaran_local_get_student_data')) {
+            require_once __DIR__ . '/pembayaran_local.php';
+        }
+        if (function_exists('pembayaran_local_get_student_data') && pembayaran_local_connection()) {
+            return pembayaran_local_get_student_data($nisn, (string)($tahunAjaran ?? ''));
+        }
         $params = ['nisn' => $nisn];
         if ($tahunAjaran !== null && trim($tahunAjaran) !== '') {
             $params['tahun_ajaran'] = trim($tahunAjaran);
@@ -1781,13 +1818,13 @@ class SibayarClient {
     }
 }
 
-function fetchSibayarData(string $nisn, string $type = 'tagihan', ?string $tahunAjaran = null): array {
-     $client = new SibayarClient();
+function fetchPembayaranData(string $nisn, string $type = 'tagihan', ?string $tahunAjaran = null): array {
+     $client = new PembayaranClient();
      $response = $client->getStudentDetail($nisn, $tahunAjaran);
 
      // Cache successful response
      if (isset($response['status']) && $response['status'] === 'success') {
-         $cache_file = dirname(__DIR__) . '/cache/sibayar_' . $nisn . '.json';
+         $cache_file = dirname(__DIR__) . '/cache/pembayaran_' . $nisn . '.json';
          @file_put_contents($cache_file, json_encode($response));
 
          // Map response based on request type
@@ -1807,7 +1844,7 @@ function fetchSibayarData(string $nisn, string $type = 'tagihan', ?string $tahun
      }
 
      // Fallback to cache if API failed
-     $cache_file = dirname(__DIR__) . '/cache/sibayar_' . $nisn . '.json';
+     $cache_file = dirname(__DIR__) . '/cache/pembayaran_' . $nisn . '.json';
      if (is_file($cache_file)) {
          $cached = @json_decode(@file_get_contents($cache_file), true);
          if ($cached && isset($cached['status']) && $cached['status'] === 'success') {
@@ -1828,7 +1865,7 @@ function fetchSibayarData(string $nisn, string $type = 'tagihan', ?string $tahun
      }
 
      // Dev fallback: sample data when both API and cache fail
-     if (isset($_GET['dev_sibayar'])) {
+     if (isset($_GET['dev_pembayaran'])) {
          $ta_aktif = date('Y') . '/' . (date('Y') + 1);
          $ta_lama = (date('Y') - 1) . '/' . date('Y');
          return [

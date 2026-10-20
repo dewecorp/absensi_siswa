@@ -62,7 +62,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['toggle_keluar'])) {
     }
 }
 
-// --- Simpan endpoint masuk (sigaji/sibayar/etab/dll) ---
+// --- Simpan endpoint masuk (sigaji/pembayaran/etab/dll) ---
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['save_masuk'])) {
     $rows = $_POST['masuk'] ?? [];
     try {
@@ -308,7 +308,7 @@ include '../templates/sidebar.php';
                     </div>
                 </div>
                 <div class="card-body">
-                    <p class="text-muted">Salin URL lalu tempel di web lain (sigaji/sibayar/etab). Base URL terdeteksi otomatis: <code><?= htmlspecialchars(endpoint_base_url()) ?></code></p>
+                    <p class="text-muted">Salin URL lalu tempel di web lain (sigaji/pembayaran/etab). Base URL terdeteksi otomatis: <code><?= htmlspecialchars(endpoint_base_url()) ?></code></p>
                     <div class="table-responsive">
                         <table class="table table-striped">
                             <thead><tr><th>No</th><th>Nama</th><th>Metode</th><th>URL Siap Salin</th><th>Status</th><th width="15%">Aksi</th></tr></thead>
@@ -362,7 +362,7 @@ include '../templates/sidebar.php';
                     </div>
                 </div>
                 <div class="card-body">
-                    <p class="text-muted">Isi base URL + API key tiap aplikasi (sigaji, sibayar, etab). SIMAD memakai ini saat menarik data — ganti domain cukup edit di sini.</p>
+                    <p class="text-muted">Isi base URL + API key tiap aplikasi (sigaji, pembayaran, etab). SIMAD memakai ini saat menarik data — ganti domain cukup edit di sini.</p>
                     <form method="POST" id="formSimpanMasuk">
                         <input type="hidden" name="save_masuk" value="1">
                         <div class="table-responsive">

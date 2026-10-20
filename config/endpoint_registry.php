@@ -45,7 +45,7 @@ if (!function_exists('endpoint_seeds')) {
     function endpoint_seeds(): array {
         return [
             ['nama' => 'Data Siswa', 'path' => 'api/v1/students.php', 'metode' => 'GET', 'deskripsi' => 'Sinkron data siswa ke aplikasi eksternal (mis. Rapor).'],
-            ['nama' => 'Sinkron Siswa (Sibayar)', 'path' => 'api/v1/sync_siswa.php', 'metode' => 'GET', 'deskripsi' => 'Data siswa + tanggal_masuk untuk penentuan tagihan Sibayar.'],
+            ['nama' => 'Sinkron Siswa (Pembayaran)', 'path' => 'api/v1/sync_siswa.php', 'metode' => 'GET', 'deskripsi' => 'Data siswa + tanggal_masuk untuk penentuan tagihan Pembayaran.'],
             ['nama' => 'Data Guru', 'path' => 'api/v1/teachers.php', 'metode' => 'GET', 'deskripsi' => 'Sinkron data guru ke aplikasi eksternal.'],
             ['nama' => 'Data Kelas', 'path' => 'api/v1/classes.php', 'metode' => 'GET', 'deskripsi' => 'Sinkron data kelas ke aplikasi eksternal.'],
             ['nama' => 'Data Ekstrakurikuler', 'path' => 'api/v1/extracurriculars.php', 'metode' => 'GET', 'deskripsi' => 'Sinkron data ekstrakurikuler + pembina + anggota aktif.'],
@@ -57,7 +57,7 @@ if (!function_exists('endpoint_inbound_seeds')) {
     function endpoint_inbound_seeds(): array {
         return [
             ['nama_aplikasi' => 'sigaji', 'deskripsi' => 'Ambil endpoint/data dari aplikasi Sigaji.'],
-            ['nama_aplikasi' => 'sibayar', 'deskripsi' => 'Ambil endpoint/data dari aplikasi Sibayar.'],
+            ['nama_aplikasi' => 'sibayar', 'deskripsi' => 'Ambil endpoint/data dari aplikasi Pembayaran.'],
             ['nama_aplikasi' => 'etab', 'deskripsi' => 'Ambil endpoint/data dari aplikasi Etab.'],
         ];
     }

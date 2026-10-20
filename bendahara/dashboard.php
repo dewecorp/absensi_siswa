@@ -7,6 +7,8 @@ if (!isAuthorized(['bendahara', 'admin'])) {
     redirect('../login.php');
 }
 
+require_once __DIR__ . '/_pembayaran_summary.php';
+
 $page_title = 'Dashboard Bendahara';
 $school_profile = getSchoolProfile($pdo);
 $display_name = $_SESSION['nama'] ?? $_SESSION['username'] ?? 'Bendahara';
@@ -26,48 +28,8 @@ try {
 } catch (Throwable $e) {}
 $sisa_anggaran = $total_sumber - $total_pengeluaran;
 
-/* ── Ringkasan tagihan siswa (Sibayar) ─────────────────────── */
-$summary = bendahara_fetch_summary();
-$siswa_rows = $summary['status'] === 'success' ? $summary['data'] : [];
-$api_ok = $summary['status'] === 'success';
-
-$total_tagihan = 0;
-$total_dibayar = 0;
-$total_tunggakan = 0;
-$jml_siswa = count($siswa_rows);
-$jml_belum = 0;
-$jml_lunas = 0;
-$top_tunggakan = [];
-
-foreach ($siswa_rows as $row) {
-    $tagihan = (int)($row['total_tunggakan_aktif'] ?? 0)
-        + (int)($row['total_tunggakan_tahun_lama'] ?? 0)
-        + (int)($row['total_sudah_bayar'] ?? 0);
-    $dibayar = (int)($row['total_sudah_bayar'] ?? 0);
-    $tunggakan = (int)($row['total_tunggakan'] ?? 0);
-
-    $total_tagihan += $tagihan;
-    $total_dibayar += $dibayar;
-    $total_tunggakan += $tunggakan;
-
-    if (!empty($row['is_lunas'])) {
-        $jml_lunas++;
-    } else {
-        $jml_belum++;
-        $top_tunggakan[] = [
-            'nama' => (string)($row['nama'] ?? '-'),
-            'nisn' => (string)($row['nisn'] ?? ''),
-            'kelas' => (string)($row['kelas'] ?? ''),
-            'tagihan' => $tagihan,
-            'dibayar' => $dibayar,
-            'tunggakan' => $tunggakan,
-        ];
-    }
-}
-usort($top_tunggakan, static fn($a, $b) => $b['tunggakan'] <=> $a['tunggakan']);
-$top_tunggakan = array_slice($top_tunggakan, 0, 8);
-
-$persen_bayar = $total_tagihan > 0 ? round(($total_dibayar / $total_tagihan) * 100, 1) : 0;
+/* ── Ringkasan pembayaran siswa ───────────────────────────── */
+$pembayaran_summary = bendahara_pembayaran_summary($koneksi);
 
 include '../templates/header.php';
 include_once '../templates/sidebar.php';
@@ -103,49 +65,20 @@ include_once '../templates/sidebar.php';
     color: #fff !important;
 }
 .bdh-chip i { color: #fff !important; }
-.bdh-progress {
-    height: 8px; border-radius: 999px; background: #e2e8f0; overflow: hidden; margin-top: 6px;
+.bdh-payment-grid {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 12px;
 }
-.bdh-progress > span {
-    display: block; height: 100%; border-radius: 999px;
-    background: linear-gradient(90deg, #16a34a, #22c55e);
+@media (min-width: 1200px) {
+    .bdh-payment-grid { grid-template-columns: repeat(4, minmax(0, 1fr)); }
 }
-.bdh-tcard {
-    display: block;
-    height: 100%;
-    background: #fff;
-    border: 1.5px solid rgba(15, 23, 42, .07);
-    border-radius: 14px;
-    padding: 13px 14px;
-    text-decoration: none !important;
-    transition: box-shadow .18s, transform .18s, border-color .18s;
-}
-.bdh-tcard:hover { transform: translateY(-2px); box-shadow: 0 8px 22px rgba(15, 23, 42, .09); border-color: #fecdd3; }
-.bdh-tcard-top { display: flex; align-items: flex-start; gap: 10px; }
-.bdh-tcard-ava {
-    flex: 0 0 auto; width: 38px; height: 38px; border-radius: 11px;
-    display: grid; place-items: center;
-    background: #fff1f2; color: #be123c; font-weight: 900; font-size: .84rem;
-}
-.bdh-tcard-id { flex: 1; min-width: 0; }
-.bdh-tcard-nama { font-size: .82rem; font-weight: 800; color: #0f172a; line-height: 1.25; }
-.bdh-tcard-meta { font-size: .68rem; color: #94a3b8; font-weight: 600; }
-.bdh-tcard-badge {
-    flex: 0 0 auto; font-size: .58rem; font-weight: 900; letter-spacing: .03em;
-    padding: 3px 8px; border-radius: 999px; background: #ffe4e6; color: #be123c;
-    text-transform: uppercase; white-space: nowrap;
-}
-.bdh-tcard-amt { display: flex; align-items: baseline; justify-content: space-between; gap: 8px; margin-top: 11px; }
-.bdh-tcard-amt .lbl { font-size: .62rem; font-weight: 800; color: #94a3b8; text-transform: uppercase; letter-spacing: .04em; }
-.bdh-tcard-amt .val { font-size: .98rem; font-weight: 900; color: #be123c; white-space: nowrap; }
-.bdh-tcard-bar { height: 7px; border-radius: 999px; background: #f1f5f9; overflow: hidden; margin: 7px 0 9px; }
-.bdh-tcard-bar > span { display: block; height: 100%; border-radius: 999px; background: linear-gradient(90deg, #16a34a, #22c55e); }
-.bdh-tcard-foot { display: flex; justify-content: space-between; gap: 8px; font-size: .66rem; color: #94a3b8; font-weight: 600; }
-.bdh-tcard-foot b { display: block; font-size: .74rem; color: #334155; font-weight: 800; }
 @media (max-width: 575.98px) {
-    .bdh-tcard { padding: 12px 13px; }
-    .bdh-tcard-amt .val { font-size: .92rem; }
     .bdh-hero { padding: 16px 16px; border-radius: 16px; }
+    .bdh-payment-grid { gap: 10px; }
+    .bdh-payment-grid .dash-stat-card { padding: 11px 12px; gap: 10px; }
+    .bdh-payment-grid .dash-stat-ico { width: 40px; height: 40px; border-radius: 12px; font-size: .95rem; }
+    .bdh-payment-grid .dash-stat-value { font-size: 1.15rem; }
 }
 </style>
 
@@ -209,68 +142,6 @@ include_once '../templates/sidebar.php';
                 <?php endif; ?>
             </div>
 
-            <?php if (!$api_ok): ?>
-                <div class="alert alert-warning d-flex align-items-center" style="gap:10px;border-radius:12px;">
-                    <i class="fas fa-exclamation-triangle"></i>
-                    <div>
-                        <strong>Data tagihan belum tersambung.</strong>
-                        <div class="small"><?= htmlspecialchars($summary['message'] ?? 'Periksa pengaturan endpoint Sibayar.') ?></div>
-                    </div>
-                </div>
-            <?php endif; ?>
-
-            <!-- Ringkasan Tagihan -->
-            <div class="dash-section-head">
-                <div class="dsh-title">
-                    <span class="dsh-dot" style="background:#2563eb;"></span>
-                    Ringkasan Tagihan Siswa
-                </div>
-                <span class="dsh-date"><?= date('d M Y') ?></span>
-            </div>
-            <div class="row dash-stat-row">
-                <div class="col-6 col-xl-3">
-                    <div class="dash-stat-card tint-blue">
-                        <div class="dash-stat-ico dsi-blue"><i class="fas fa-file-invoice-dollar"></i></div>
-                        <div class="dash-stat-body">
-                            <div class="dash-stat-label">Tagihan</div>
-                            <div class="dash-stat-value" style="font-size:1.15rem;" title="<?= htmlspecialchars(bendahara_rupiah($total_tagihan)) ?>"><?= bendahara_rupiah_short($total_tagihan) ?></div>
-                            <div class="dash-stat-sub"><span style="color:#2563eb;"><?= $jml_siswa ?> siswa</span></div>
-                        </div>
-                    </div>
-                </div>
-                <div class="col-6 col-xl-3">
-                    <div class="dash-stat-card tint-green">
-                        <div class="dash-stat-ico dsi-green"><i class="fas fa-check-circle"></i></div>
-                        <div class="dash-stat-body">
-                            <div class="dash-stat-label">Dibayar</div>
-                            <div class="dash-stat-value" style="font-size:1.15rem;" title="<?= htmlspecialchars(bendahara_rupiah($total_dibayar)) ?>"><?= bendahara_rupiah_short($total_dibayar) ?></div>
-                            <div class="dash-stat-sub"><span style="color:#15803d;"><?= $persen_bayar ?>% dari tagihan</span></div>
-                        </div>
-                    </div>
-                </div>
-                <div class="col-6 col-xl-3">
-                    <div class="dash-stat-card tint-rose">
-                        <div class="dash-stat-ico dsi-rose"><i class="fas fa-hourglass-half"></i></div>
-                        <div class="dash-stat-body">
-                            <div class="dash-stat-label">Tunggakan</div>
-                            <div class="dash-stat-value" style="font-size:1.15rem;" title="<?= htmlspecialchars(bendahara_rupiah($total_tunggakan)) ?>"><?= bendahara_rupiah_short($total_tunggakan) ?></div>
-                            <div class="dash-stat-sub"><span style="color:#be123c;"><?= $jml_belum ?> siswa belum lunas</span></div>
-                        </div>
-                    </div>
-                </div>
-                <div class="col-6 col-xl-3">
-                    <div class="dash-stat-card tint-teal">
-                        <div class="dash-stat-ico dsi-teal"><i class="fas fa-user-check"></i></div>
-                        <div class="dash-stat-body">
-                            <div class="dash-stat-label">Lunas</div>
-                            <div class="dash-stat-value"><?= $jml_lunas ?></div>
-                            <div class="dash-stat-sub"><span style="color:#0891b2;">dari <?= $jml_siswa ?> siswa</span></div>
-                            <div class="bdh-progress"><span style="width:<?= $jml_siswa > 0 ? round(($jml_lunas / $jml_siswa) * 100) : 0 ?>%"></span></div>
-                        </div>
-                    </div>
-                </div>
-            </div>
-
             <!-- Anggaran -->
             <div class="dash-section-head" style="margin-top:8px;">
                 <div class="dsh-title">
@@ -312,62 +183,106 @@ include_once '../templates/sidebar.php';
                 </div>
             </div>
 
-            <div class="dash-section-head" style="margin-top:8px;">
+            <!-- Pembayaran -->
+            <div class="dash-section-head" style="margin-top:28px;">
                 <div class="dsh-title">
-                    <span class="dsh-dot" style="background:#be123c;"></span>
-                    Tunggakan Terbesar
+                    <span class="dsh-dot" style="background:#16a34a;"></span>
+                    Pembayaran
                 </div>
-                <a href="tagihan_siswa.php?status=belum" class="small font-weight-bold" style="color:#2563eb;">Lihat Semua</a>
+                <a href="../pembayaran/index.php" class="small font-weight-bold" style="color:#2563eb;">Lihat detail</a>
             </div>
 
-            <?php if (empty($top_tunggakan)): ?>
-                <div class="card mb-3">
-                    <div class="card-body">
-                        <div class="text-center py-4">
-                            <div style="width:52px;height:52px;border-radius:15px;background:#f0fdf4;display:grid;place-items:center;margin:0 auto 10px;">
-                                <i class="fas fa-check-circle" style="color:#16a34a;font-size:1.3rem;"></i>
-                            </div>
-                            <div style="font-weight:800;color:#334155;font-size:.88rem;">
-                                <?= $api_ok ? 'Tidak ada tunggakan' : 'Data belum tersedia' ?>
-                            </div>
-                            <div style="font-size:.76rem;color:#94a3b8;margin-top:2px;">
-                                <?= $api_ok ? 'Semua siswa sudah lunas.' : 'Sambungkan endpoint Sibayar terlebih dahulu.' ?>
-                            </div>
+            <?php
+            $payment_cards = [
+                [
+                    'label' => 'Siswa Aktif',
+                    'value' => number_format((int) $pembayaran_summary['jml_siswa'], 0, ',', '.'),
+                    'sub' => 'Di luar kelas alumni',
+                    'icon' => 'fas fa-users',
+                    'tone' => 'blue',
+                    'compact' => false,
+                ],
+                [
+                    'label' => 'Jenis Bayar',
+                    'value' => number_format((int) $pembayaran_summary['jml_jenis'], 0, ',', '.') . ' jenis',
+                    'sub' => 'Tagihan berjalan',
+                    'icon' => 'fas fa-tags',
+                    'tone' => 'teal',
+                    'compact' => false,
+                ],
+                [
+                    'label' => 'Total Pembayaran',
+                    'value' => bendahara_rupiah($pembayaran_summary['total_bayar']),
+                    'sub' => 'Tahun ajaran aktif',
+                    'icon' => 'fas fa-money-bill-wave',
+                    'tone' => 'green',
+                    'compact' => true,
+                ],
+                [
+                    'label' => 'Total Tagihan',
+                    'value' => bendahara_rupiah($pembayaran_summary['total_tagihan_aktif']),
+                    'sub' => 'Sisa tahun aktif',
+                    'icon' => 'fas fa-file-invoice-dollar',
+                    'tone' => 'amber',
+                    'compact' => true,
+                ],
+            ];
+            ?>
+            <div class="bdh-payment-grid mb-3">
+                <?php foreach ($payment_cards as $payment_card) : ?>
+                    <div class="dash-stat-card tint-<?= htmlspecialchars($payment_card['tone'], ENT_QUOTES, 'UTF-8') ?>">
+                        <div class="dash-stat-ico dsi-<?= htmlspecialchars($payment_card['tone'], ENT_QUOTES, 'UTF-8') ?>">
+                            <i class="<?= htmlspecialchars($payment_card['icon'], ENT_QUOTES, 'UTF-8') ?>"></i>
+                        </div>
+                        <div class="dash-stat-body">
+                            <div class="dash-stat-label"><?= htmlspecialchars($payment_card['label'], ENT_QUOTES, 'UTF-8') ?></div>
+                            <div class="dash-stat-value"<?= $payment_card['compact'] ? ' style="font-size:1.15rem;"' : '' ?>><?= htmlspecialchars($payment_card['value'], ENT_QUOTES, 'UTF-8') ?></div>
+                            <div class="dash-stat-sub"><span><?= htmlspecialchars($payment_card['sub'], ENT_QUOTES, 'UTF-8') ?></span></div>
                         </div>
                     </div>
-                </div>
-            <?php else: ?>
-                <div class="row">
-                    <?php foreach ($top_tunggakan as $t): ?>
+                <?php endforeach; ?>
+            </div>
+
+            <div class="card mb-0">
+                <?php if (empty($pembayaran_summary['jenis_totals'])) : ?>
+                    <div class="card-body text-center text-muted py-4">Belum ada jenis pembayaran aktif.</div>
+                <?php else : ?>
+                    <div class="list-group list-group-flush">
                         <?php
-                        $t_tagihan = max(0, (int)($t['tagihan'] ?? 0));
-                        $t_dibayar = max(0, (int)($t['dibayar'] ?? 0));
-                        $t_persen = $t_tagihan > 0 ? min(100, round(($t_dibayar / $t_tagihan) * 100)) : 0;
+                        $payment_jenis_icons = [
+                            'ekstrakurikuler' => 'fas fa-futbol',
+                            'lks' => 'fas fa-book-open',
+                            'ujian' => 'fas fa-file-alt',
+                            'rekreasi' => 'fas fa-bus',
+                        ];
+                        $payment_jenis_tones = ['green', 'blue', 'amber', 'indigo'];
+                        foreach ($pembayaran_summary['jenis_totals'] as $payment_jenis_index => $payment_jenis) :
+                            $payment_jenis_nama = (string) $payment_jenis['nama_pembayaran'];
+                            $payment_jenis_tampil = preg_replace('/ekstrakurikuler/i', 'Ekskul', $payment_jenis_nama);
+                            $payment_jenis_lower = strtolower($payment_jenis_nama);
+                            $payment_jenis_icon = 'fas fa-money-bill';
+                            foreach ($payment_jenis_icons as $payment_keyword => $payment_icon) {
+                                if (strpos($payment_jenis_lower, $payment_keyword) !== false) {
+                                    $payment_jenis_icon = $payment_icon;
+                                    break;
+                                }
+                            }
+                            $payment_jenis_tone = $payment_jenis_tones[$payment_jenis_index % count($payment_jenis_tones)];
                         ?>
-                        <div class="col-12 col-md-6 col-xl-4 mb-3">
-                            <a class="bdh-tcard" href="laporan_pembayaran.php?nisn=<?= urlencode($t['nisn']) ?>">
-                                <div class="bdh-tcard-top">
-                                    <span class="bdh-tcard-ava"><?= htmlspecialchars(strtoupper(mb_substr($t['nama'], 0, 1))) ?></span>
-                                    <span class="bdh-tcard-id">
-                                        <span class="bdh-tcard-nama d-block text-truncate"><?= htmlspecialchars($t['nama']) ?></span>
-                                        <span class="bdh-tcard-meta"><?= htmlspecialchars(bendahara_kelas_label($t['kelas'])) ?> &bull; NISN <?= htmlspecialchars($t['nisn']) ?></span>
-                                    </span>
-                                    <span class="bdh-tcard-badge">Belum lunas</span>
+                            <div class="list-group-item d-flex align-items-center" style="gap:12px;padding:12px 16px;">
+                                <span class="dash-stat-ico dsi-<?= htmlspecialchars($payment_jenis_tone, ENT_QUOTES, 'UTF-8') ?>" style="width:38px;height:38px;border-radius:12px;font-size:.9rem;flex:0 0 auto;">
+                                    <i class="<?= htmlspecialchars($payment_jenis_icon, ENT_QUOTES, 'UTF-8') ?>"></i>
+                                </span>
+                                <div class="flex-grow-1" style="min-width:0;">
+                                    <div class="font-weight-bold text-truncate" title="Total Bayar <?= htmlspecialchars($payment_jenis_tampil, ENT_QUOTES, 'UTF-8') ?>">Total Bayar <?= htmlspecialchars($payment_jenis_tampil, ENT_QUOTES, 'UTF-8') ?></div>
+                                    <div class="small text-muted">Jenis pembayaran</div>
                                 </div>
-                                <div class="bdh-tcard-amt">
-                                    <span class="lbl">Sisa Tunggakan</span>
-                                    <span class="val"><?= bendahara_rupiah($t['tunggakan']) ?></span>
-                                </div>
-                                <div class="bdh-tcard-bar"><span style="width:<?= $t_persen ?>%"></span></div>
-                                <div class="bdh-tcard-foot">
-                                    <span>Dibayar <?= $t_persen ?>%<b><?= bendahara_rupiah($t_dibayar) ?></b></span>
-                                    <span class="text-right">Total Tagihan<b><?= bendahara_rupiah($t_tagihan) ?></b></span>
-                                </div>
-                            </a>
-                        </div>
-                    <?php endforeach; ?>
-                </div>
-            <?php endif; ?>
+                                <div class="font-weight-bold text-right text-nowrap"><?= bendahara_rupiah($payment_jenis['total_bayar_jenis']) ?></div>
+                            </div>
+                        <?php endforeach; ?>
+                    </div>
+                <?php endif; ?>
+            </div>
         </div>
     </section>
 </div>

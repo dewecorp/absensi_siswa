@@ -994,6 +994,7 @@ switch ($user_level) {
         break;
 
     case 'bendahara':
+        $is_pembayaran_path = strpos(str_replace('\\', '/', $current_uri), '/pembayaran/') !== false;
         $menu_items = [
             [
                 'title' => 'Dashboard',
@@ -1002,13 +1003,19 @@ switch ($user_level) {
                 'active' => $current_page === 'dashboard.php' && $current_dir === 'bendahara'
             ],
             [
-                'title' => 'Keuangan',
+                'title' => 'Pembayaran Siswa',
                 'icon' => 'fas fa-wallet',
                 'submenu' => [
+                    ['title' => 'Ringkasan Pembayaran', 'url' => '../pembayaran/index.php', 'active' => $is_pembayaran_path && $current_page === 'index.php'],
+                    ['title' => 'Jenis Bayar', 'url' => '../pembayaran/jenis_bayar.php', 'active' => $is_pembayaran_path && $current_page === 'jenis_bayar.php'],
+                    ['title' => 'Laporan', 'url' => '../pembayaran/laporan.php', 'active' => $is_pembayaran_path && $current_page === 'laporan.php'],
+                    ['title' => 'Pengaturan', 'url' => '../pembayaran/pengaturan.php', 'active' => $is_pembayaran_path && $current_page === 'pengaturan.php'],
+                    ['title' => 'Riwayat Bayar', 'url' => '../pembayaran/riwayat.php', 'active' => $is_pembayaran_path && $current_page === 'riwayat.php'],
+                    ['title' => 'Tagihan & Cetak', 'url' => '../pembayaran/tagihan.php', 'active' => $is_pembayaran_path && $current_page === 'tagihan.php'],
                     ['title' => 'Tagihan Siswa', 'url' => '../bendahara/tagihan_siswa.php', 'active' => $current_page === 'tagihan_siswa.php'],
-                    ['title' => 'Laporan Pembayaran', 'url' => '../bendahara/laporan_pembayaran.php', 'active' => $current_page === 'laporan_pembayaran.php'],
+                    ['title' => 'Transaksi Bayar', 'url' => '../pembayaran/transaksi.php', 'active' => $is_pembayaran_path && $current_page === 'transaksi.php'],
                 ],
-                'active' => in_array($current_page, ['tagihan_siswa.php', 'laporan_pembayaran.php'], true)
+                'active' => $is_pembayaran_path || $current_page === 'tagihan_siswa.php'
             ],
             [
                 'title' => 'Tabungan',
@@ -1811,6 +1818,8 @@ if (!function_exists('get_app_menu_icon')) {
             'jadwal' => 'bi bi-calendar3',
             'kehadiran' => 'bi bi-calendar-check-fill',
             'keuangan' => 'bi bi-wallet2',
+            'pembayaran siswa' => 'bi bi-cash-coin',
+            'ringkasan spp' => 'bi bi-receipt-cutoff',
             'tabungan' => 'bi bi-piggy-bank-fill',
             'gaji guru' => 'bi bi-cash-stack',
             'honor & insentif' => 'bi bi-award-fill',

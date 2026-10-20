@@ -26,7 +26,7 @@ $arrears_data = [];
 $student_info = [];
 
 if ($nisn !== '') {
-    $detail = fetchSibayarData($nisn, 'laporan');
+    $detail = fetchPembayaranData($nisn, 'laporan');
     $detail_ok = (($detail['status'] ?? '') === 'success');
     $detail_msg = (string)($detail['message'] ?? '');
     $billing_data = is_array($detail['billing'] ?? null) ? $detail['billing'] : [];
@@ -187,7 +187,7 @@ include_once '../templates/sidebar.php';
 
                     <?php if (!$api_ok): ?>
                         <div class="alert alert-warning" style="border-radius:12px;">
-                            <strong>Data Sibayar belum tersedia.</strong>
+                            <strong>Data Pembayaran belum tersedia.</strong>
                             <div class="small"><?= htmlspecialchars($summary['message'] ?? '') ?></div>
                         </div>
                     <?php endif; ?>
@@ -240,7 +240,7 @@ include_once '../templates/sidebar.php';
                 <?php if (!$detail_ok): ?>
                     <div class="alert alert-warning" style="border-radius:12px;">
                         <strong>Detail pembayaran belum tersedia.</strong>
-                        <div class="small"><?= htmlspecialchars($detail_msg !== '' ? $detail_msg : 'Periksa koneksi ke server Sibayar.') ?></div>
+                        <div class="small"><?= htmlspecialchars($detail_msg !== '' ? $detail_msg : 'Periksa koneksi ke server Pembayaran.') ?></div>
                     </div>
                 <?php endif; ?>
 

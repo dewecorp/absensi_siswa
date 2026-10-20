@@ -1,8 +1,8 @@
 <?php
 /**
- * Student Sync API Endpoint (for Sibayar)
+ * Student Sync API Endpoint (for Pembayaran)
  * Menyediakan data siswa termasuk tanggal_masuk untuk menentukan tagihan.
- * Dipanggil oleh server Sibayar untuk mencegah siswa baru terkena tunggakan tahun lama.
+ * Dipanggil oleh server Pembayaran untuk mencegah siswa baru terkena tunggakan tahun lama.
  */
 
 header('Content-Type: application/json; charset=UTF-8');
@@ -75,7 +75,7 @@ try {
     $stmt->execute($params);
     $students = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
-    // Format tanggal_masuk: biarkan null jika tidak diisi, agar Sibayar tahu data ini belum ada
+    // Format tanggal_masuk: biarkan null jika tidak diisi, agar Pembayaran tahu data ini belum ada
     foreach ($students as &$s) {
         $s['tanggal_masuk'] = !empty($s['tanggal_masuk']) ? $s['tanggal_masuk'] : null;
         $s['tahun_masuk'] = $s['tanggal_masuk'] ? (int)date('Y', strtotime($s['tanggal_masuk'])) : null;

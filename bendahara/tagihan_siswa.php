@@ -175,7 +175,7 @@ include_once '../templates/sidebar.php';
         <div class="section-body">
             <?php if (!$api_ok): ?>
                 <div class="alert alert-warning" style="border-radius:12px;">
-                    <strong>Data Sibayar belum tersedia.</strong>
+                    <strong>Data Pembayaran belum tersedia.</strong>
                     <div class="small"><?= htmlspecialchars($summary['message'] ?? '') ?></div>
                 </div>
             <?php endif; ?>

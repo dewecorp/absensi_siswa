@@ -50,7 +50,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
 // Set page title
 $page_title = 'Dashboard Siswa';
 
-$tagihan_summary_response = !empty($student['nisn']) ? fetchSibayarData((string)$student['nisn'], 'tagihan') : ['status' => 'error'];
+$tagihan_summary_response = !empty($student['nisn']) ? fetchPembayaranData((string)$student['nisn'], 'tagihan') : ['status' => 'error'];
 $tagihan_summary = is_array($tagihan_summary_response['summary'] ?? null) ? $tagihan_summary_response['summary'] : [];
 $tagihan_total_aktif = (int)($tagihan_summary['total_tunggakan_aktif'] ?? 0);
 $tagihan_total_lama = (int)($tagihan_summary['total_tunggakan_tahun_lama'] ?? 0);
@@ -482,7 +482,7 @@ include_once '../templates/sidebar.php';
             <div class="col-lg-6 col-md-12 col-12 col-sm-12 mb-4">
                 <div class="card card-warning mapp-tagihan-card h-100" style="border-radius: 12px; overflow: hidden;">
                     <div class="card-header py-3 d-flex justify-content-between align-items-center">
-                        <h4 class="mb-0"><i class="fas fa-file-invoice-dollar mr-2"></i>Ringkasan Tagihan Sibayar</h4>
+                        <h4 class="mb-0"><i class="fas fa-file-invoice-dollar mr-2"></i>Ringkasan Tagihan Pembayaran</h4>
                         <a href="tagihan_siswa.php" class="btn btn-sm btn-warning text-white" style="border-radius: 20px;">
                             Detail Tagihan <i class="fas fa-chevron-right ml-1"></i>
                         </a>
@@ -567,7 +567,7 @@ include_once '../templates/sidebar.php';
                                 </div>
                             <?php else: ?>
                                 <div class="alert alert-success mb-0" style="border-radius: 10px;">
-                                    <i class="fas fa-check-circle mr-2"></i>Tidak ada tagihan yang belum dibayar menurut data Sibayar. Pertahankan!
+                                    <i class="fas fa-check-circle mr-2"></i>Tidak ada tagihan yang belum dibayar menurut data Pembayaran Siswa. Pertahankan!
                                 </div>
                             <?php endif; ?>
                         <?php else: ?>
@@ -575,7 +575,7 @@ include_once '../templates/sidebar.php';
                                 <div class="rounded-circle bg-light d-inline-flex align-items-center justify-content-center mb-3 text-warning" style="width: 56px; height: 56px;">
                                     <i class="fas fa-plug fa-lg"></i>
                                 </div>
-                                <h6 class="font-weight-bold text-dark">Belum Terhubung ke Sibayar</h6>
+                                <h6 class="font-weight-bold text-dark">Belum Terhubung ke Pembayaran</h6>
                                 <p class="text-muted small mb-3">Ringkasan tagihan belum bisa diambil saat ini. Coba lagi melalui halaman detail.</p>
                                 <a href="tagihan_siswa.php" class="btn btn-warning btn-sm text-white font-weight-bold px-4" style="border-radius: 20px;">
                                     <i class="fas fa-sync-alt mr-1"></i>Coba Lagi

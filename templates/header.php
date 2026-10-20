@@ -801,13 +801,46 @@ if (getUserLevel() === 'siswa' && isset($_SESSION['user_id'])) {
             background: transparent !important;
         }
     </style>
+
+    <?php if (!empty($pembayaran_module) && empty($pembayaran_native_ui)): ?>
+    <!-- Pembayaran Siswa: aset modul, dimuat hanya pada halaman /pembayaran -->
+    <link rel="stylesheet" href="<?= htmlspecialchars(simad_url('pembayaran/assets/vendors/mdi/css/materialdesignicons.min.css'), ENT_QUOTES, 'UTF-8') ?>">
+    <link rel="stylesheet" href="https://cdn.datatables.net/1.10.24/css/jquery.dataTables.min.css">
+    <link rel="stylesheet" href="<?= htmlspecialchars(simad_url('pembayaran/assets/vendors/select2/select2.min.css'), ENT_QUOTES, 'UTF-8') ?>">
+    <link rel="stylesheet" href="<?= htmlspecialchars(simad_url('pembayaran/assets/css/custom.css'), ENT_QUOTES, 'UTF-8') ?>?v=<?= (int) @filemtime(__DIR__ . '/../pembayaran/assets/css/custom.css') ?>">
+
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        // Tailwind utilities are scoped to module content so Stisla/Bootstrap
+        // navbar, sidebar, footer, buttons, and forms keep their native styles.
+        tailwind.config = {
+            corePlugins: { preflight: false },
+            important: '.pembayaran-app',
+            theme: {
+                extend: {
+                    colors: {
+                        primary: { DEFAULT: '#10b981', dark: '#059669', light: '#34d399', soft: '#d1fae5' }
+                    }
+                }
+            }
+        };
+    </script>
+
+    <!-- jQuery dimuat lebih awal agar script inline halaman modul langsung tersedia. -->
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+    <script src="https://cdn.datatables.net/1.10.24/js/jquery.dataTables.min.js"></script>
+    <script src="<?= htmlspecialchars(simad_url('pembayaran/assets/vendors/select2/select2.min.js'), ENT_QUOTES, 'UTF-8') ?>"></script>
+    <script src="<?= htmlspecialchars(simad_url('pembayaran/assets/vendors/chart.js/chart.umd.js'), ENT_QUOTES, 'UTF-8') ?>"></script>
+    <script src="<?= htmlspecialchars(simad_url('pembayaran/assets/js/pembayaran.js'), ENT_QUOTES, 'UTF-8') ?>?v=<?= (int) @filemtime(__DIR__ . '/../pembayaran/assets/js/pembayaran.js') ?>"></script>
+    <?php endif; ?>
 </head>
 
-        <body class="<?php echo in_array(basename($_SERVER['PHP_SELF']), ['dashboard.php', 'simple_dashboard.php']) ? 'mobile-no-app-header' : 'mobile-has-app-header'; ?>">
+        <body class="<?php echo (in_array(basename($_SERVER['PHP_SELF']), ['dashboard.php', 'simple_dashboard.php']) || !empty($pembayaran_dashboard_home)) ? 'mobile-no-app-header' : 'mobile-has-app-header'; ?>">
     <div id="app">
         <div class="main-wrapper">
 
-            <?php if (!in_array(basename($_SERVER['PHP_SELF']), ['dashboard.php', 'simple_dashboard.php'])): ?>
+            <?php if (!in_array(basename($_SERVER['PHP_SELF']), ['dashboard.php', 'simple_dashboard.php']) && empty($pembayaran_dashboard_home)): ?>
             <!-- Mobile App Page Header (mobile only) -->
             <div class="mobile-app-header d-lg-none">
                 <a href="javascript:history.back()" class="mobile-app-back" aria-label="Kembali">

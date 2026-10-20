@@ -84,13 +84,13 @@ if (!$student) {
 $nisn = $student['nisn'];
 $page_title = 'Laporan Pembayaran';
 
-// Ambil data dari API Sibayar
-$sibayar_response = fetchSibayarData($nisn, 'laporan');
-$billing_data = $sibayar_response['billing'] ?? [];
-$payments_data = $sibayar_response['payments'] ?? [];
-$api_status = $sibayar_response['status'] ?? 'error';
-$api_message = $sibayar_response['message'] ?? 'Unknown error';
-$tahun_ajaran_sibayar = (string)($sibayar_response['tahun_ajaran'] ?? $sibayar_response['tahun_ajaran_aktif'] ?? '');
+// Ambil data dari API Pembayaran
+$pembayaran_response = fetchPembayaranData($nisn, 'laporan');
+$billing_data = $pembayaran_response['billing'] ?? [];
+$payments_data = $pembayaran_response['payments'] ?? [];
+$api_status = $pembayaran_response['status'] ?? 'error';
+$api_message = $pembayaran_response['message'] ?? 'Unknown error';
+$tahun_ajaran_pembayaran = (string)($pembayaran_response['tahun_ajaran'] ?? $pembayaran_response['tahun_ajaran_aktif'] ?? '');
 
 // Get school profile for Tahun Ajaran
 $school_profile = getSchoolProfile($pdo);
@@ -158,7 +158,7 @@ include_once '../templates/sidebar.php';
                 <div class="alert alert-warning alert-has-icon mb-3" style="border-radius: 14px;">
                     <div class="alert-icon"><i class="fas fa-plug"></i></div>
                     <div class="alert-body">
-                        <div class="alert-title font-weight-bold">Koneksi Server Sibayar</div>
+                        <div class="alert-title font-weight-bold">Koneksi Server Pembayaran</div>
                         Sistem menampilkan data riwayat lokal. Data realtime belum tersambung.<br>
                         <small class="text-dark"><strong>Catatan:</strong> <?= htmlspecialchars($api_message) ?></small>
                     </div>
@@ -180,7 +180,7 @@ include_once '../templates/sidebar.php';
                     </div>
                     <div>
                         <span class="sfin-badge-pill">
-                            TA <?= htmlspecialchars($tahun_ajaran_sibayar !== '' ? $tahun_ajaran_sibayar : ($school_profile['tahun_ajaran'] ?? '-')) ?>
+                            TA <?= htmlspecialchars($tahun_ajaran_pembayaran !== '' ? $tahun_ajaran_pembayaran : ($school_profile['tahun_ajaran'] ?? '-')) ?>
                         </span>
                     </div>
                 </div>
@@ -198,7 +198,7 @@ include_once '../templates/sidebar.php';
                 <?php 
                 foreach ($billing_data as $category): 
                     $is_bulanan = ($category['tipe_bayar'] === 'Bulanan');
-                    $category_tahun_ajaran = (string)($category['tahun_ajaran'] ?? $tahun_ajaran_sibayar);
+                    $category_tahun_ajaran = (string)($category['tahun_ajaran'] ?? $tahun_ajaran_pembayaran);
                     $months = bulanTahunAjaranBerjalan($category_tahun_ajaran);
                 ?>
                     <div class="card border-0 shadow-sm mb-4" style="border-radius: 16px; overflow: hidden;">
@@ -225,9 +225,9 @@ include_once '../templates/sidebar.php';
                                     <?php foreach ($months as $m): ?>
                                         <?php
                                         $unpaid_months = $category['item_belum_bayar'] ?? [];
-                                        $is_unpaid_by_sibayar = is_array($unpaid_months) && in_array($m, $unpaid_months, true);
+                                        $is_unpaid_by_pembayaran = is_array($unpaid_months) && in_array($m, $unpaid_months, true);
                                         $payment_info = cariPembayaranBulanan($payments_data, (string)$category['nama_pembayaran'], $m, $category_tahun_ajaran);
-                                        $is_paid = $payment_info !== null && !$is_unpaid_by_sibayar;
+                                        $is_paid = $payment_info !== null && !$is_unpaid_by_pembayaran;
                                         ?>
                                         <div class="sfin-month-pill <?= $is_paid ? 'is-paid' : 'is-unpaid' ?>">
                                             <div class="sfin-month-name">

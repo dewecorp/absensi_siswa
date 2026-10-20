@@ -58,6 +58,14 @@ if (!empty($tab_data['groups'])) {
         $total_submenus += count($tg['items'] ?? []);
     }
 }
+$mapp_badge = 'Modul Akademik';
+$mapp_description = 'Pilih jenis asesmen di bawah ini untuk input, verifikasi, atau rekapitulasi nilai siswa madrasah.';
+$mapp_hero_icon = 'fas fa-chart-bar';
+if (strcasecmp(trim((string)$mapp_g), 'Pembayaran Siswa') === 0) {
+    $mapp_badge = 'Keuangan';
+    $mapp_description = 'Kelola tagihan, transaksi pembayaran, data siswa, dan laporan pembayaran siswa.';
+    $mapp_hero_icon = 'fas fa-wallet';
+}
 ?>
 
 <div class="main-content">
@@ -75,12 +83,12 @@ if (!empty($tab_data['groups'])) {
             <div class="mb-3">
                 <div class="card border-0 text-white shadow-sm" style="background: linear-gradient(135deg, #10b981 0%, #059669 60%, #047857 100%); border-radius: 18px; overflow: hidden; position: relative;">
                     <div style="position: absolute; right: -20px; bottom: -20px; font-size: 110px; color: rgba(255,255,255,0.12); pointer-events: none;">
-                        <i class="fas fa-chart-bar"></i>
+                        <i class="<?php echo htmlspecialchars($mapp_hero_icon, ENT_QUOTES, 'UTF-8'); ?>"></i>
                     </div>
                     <div class="card-body p-3" style="position: relative; z-index: 1;">
                         <div class="d-flex align-items-center justify-content-between mb-2">
                             <span class="badge badge-light text-success font-weight-bold px-2 py-1" style="border-radius: 999px; font-size: 10px;">
-                                <i class="fas fa-layer-group mr-1"></i> Modul Akademik
+                                <i class="fas fa-layer-group mr-1"></i> <?php echo htmlspecialchars($mapp_badge, ENT_QUOTES, 'UTF-8'); ?>
                             </span>
                             <span class="small font-weight-bold" style="color: rgba(255,255,255,0.9); font-size: 11px;">
                                 <?php echo $total_submenus; ?> Menu Tersedia
@@ -90,7 +98,7 @@ if (!empty($tab_data['groups'])) {
                             <?php echo htmlspecialchars($page_title, ENT_QUOTES, 'UTF-8'); ?>
                         </h5>
                         <p class="mb-0 small" style="color: rgba(255,255,255,0.85); font-size: 11.5px; line-height: 1.4;">
-                            Pilih jenis asesmen di bawah ini untuk input, verifikasi, atau rekapitulasi nilai siswa madrasah.
+                            <?php echo htmlspecialchars($mapp_description, ENT_QUOTES, 'UTF-8'); ?>
                         </p>
                     </div>
                 </div>

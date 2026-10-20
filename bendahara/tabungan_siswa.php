@@ -44,7 +44,7 @@ if ($nisn !== '') {
     $rdata = $tabs_riwayat['data'] ?? [];
     $transaksi = is_array($rdata['transaksi'] ?? null) ? $rdata['transaksi'] : (is_array($rdata) ? $rdata : []);
 
-    /* identitas dari ringkasan Sibayar */
+    /* identitas dari ringkasan Pembayaran */
     foreach ($rows as $r) {
         if ((string)($r['nisn'] ?? '') === $nisn) {
             $student_info = ['nama' => $r['nama'] ?? '-', 'nisn' => $r['nisn'] ?? '-', 'kelas' => $r['kelas'] ?? ''];

@@ -1,13 +1,13 @@
 <?php
 /**
- * Helper ringkasan keuangan Sibayar untuk level bendahara.
+ * Helper ringkasan keuangan Pembayaran untuk level bendahara.
  * Cache 10 menit agar halaman tidak lambat saat API jarak jauh.
  */
 
 if (!function_exists('bendahara_summary_cache_path')) {
     function bendahara_summary_cache_path(): string
     {
-        return dirname(__DIR__) . '/cache/sibayar_summary.json';
+        return dirname(__DIR__) . '/cache/pembayaran_summary_local.json';
     }
 }
 
@@ -29,7 +29,7 @@ if (!function_exists('bendahara_fetch_summary')) {
         }
 
         try {
-            $client = new SibayarClient();
+            $client = new PembayaranClient();
             $response = $client->getAllStudentSummary();
         } catch (Throwable $e) {
             $response = ['status' => 'error', 'message' => $e->getMessage()];
@@ -48,7 +48,7 @@ if (!function_exists('bendahara_fetch_summary')) {
             return [
                 'status' => 'error',
                 'data' => [],
-                'message' => (string)($response['message'] ?? 'Gagal mengambil data Sibayar'),
+                'message' => (string)($response['message'] ?? 'Gagal mengambil data Pembayaran Siswa'),
                 'cached' => false,
             ];
         }
