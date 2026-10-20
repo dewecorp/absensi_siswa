@@ -129,15 +129,14 @@ include '../templates/sidebar.php';
                         <div class="card-header">
                             <h4>Daftar Aktivitas Pengguna</h4>
                             <div class="card-header-action">
-                                <form method="GET" class="form-inline">
+                                <form method="GET" class="form-inline" id="activityLogForm">
                                     <div class="input-group mr-2">
-                                        <input type="text" class="form-control" name="search" placeholder="Cari aktivitas..." value="<?php echo htmlspecialchars($search); ?>">
-                                        <div class="input-group-btn">
-                                            <button type="submit" class="btn btn-primary"><i class="fas fa-search"></i></button>
-                                            <?php if (!empty($search)): ?>
+                                        <input type="text" class="form-control" name="search" id="activityLogSearch" placeholder="Cari aktivitas..." value="<?php echo htmlspecialchars($search); ?>">
+                                        <?php if (!empty($search)): ?>
+                                            <div class="input-group-append">
                                                 <a href="activity_log.php" class="btn btn-secondary">Reset</a>
-                                            <?php endif; ?>
-                                        </div>
+                                            </div>
+                                        <?php endif; ?>
                                     </div>
                                 </form>
                             </div>
@@ -207,6 +206,19 @@ include '../templates/sidebar.php';
         </div>
     </section>
 </div>
+
+<script>
+(function () {
+    var form = document.getElementById('activityLogForm');
+    var input = document.getElementById('activityLogSearch');
+    if (!form || !input) return;
+    var timer = null;
+    input.addEventListener('input', function () {
+        clearTimeout(timer);
+        timer = setTimeout(function () { form.submit(); }, 450);
+    });
+})();
+</script>
 
 <?php
 // Add JavaScript for DataTables

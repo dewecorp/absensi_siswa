@@ -291,22 +291,24 @@
                         </div>
                         <div class="modal-body p-0">
                             <div class="mapp-lainnya-grid">
+                                <?php if (function_exists('getUserLevel') && getUserLevel() !== 'bendahara'): ?>
                                 <a href="<?php echo htmlspecialchars(app_url($bottom_profile_url), ENT_QUOTES, 'UTF-8'); ?>" class="mapp-lainnya-item">
-                                    <span class="mapp-lainnya-icon mg-c3"><i class="ri-user-3-line"></i></span>
+                                    <span class="mapp-lainnya-icon mg-c3"><i class="bi bi-person-fill"></i></span>
                                     <span class="mapp-lainnya-label">Profil</span>
                                 </a>
+                                <?php endif; ?>
                                 <?php if (function_exists('getUserLevel') && getUserLevel() === 'admin'): ?>
                                 <a href="#" id="btn-toggle-self-update-m" class="mapp-lainnya-item">
-                                    <span class="mapp-lainnya-icon mg-c4"><i class="ri-toggle-line"></i></span>
+                                    <span class="mapp-lainnya-icon mg-c4"><i class="bi bi-toggle-on"></i></span>
                                     <span class="mapp-lainnya-label">Update Sistem</span>
                                 </a>
                                 <a href="#" id="btn-update-github-m" class="mapp-lainnya-item">
-                                    <span class="mapp-lainnya-icon mg-c2"><i class="ri-refresh-line"></i></span>
+                                    <span class="mapp-lainnya-icon mg-c2"><i class="bi bi-arrow-repeat"></i></span>
                                     <span class="mapp-lainnya-label">Jalankan Update</span>
                                 </a>
                                 <?php endif; ?>
                                 <a href="#" onclick="confirmLogout('../logout.php?level=<?php echo htmlspecialchars(getUserLevel(), ENT_QUOTES, 'UTF-8'); ?>'); return false;" class="mapp-lainnya-item">
-                                    <span class="mapp-lainnya-icon mg-c7"><i class="ri-logout-box-r-line"></i></span>
+                                    <span class="mapp-lainnya-icon mg-c7"><i class="bi bi-box-arrow-right"></i></span>
                                     <span class="mapp-lainnya-label" style="color:#e11d48;">Keluar</span>
                                 </a>
                             </div>

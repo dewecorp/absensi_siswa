@@ -78,7 +78,7 @@ Options -Indexes
     # Fallback aman: URL lama tanpa .php tetap bisa dibuka,
     # tetapi aplikasi tidak dipaksa memakai clean URL.
     RewriteRule ^(login|logout)/?$ $1.php [L,QSA,NC]
-    RewriteRule ^(admin|guru|wali|kepala|tata_usaha|siswa)/([A-Za-z0-9_-]+)/?$ $1/$2.php [L,QSA,NC]
+    RewriteRule ^(admin|guru|wali|kepala|tata_usaha|bendahara|siswa)/([A-Za-z0-9_-]+)/?$ $1/$2.php [L,QSA,NC]
     RewriteRule ^ajax/([A-Za-z0-9_-]+)/?$ ajax/$1.php [L,QSA,NC]
     RewriteRule ^api/v1/([A-Za-z0-9_-]+)/?$ api/v1/$1.php [L,QSA,NC]
 

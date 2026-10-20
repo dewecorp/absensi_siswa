@@ -8,10 +8,10 @@ if (session_status() == PHP_SESSION_NONE) {
 }
 
 // Check authorization
-if (!isAuthorized(['admin', 'kepala_madrasah', 'tata_usaha', 'wali', 'guru'])) {
+if (!isAuthorized(['admin', 'kepala_madrasah', 'tata_usaha', 'bendahara', 'wali', 'guru'])) {
     redirect('../login.php');
 }
-$is_admin = isAuthorized(['admin', 'tata_usaha']);
+$is_admin = isAuthorized(['admin', 'tata_usaha', 'bendahara']);
 $is_bendahara = isBendahara($pdo);
 if ($is_bendahara) {
     $is_admin = true;

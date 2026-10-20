@@ -57,6 +57,7 @@ $__nav_dash = [
     'admin' => 'Dashboard Admin',
     'kepala_madrasah' => 'Dashboard Kepala Madrasah',
     'tata_usaha' => 'Dashboard Tata Usaha',
+    'bendahara' => 'Dashboard Bendahara',
     'guru' => 'Dashboard Guru',
     'wali' => 'Dashboard Wali Kelas',
     'siswa' => 'Dashboard Siswa',

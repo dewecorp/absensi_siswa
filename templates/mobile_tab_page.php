@@ -11,7 +11,7 @@ if (function_exists('isLoggedIn') && !isLoggedIn()) {
     redirect('../login.php');
 }
 $user_level = function_exists('getUserLevel') ? getUserLevel() : '';
-$allowed_levels = ['admin', 'kepala_madrasah', 'tata_usaha', 'guru', 'wali', 'siswa'];
+$allowed_levels = ['admin', 'kepala_madrasah', 'tata_usaha', 'bendahara', 'guru', 'wali', 'siswa'];
 if ($user_level === '' || !in_array($user_level, $allowed_levels, true)) {
     if (function_exists('isAuthorized')) {
         if (!isAuthorized($allowed_levels)) {
@@ -23,7 +23,7 @@ $role_dir = function_exists('mapp_role_dir') ? mapp_role_dir($user_level) : 'adm
 
 $mapp_g = isset($_GET['g']) ? trim((string)$_GET['g']) : '';
 if ($mapp_g === '') {
-    redirect($role_dir . '/dashboard.php');
+    redirect(function_exists('app_url') ? app_url($role_dir . '/dashboard.php') : '../' . $role_dir . '/dashboard.php');
 }
 $mapp_g = mb_substr($mapp_g, 0, 60, 'UTF-8');
 $page_title = $mapp_g;

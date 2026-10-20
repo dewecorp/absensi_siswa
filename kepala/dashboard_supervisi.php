@@ -222,7 +222,7 @@ include '../templates/sidebar.php';
                     <form method="GET" class="form-row align-items-end">
                         <div class="form-group col-md-4 mb-2">
                             <label class="small font-weight-bold">Tahun Ajaran</label>
-                            <select name="tahun_ajaran" class="form-control">
+                            <select name="tahun_ajaran" class="form-control" onchange="this.form.submit()">
                                 <?php foreach (sv_tahun_ajaran_options($pdo) as $ta): ?>
                                     <option value="<?= htmlspecialchars($ta, ENT_QUOTES) ?>" <?= $ta === $filter_ta ? 'selected' : '' ?>><?= htmlspecialchars($ta) ?></option>
                                 <?php endforeach; ?>
@@ -230,14 +230,13 @@ include '../templates/sidebar.php';
                         </div>
                         <div class="form-group col-md-4 mb-2">
                             <label class="small font-weight-bold">Semester</label>
-                            <select name="semester" class="form-control">
+                            <select name="semester" class="form-control" onchange="this.form.submit()">
                                 <?php foreach (sv_semester_options() as $s): ?>
                                     <option value="<?= htmlspecialchars($s, ENT_QUOTES) ?>" <?= $s === $filter_sem ? 'selected' : '' ?>><?= htmlspecialchars($s) ?></option>
                                 <?php endforeach; ?>
                             </select>
                         </div>
                         <div class="form-group col-md-4 mb-2">
-                            <button type="submit" class="btn btn-primary"><i class="fas fa-filter"></i> Terapkan</button>
                             <a href="dashboard_supervisi.php" class="btn btn-light">Reset</a>
                         </div>
                     </form>

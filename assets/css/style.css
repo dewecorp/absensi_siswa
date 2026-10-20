@@ -3354,9 +3354,11 @@ body.layout-3 .main-footer {
 .main-sidebar .sidebar-menu {
   padding: 0;
   margin: 0;
+  list-style: none;
 }
 .main-sidebar .sidebar-menu li {
   display: block;
+  list-style: none;
 }
 .main-sidebar .sidebar-menu li.menu-header {
   padding: 3px 15px;

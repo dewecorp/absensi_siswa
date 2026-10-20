@@ -317,6 +317,9 @@ include '../templates/sidebar.php';
                                                             case 'tata_usaha':
                                                                 $badge_class = 'badge-info';
                                                                 break;
+                                                            case 'bendahara':
+                                                                $badge_class = 'badge-warning';
+                                                                break;
                                                             default:
                                                                 $badge_class = 'badge-secondary';
                                                                 break;
@@ -378,6 +381,7 @@ include '../templates/sidebar.php';
                                         <option value="wali">Wali</option>
                                         <option value="kepala_madrasah">Kepala Madrasah</option>
                                         <option value="tata_usaha">Tata Usaha</option>
+                                        <option value="bendahara">Bendahara</option>
                                     </select>
                                 </div>
                                 <div class="form-group">
@@ -429,6 +433,7 @@ include '../templates/sidebar.php';
                                         <option value="wali" <?php echo $user['level'] === 'wali' ? 'selected' : ''; ?>>Wali</option>
                                         <option value="kepala_madrasah" <?php echo $user['level'] === 'kepala_madrasah' ? 'selected' : ''; ?>>Kepala Madrasah</option>
                                         <option value="tata_usaha" <?php echo $user['level'] === 'tata_usaha' ? 'selected' : ''; ?>>Tata Usaha</option>
+                                        <option value="bendahara" <?php echo $user['level'] === 'bendahara' ? 'selected' : ''; ?>>Bendahara</option>
                                     </select>
                                 </div>
                                 <div class="form-group">

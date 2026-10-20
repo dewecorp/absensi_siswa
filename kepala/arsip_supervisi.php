@@ -359,13 +359,12 @@ include '../templates/sidebar.php';
                     <form method="GET" class="form-row align-items-end">
                         <div class="form-group col-md-4 mb-2">
                             <label class="small font-weight-bold">Jenis Dokumen</label>
-                            <select class="form-control" name="jenis_dokumen">
+                            <select class="form-control" name="jenis_dokumen" onchange="this.form.submit()">
                                 <option value="">Semua</option>
                                 <?php foreach (sv_jenis_dokumen_list() as $jd): ?><option value="<?= $jd ?>" <?= $jd === $filter_jenis ? 'selected' : '' ?>><?= $jd ?></option><?php endforeach; ?>
                             </select>
                         </div>
                         <div class="form-group col-md-4 mb-2">
-                            <button type="submit" class="btn btn-primary"><i class="fas fa-filter"></i> Filter</button>
                             <a href="arsip_supervisi.php" class="btn btn-light">Reset</a>
                         </div>
                     </form>

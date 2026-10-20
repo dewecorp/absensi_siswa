@@ -9,6 +9,7 @@ if (!function_exists('mapp_role_dir')) {
             'admin' => 'admin',
             'kepala_madrasah' => 'kepala',
             'tata_usaha' => 'tata_usaha',
+            'bendahara' => 'bendahara',
             'guru' => 'guru',
             'wali' => 'wali',
             'siswa' => 'siswa',
@@ -107,6 +108,19 @@ if (!function_exists('mapp_item_icon')) {
             'rekap nilai siswa' => 'fas fa-chart-line',
             'program remidi' => 'fas fa-tools',
             'program pengayaan' => 'fas fa-layer-group',
+            'tagihan siswa' => 'fas fa-file-invoice-dollar',
+            'laporan pembayaran' => 'fas fa-receipt',
+            'tabungan siswa' => 'fas fa-piggy-bank',
+            'tabungan' => 'fas fa-piggy-bank',
+            'data gaji guru' => 'fas fa-money-bill-wave',
+            'gaji guru' => 'fas fa-money-bill-wave',
+            'data honor & insentif' => 'fas fa-award',
+            'honor & insentif' => 'fas fa-award',
+            'honor insentif' => 'fas fa-award',
+            'kategori anggaran' => 'fas fa-tags',
+            'rab madrasah' => 'fas fa-file-invoice',
+            'rab ekstrakurikuler' => 'fas fa-trophy',
+            'rab ujian' => 'fas fa-clipboard-list',
         ];
         if (isset($map[$t])) {
             return $map[$t];
@@ -115,6 +129,17 @@ if (!function_exists('mapp_item_icon')) {
             if (strpos($t, $k) !== false) {
                 return $icon;
             }
+        }
+        $group_map = [
+            'keuangan' => 'fas fa-wallet',
+            'tabungan' => 'fas fa-piggy-bank',
+            'gaji guru' => 'fas fa-money-bill-wave',
+            'honor & insentif' => 'fas fa-award',
+            'anggaran' => 'fas fa-coins',
+        ];
+        $g = strtolower(trim($group_title));
+        if (isset($group_map[$g])) {
+            return $group_map[$g];
         }
         return 'fas fa-file-alt';
     }
@@ -141,6 +166,18 @@ if (!function_exists('mapp_item_desc')) {
             'rekap nilai siswa' => 'Rekapitulasi lengkap nilai seluruh mapel & peringkat kelas',
             'program remidi' => 'Perencanaan & pelaksanaan tindak lanjut ketuntasan remidi',
             'program pengayaan' => 'Program pendalaman materi bagi siswa berprestasi',
+            'tagihan siswa' => 'Cek tunggakan & status pembayaran seluruh siswa',
+            'laporan pembayaran' => 'Riwayat pembayaran dan rincian tagihan per siswa',
+            'tabungan siswa' => 'Saldo, setoran, penarikan & riwayat tabungan siswa',
+            'data gaji guru' => 'Rekap gaji pokok, tunjangan, potongan & gaji bersih',
+            'gaji guru' => 'Rekap gaji pokok, tunjangan, potongan & gaji bersih',
+            'data honor & insentif' => 'Kelola honor & insentif guru per periode',
+            'honor & insentif' => 'Kelola honor & insentif guru per periode',
+            'honor insentif' => 'Kelola honor & insentif guru per periode',
+            'kategori anggaran' => 'Kelola pos & kategori anggaran madrasah',
+            'rab madrasah' => 'Rencana anggaran & realisasi belanja madrasah',
+            'rab ekstrakurikuler' => 'Rencana anggaran kegiatan ekstrakurikuler',
+            'rab ujian' => 'Rencana anggaran pelaksanaan ujian madrasah',
         ];
         if (isset($map[$t])) {
             return $map[$t];

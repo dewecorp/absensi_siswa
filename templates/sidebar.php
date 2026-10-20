@@ -13,7 +13,7 @@ $nilai_ujian_praktik_menu_active = ($current_page === 'nilai_ujian.php' && isset
 $nilai_ujian_biasa_menu_active = ($current_page === 'nilai_ujian.php' && !$nilai_ujian_praktik_menu_active);
 
 // Define menu items based on user level
-$user_level = isset($_GET['session_type']) && in_array($_GET['session_type'], ['guru', 'wali', 'admin', 'kepala_madrasah', 'tata_usaha', 'siswa'], true) 
+$user_level = isset($_GET['session_type']) && in_array($_GET['session_type'], ['guru', 'wali', 'admin', 'kepala_madrasah', 'tata_usaha', 'bendahara', 'siswa'], true) 
     ? $_GET['session_type'] 
     : getUserLevel();
 global $menu_items;
@@ -993,6 +993,68 @@ switch ($user_level) {
         $menu_items = array_merge($menu_top_tu, $menu_mid_tu, $menu_bottom_tu);
         break;
 
+    case 'bendahara':
+        $menu_items = [
+            [
+                'title' => 'Dashboard',
+                'icon' => 'fas fa-fire',
+                'url' => '../bendahara/dashboard.php',
+                'active' => $current_page === 'dashboard.php' && $current_dir === 'bendahara'
+            ],
+            [
+                'title' => 'Keuangan',
+                'icon' => 'fas fa-wallet',
+                'submenu' => [
+                    ['title' => 'Tagihan Siswa', 'url' => '../bendahara/tagihan_siswa.php', 'active' => $current_page === 'tagihan_siswa.php'],
+                    ['title' => 'Laporan Pembayaran', 'url' => '../bendahara/laporan_pembayaran.php', 'active' => $current_page === 'laporan_pembayaran.php'],
+                ],
+                'active' => in_array($current_page, ['tagihan_siswa.php', 'laporan_pembayaran.php'], true)
+            ],
+            [
+                'title' => 'Tabungan',
+                'icon' => 'fas fa-piggy-bank',
+                'submenu' => [
+                    ['title' => 'Tabungan Siswa', 'url' => '../bendahara/tabungan_siswa.php', 'active' => $current_page === 'tabungan_siswa.php'],
+                ],
+                'active' => $current_page === 'tabungan_siswa.php'
+            ],
+            [
+                'title' => 'Gaji Guru',
+                'icon' => 'fas fa-money-bill-wave',
+                'submenu' => [
+                    ['title' => 'Data Gaji Guru', 'url' => '../bendahara/gaji_guru.php', 'active' => $current_page === 'gaji_guru.php'],
+                ],
+                'active' => $current_page === 'gaji_guru.php'
+            ],
+            [
+                'title' => 'Honor & Insentif',
+                'icon' => 'fas fa-award',
+                'submenu' => [
+                    ['title' => 'Data Honor & Insentif', 'url' => '../bendahara/honor_insentif.php', 'active' => $current_page === 'honor_insentif.php'],
+                ],
+                'active' => $current_page === 'honor_insentif.php'
+            ],
+            [
+                'title' => 'Anggaran',
+                'icon' => 'fas fa-file-invoice-dollar',
+                'submenu' => [
+                    ['title' => 'Kategori Anggaran', 'url' => '../admin/kategori_anggaran.php?session_type=bendahara', 'active' => $current_page === 'kategori_anggaran.php'],
+                    ['title' => 'RAB Madrasah', 'url' => '../admin/rab_madrasah.php?session_type=bendahara', 'active' => $current_page === 'rab_madrasah.php'],
+                    ['title' => 'RAB Ekstrakurikuler', 'url' => '../admin/rab_ekstrakurikuler.php?session_type=bendahara', 'active' => $current_page === 'rab_ekstrakurikuler.php'],
+                    ['title' => 'RAB Ujian', 'url' => '../admin/rab_ujian.php?session_type=bendahara', 'active' => $current_page === 'rab_ujian.php'],
+                ],
+                'active' => in_array($current_page, ['kategori_anggaran.php', 'rab_madrasah.php', 'rab_ekstrakurikuler.php', 'rab_ujian.php'], true)
+            ],
+            [
+                'title' => 'Logout',
+                'icon' => 'fas fa-sign-out-alt',
+                'url' => '#',
+                'active' => false,
+                'attributes' => 'onclick="confirmLogoutInline(\'../logout.php?level=' . htmlspecialchars($user_level, ENT_QUOTES, 'UTF-8') . '\'); return false;"'
+            ],
+        ];
+        break;
+
     case 'guru':
         $is_grade_6_guru = false;
         $is_guru_pembina_pramuka = is_current_guru_pembina_pramuka($pdo);
@@ -1749,6 +1811,10 @@ if (!function_exists('get_app_menu_icon')) {
             'jadwal' => 'bi bi-calendar3',
             'kehadiran' => 'bi bi-calendar-check-fill',
             'keuangan' => 'bi bi-wallet2',
+            'tabungan' => 'bi bi-piggy-bank-fill',
+            'gaji guru' => 'bi bi-cash-stack',
+            'honor & insentif' => 'bi bi-award-fill',
+            'anggaran' => 'bi bi-cash-coin',
             'nilai siswa' => 'bi bi-mortarboard-fill',
             'pembelajaran' => 'bi bi-book-fill',
             'pengelolaan kelas' => 'bi bi-people-fill',

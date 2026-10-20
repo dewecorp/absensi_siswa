@@ -144,6 +144,7 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
                 case 'wali': $redirect_url = app_url('wali/dashboard.php'); break;
                 case 'kepala_madrasah': $redirect_url = app_url('kepala/dashboard.php'); break;
                 case 'tata_usaha': $redirect_url = app_url('tata_usaha/dashboard.php'); break;
+                case 'bendahara': $redirect_url = app_url('bendahara/dashboard.php'); break;
                 default: $redirect_url = app_url('index.php'); break;
             }
             $show_swal = true;

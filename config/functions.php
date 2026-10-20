@@ -167,7 +167,7 @@ function appCleanQueryString(string $query): string {
 
 function app_base_path(): string {
     $scriptName = str_replace('\\', '/', (string)($_SERVER['SCRIPT_NAME'] ?? ''));
-    $knownDirs = ['admin', 'guru', 'wali', 'kepala', 'tata_usaha', 'siswa', 'ajax', 'api', 'config'];
+    $knownDirs = ['admin', 'guru', 'wali', 'kepala', 'tata_usaha', 'bendahara', 'siswa', 'ajax', 'api', 'config'];
 
     foreach ($knownDirs as $dir) {
         $needle = '/' . $dir . '/';
@@ -219,7 +219,7 @@ function app_url(string $path): string {
     }
     $path = ltrim($path, '/');
 
-    $knownDirs = ['admin', 'guru', 'wali', 'kepala', 'tata_usaha', 'siswa', 'ajax', 'api', 'config'];
+    $knownDirs = ['admin', 'guru', 'wali', 'kepala', 'tata_usaha', 'bendahara', 'siswa', 'ajax', 'api', 'config'];
     $firstSegment = explode('/', $path, 2)[0] ?? '';
     if (!$hadParentTraversal && !$hadLeadingSlash && $path !== '' && !in_array($firstSegment, $knownDirs, true)) {
         $scriptName = str_replace('\\', '/', (string)($_SERVER['SCRIPT_NAME'] ?? ''));
@@ -4068,6 +4068,9 @@ if (!function_exists('simadAktorKehadiranLabel')) {
         }
         if ($level === 'tata_usaha') {
             return 'Tata Usaha';
+        }
+        if ($level === 'bendahara') {
+            return 'Bendahara';
         }
         if ($level === 'kepala_madrasah') {
             return 'Kepala Madrasah';
