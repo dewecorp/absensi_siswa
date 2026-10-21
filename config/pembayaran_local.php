@@ -1,9 +1,9 @@
 <?php
 /**
- * Bridge data Pembayaran Siswa langsung dari database Pembayaran Siswa.
+ * Bridge data Pembayaran Siswa langsung dari database utama SIMAD.
  *
- * Semua fungsi di sini adalah port dari sibayar/api/simad.php, tetapi
- * dijalankan dalam proses SIMAD tanpa HTTP/API dan tanpa web Pembayaran.
+ * Semua fungsi di sini adalah port dari API Pembayaran lama, tetapi dijalankan
+ * langsung dalam proses SIMAD tanpa HTTP/API dan tanpa database terpisah.
  */
 
 require_once __DIR__ . '/pembayaran_db.php';

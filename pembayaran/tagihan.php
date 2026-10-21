@@ -49,11 +49,6 @@ if (isset($_GET['id_kelas'])) {
     $tahun_ajaran_aktif = get_tahun_ajaran_aktif($koneksi);
     $tahun_ajaran_berjalan = tahun_ajaran_berjalan($koneksi);
     $tahun_ajaran_sebelumnya = tahun_ajaran_sebelumnya($tahun_ajaran_berjalan);
-    $hapus_alumni_lunas_tagihan = null;
-    if ($is_kelas_alumni && isset($_POST['hapus_alumni_lunas'])) {
-        $hapus_alumni_lunas_tagihan = hapus_semua_siswa_alumni_lunas($koneksi, $tahun_ajaran_aktif);
-    }
-    $alumni_lunas_tagihan = $is_kelas_alumni ? daftar_siswa_alumni_lunas($koneksi, $tahun_ajaran_aktif) : [];
     $tahun_aktif_boleh_ditagihkan = tahun_ajaran_boleh_ditagihkan($koneksi, $tahun_ajaran_aktif);
     $is_kelas_satu = in_array(trim($d_kelas['nama_kelas'] ?? ''), ['1', 'I'], true);
     // Tahun berjalan (acuan tagihan) mengikuti Tanggal Mulai Tahun Ajaran.
@@ -235,11 +230,6 @@ if (isset($_GET['id_kelas'])) {
 }
 ?>
 
-<?php if (isset($alumni_lunas_tagihan) && !empty($alumni_lunas_tagihan)) : ?>
-<form method="post" id="formHapusAlumniLunas" style="display: none;">
-    <input type="hidden" name="hapus_alumni_lunas" value="1">
-</form>
-<?php endif; ?>
 <?php include __DIR__ . '/../templates/pembayaran_footer.php'; ?>
 <script>
     $(document).ready(function() {
@@ -255,28 +245,5 @@ if (isset($_GET['id_kelas'])) {
                 $(this).closest('form').submit();
             }
         });
-
-        <?php if (isset($hapus_alumni_lunas_tagihan) && $hapus_alumni_lunas_tagihan !== null): ?>
-        Swal.fire({
-            title: 'Berhasil',
-            text: '<?= (int) $hapus_alumni_lunas_tagihan ?> data alumni lunas berhasil dihapus.',
-            icon: 'success',
-            timer: 1800,
-            showConfirmButton: false
-        });
-        <?php elseif (isset($alumni_lunas_tagihan) && !empty($alumni_lunas_tagihan)): ?>
-        Swal.fire({
-            title: 'Hapus data alumni lunas?',
-            text: 'Ada <?= count($alumni_lunas_tagihan) ?> data alumni yang semua tagihannya sudah lunas. Data siswa alumninya bisa dihapus, riwayat pembayaran tetap tersimpan.',
-            icon: 'warning',
-            showCancelButton: true,
-            confirmButtonText: 'Hapus sekarang',
-            cancelButtonText: 'Nanti saja'
-        }).then(function(result) {
-            if (result.isConfirmed) {
-                document.getElementById('formHapusAlumniLunas').submit();
-            }
-        });
-        <?php endif; ?>
     });
 </script>

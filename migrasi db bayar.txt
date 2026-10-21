@@ -1,0 +1,3 @@
+Login admin → buka https://domain/pembayaran/migrasi_db.php sekali (buat tabel + VIEW + salin data dari kvzveyrg_pembayaran, sekaligus normalisasi kelas I..VI).
+Setelah cocok, hapus pembayaran/migrasi_db.php — satu-satunya file yang masih menyimpan kredensial DB lama.
+Backup lalu drop kvzveyrg_pembayaran. DB spp lokal juga tidak dipakai lagi.

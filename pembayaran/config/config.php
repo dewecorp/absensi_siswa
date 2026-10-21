@@ -3,7 +3,7 @@
  * Bootstrap modul Pembayaran Siswa (Pembayaran) di dalam SIMAD.
  *
  * - Login & otorisasi memakai sesi SIMAD (bukan login Pembayaran).
- * - Database tetap database Pembayaran (`spp`), dapat dioverride via environment.
+ * - Database menyatu dengan database utama SIMAD (`DB_NAME` di config/database.php).
  * - Semua URL dihitung dari lokasi folder ini di dalam SIMAD.
  */
 
@@ -57,26 +57,29 @@ if (!$is_api_request) {
     }
 }
 
-// === KONEKSI DATABASE PEMBAYARAN (mysqli untuk logika asli Pembayaran) ===
-$is_local = ($_SERVER['HTTP_HOST'] == 'localhost' || $_SERVER['HTTP_HOST'] == '127.0.0.1' || strpos($_SERVER['HTTP_HOST'], '.test') !== false || strpos($_SERVER['HTTP_HOST'], '.local') !== false);
+// === KONEKSI DATABASE (SATU DATABASE DENGAN SIMAD) ===
+// Modul Pembayaran memakai database utama SIMAD (`DB_NAME` dari config/database.php).
+if (!defined('DB_NAME')) {
+    require_once $simad_root . '/config/database.php';
+}
 
-$host = getenv('PEMBAYARAN_DB_HOST') ?: ($is_local ? '127.0.0.1' : 'localhost');
-$user = getenv('PEMBAYARAN_DB_USER') ?: ($is_local ? 'root' : 'kvzveyrg_pembayaran');
-$pass = getenv('PEMBAYARAN_DB_PASS') !== false ? (string)getenv('PEMBAYARAN_DB_PASS') : ($is_local ? '' : 'sultanfattah26');
-$db   = getenv('PEMBAYARAN_DB_NAME') ?: ($is_local ? 'spp' : 'kvzveyrg_pembayaran');
-$port = (int)(getenv('PEMBAYARAN_DB_PORT') ?: 3306);
+$host = DB_HOST;
+$user = DB_USER;
+$pass = DB_PASS;
+$db   = DB_NAME;
+$port = (int)(getenv('DB_PORT') ?: 3306);
 
 if (function_exists('mysqli_report')) {
     mysqli_report(MYSQLI_REPORT_OFF);
 }
 $koneksi = mysqli_connect($host, $user, $pass, $db, $port);
-if (!$koneksi && $is_local) {
-    $koneksi = mysqli_connect('localhost', 'root', '', $db);
-}
 if (!$koneksi) {
-    die('Koneksi database Pembayaran Siswa gagal. Periksa environment PEMBAYARAN_DB_HOST, PEMBAYARAN_DB_USER, PEMBAYARAN_DB_PASS, PEMBAYARAN_DB_NAME.');
+    die('Koneksi database SIMAD gagal. Periksa konfigurasi database pada config/database.php (DB_HOST, DB_USER, DB_PASS, DB_NAME).');
 }
 mysqli_query($koneksi, "SET time_zone = '+07:00'");
+if (function_exists('mysqli_set_charset')) {
+    mysqli_set_charset($koneksi, 'utf8mb4');
+}
 
 // Petakan akun SIMAD ke akun petugas Pembayaran bila username-nya sama (untuk audit pembayaran).
 if (!$is_api_request && isset($_SESSION['username'])) {

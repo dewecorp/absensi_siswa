@@ -62,7 +62,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['toggle_keluar'])) {
     }
 }
 
-// --- Simpan endpoint masuk (sigaji/pembayaran/etab/dll) ---
+// --- Simpan endpoint masuk (sigaji/etab/dll) ---
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['save_masuk'])) {
     $rows = $_POST['masuk'] ?? [];
     try {
@@ -308,7 +308,7 @@ include '../templates/sidebar.php';
                     </div>
                 </div>
                 <div class="card-body">
-                    <p class="text-muted">Salin URL lalu tempel di web lain (sigaji/pembayaran/etab). Base URL terdeteksi otomatis: <code><?= htmlspecialchars(endpoint_base_url()) ?></code></p>
+                    <p class="text-muted">Salin URL lalu tempel di web lain (sigaji/etab). Base URL terdeteksi otomatis: <code><?= htmlspecialchars(endpoint_base_url()) ?></code></p>
                     <div class="table-responsive">
                         <table class="table table-striped">
                             <thead><tr><th>No</th><th>Nama</th><th>Metode</th><th>URL Siap Salin</th><th>Status</th><th width="15%">Aksi</th></tr></thead>

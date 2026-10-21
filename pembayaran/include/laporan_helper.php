@@ -48,37 +48,12 @@ function alumni_masih_punya_tagihan($koneksi, $nisn) {
     return (bool) cek_tagihan_tunggakan($koneksi, $nisn, $tahun_alumni);
 }
 
+/**
+ * Data siswa adalah milik SIMAD (`tb_siswa`). Modul Pembayaran tidak boleh
+ * menghapus siswa, termasuk alumni yang sudah lunas.
+ */
 function hapus_siswa_alumni_jika_lunas($koneksi, $nisn, $tahun_ajaran_aktif = null) {
-    $nisn = trim((string) $nisn);
-    if ($nisn === '') {
-        return false;
-    }
-
-    $nisn_esc = mysqli_real_escape_string($koneksi, $nisn);
-    $q_siswa = mysqli_query(
-        $koneksi,
-        "SELECT s.nisn, s.nama, k.nama_kelas
-         FROM siswa s
-         JOIN kelas k ON s.id_kelas = k.id_kelas
-         WHERE s.nisn = '$nisn_esc'
-         LIMIT 1"
-    );
-    $siswa = $q_siswa ? mysqli_fetch_assoc($q_siswa) : null;
-    if (!$siswa || !kelas_adalah_alumni($siswa['nama_kelas'] ?? '')) {
-        return false;
-    }
-
-    $tahun_ajaran_aktif = trim((string) ($tahun_ajaran_aktif ?? get_tahun_ajaran_aktif($koneksi)));
-    if (alumni_masih_punya_tagihan($koneksi, $nisn)) {
-        return false;
-    }
-
-    $deleted = mysqli_query($koneksi, "DELETE FROM siswa WHERE nisn = '$nisn_esc' LIMIT 1");
-    if ($deleted && function_exists('pembayaran_log_activity')) {
-        pembayaran_log_activity($koneksi, 'Delete', 'Menghapus data alumni lunas NISN: ' . $nisn);
-    }
-
-    return (bool) $deleted;
+    return false;
 }
 
 function daftar_siswa_alumni_lunas($koneksi, $tahun_ajaran_aktif = null, $limit = 200) {
@@ -108,30 +83,12 @@ function daftar_siswa_alumni_lunas($koneksi, $tahun_ajaran_aktif = null, $limit 
     return $alumni_lunas;
 }
 
+/**
+ * Tidak ada lagi penghapusan siswa dari modul Pembayaran: data siswa dikelola SIMAD.
+ * Fungsi dipertahankan agar pemanggil lama tidak error.
+ */
 function hapus_semua_siswa_alumni_lunas($koneksi, $tahun_ajaran_aktif = null, $limit = 200) {
-    $tahun_ajaran_aktif = trim((string) ($tahun_ajaran_aktif ?? get_tahun_ajaran_aktif($koneksi)));
-    $limit = max(1, (int) $limit);
-    $q_alumni = mysqli_query(
-        $koneksi,
-        "SELECT s.nisn
-         FROM siswa s
-         JOIN kelas k ON s.id_kelas = k.id_kelas
-         WHERE LOWER(k.nama_kelas) LIKE '%alumni%'
-         ORDER BY s.nama ASC
-         LIMIT $limit"
-    );
-    if (!$q_alumni) {
-        return 0;
-    }
-
-    $deleted = 0;
-    while ($row = mysqli_fetch_assoc($q_alumni)) {
-        if (hapus_siswa_alumni_jika_lunas($koneksi, $row['nisn'] ?? '', $tahun_ajaran_aktif)) {
-            $deleted++;
-        }
-    }
-
-    return $deleted;
+    return 0;
 }
 
 /**
@@ -674,7 +631,20 @@ function get_bulan_masuk_siswa($koneksi, $nisn, $tahun_ajaran) {
     if (!preg_match('/^(\d{4})\s*\/\s*(\d{4})$/', $tahun_ajaran, $m)) return 0;
     $tahun_mulai = (int)$m[1];
 
-    // Prioritaskan tahun_masuk (diisi manual)
+    // Prioritaskan tanggal_masuk (data SIMAD) agar hitungan bulan tepat.
+    $tanggal_masuk = trim($row['tanggal_masuk'] ?? '');
+    if ($tanggal_masuk !== '') {
+        $masuk = DateTime::createFromFormat('Y-m-d', $tanggal_masuk);
+        if ($masuk) {
+            $bulan_masuk = (int)$masuk->format('n');
+            $tahun_masuk_int = (int)$masuk->format('Y');
+            $diff = ($tahun_masuk_int - $tahun_mulai) * 12 + ($bulan_masuk - 7);
+            if ($diff >= 12) return 12;
+            return max(0, $diff);
+        }
+    }
+
+    // Fallback: tahun_masuk (hanya tahun, tanpa bulan).
     $tahun_masuk = trim($row['tahun_masuk'] ?? '');
     if ($tahun_masuk !== '' && ctype_digit($tahun_masuk)) {
         $tahun_masuk_int = (int)$tahun_masuk;
@@ -683,16 +653,7 @@ function get_bulan_masuk_siswa($koneksi, $nisn, $tahun_ajaran) {
         return max(0, $diff);
     }
 
-    // Fallback: hitung dari tanggal_masuk
-    $tanggal_masuk = trim($row['tanggal_masuk'] ?? '');
-    if (empty($tanggal_masuk)) return 0;
-    $masuk = DateTime::createFromFormat('Y-m-d', $tanggal_masuk);
-    if (!$masuk) return 0;
-    $bulan_masuk = (int)$masuk->format('n');
-    $tahun_masuk_int = (int)$masuk->format('Y');
-    $diff = ($tahun_masuk_int - $tahun_mulai) * 12 + ($bulan_masuk - 7);
-    if ($diff >= 12) return 12;
-    return max(0, $diff);
+    return 0;
 }
 
 /**
@@ -780,78 +741,3 @@ function cek_tagihan_tunggakan($koneksi, $nisn, $tahun_ajaran = null) {
     return !empty($tagihan_tunggakan) ? $tagihan_tunggakan : false;
 }
 
-/**
- * Buat dan kelola tabel integrasi endpoint (keluar & masuk)
- */
-function ensure_integrasi_tables($koneksi) {
-    static $tables_checked = false;
-    if ($tables_checked) {
-        return;
-    }
-    $tables_checked = true;
-
-    // Table endpoint_keluar
-    $q1 = "CREATE TABLE IF NOT EXISTS endpoint_keluar (
-        id INT PRIMARY KEY AUTO_INCREMENT,
-        nama VARCHAR(100) NOT NULL,
-        deskripsi VARCHAR(255) DEFAULT '',
-        metode VARCHAR(20) DEFAULT 'GET',
-        path_endpoint VARCHAR(255) NOT NULL,
-        status ENUM('Aktif', 'Non-aktif') DEFAULT 'Aktif',
-        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-    )";
-    mysqli_query($koneksi, $q1);
-
-    // Hapus seed keliru jika ada
-    mysqli_query($koneksi, "DELETE FROM endpoint_keluar WHERE nama IN ('Data Guru', 'Data Kelas', 'Data Siswa', 'Sinkron Siswa (Pembayaran)')");
-
-    // Seed default endpoint_keluar jika kosong
-    $cek_keluar = mysqli_query($koneksi, "SELECT COUNT(*) as total FROM endpoint_keluar");
-    $row_k = $cek_keluar ? mysqli_fetch_assoc($cek_keluar) : ['total' => 0];
-    if (empty($row_k['total'])) {
-        mysqli_query($koneksi, "INSERT INTO endpoint_keluar (nama, deskripsi, metode, path_endpoint, status) VALUES
-            ('Data Tagihan & Potongan Tabungan (ETAB)', 'Endpoint data tagihan siswa & penarikan/potongan tabungan untuk ETAB.', 'GET/POST', 'api/etab.php?action=check&api_key=SPP_SECRET_KEY_2026', 'Aktif'),
-            ('Data Tagihan & Tunggakan (SIMAD)', 'Endpoint rincian tagihan, tunggakan, dan riwayat bayar siswa untuk SIMAD.', 'GET', 'api/simad.php?action=get_all_summary&api_key=SPP_SECRET_KEY_2026', 'Aktif'),
-            ('API Tagihan Siswa (v1)', 'Endpoint umum query tagihan dan laporan pembayaran siswa Pembayaran.', 'GET', 'api/v1.php?action=health&api_key=SPP_SECRET_KEY_2026', 'Aktif')
-        ");
-    }
-
-    // Table endpoint_masuk
-    $q2 = "CREATE TABLE IF NOT EXISTS endpoint_masuk (
-        id INT PRIMARY KEY AUTO_INCREMENT,
-        aplikasi VARCHAR(50) NOT NULL UNIQUE,
-        nama_aplikasi VARCHAR(100) DEFAULT '',
-        deskripsi VARCHAR(255) DEFAULT '',
-        base_url VARCHAR(255) DEFAULT '',
-        api_key VARCHAR(255) DEFAULT '',
-        status TINYINT(1) DEFAULT 1,
-        tes_terakhir_status VARCHAR(20) DEFAULT 'Belum dites',
-        tes_terakhir_detail TEXT DEFAULT NULL,
-        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-        updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
-    )";
-    mysqli_query($koneksi, $q2);
-
-    // Hapus seed keliru jika ada
-    mysqli_query($koneksi, "DELETE FROM endpoint_masuk WHERE aplikasi IN ('sigaji', 'sims', 'sibayar')");
-
-    // Seed default endpoint_masuk jika kosong
-    $cek_masuk = mysqli_query($koneksi, "SELECT COUNT(*) as total FROM endpoint_masuk");
-    $row_m = $cek_masuk ? mysqli_fetch_assoc($cek_masuk) : ['total' => 0];
-    if (empty($row_m['total'])) {
-        mysqli_query($koneksi, "INSERT INTO endpoint_masuk (aplikasi, nama_aplikasi, deskripsi, base_url, api_key, status, tes_terakhir_status, tes_terakhir_detail) VALUES
-            ('simad', 'simad', 'Ambil data siswa & kelas dari aplikasi SIMAD untuk sinkronisasi data master.', 'https://simad.misultanfattah.sch.id', 'SIS_CENTRAL_HUB_SECRET_2026', 1, 'Belum dites', NULL),
-            ('etab', 'etab', 'Ambil endpoint/data dari aplikasi ETAB.', 'http://etab.test', 'ETAB_SECRET_KEY_2026', 1, 'Belum dites', NULL)
-        ");
-    }
-}
-
-function get_endpoint_masuk($koneksi, $aplikasi) {
-    ensure_integrasi_tables($koneksi);
-    $app_esc = mysqli_real_escape_string($koneksi, strtolower(trim($aplikasi)));
-    $q = mysqli_query($koneksi, "SELECT * FROM endpoint_masuk WHERE LOWER(aplikasi) = '$app_esc' LIMIT 1");
-    if ($q && $d = mysqli_fetch_assoc($q)) {
-        return $d;
-    }
-    return null;
-}

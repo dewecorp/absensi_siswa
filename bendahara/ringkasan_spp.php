@@ -89,7 +89,7 @@ if ($db_ok) {
         $terbaru = $stmt->fetchAll();
     } catch (Throwable $e) {
         $db_ok = false;
-        $db_error = 'Gagal membaca database Pembayaran Siswa: ' . $e->getMessage();
+        $db_error = 'Gagal membaca data Pembayaran Siswa: ' . $e->getMessage();
     }
 }
 
@@ -139,7 +139,7 @@ include_once '../templates/sidebar.php';
             <?php else: ?>
                 <div class="d-flex align-items-center justify-content-between mb-3 flex-wrap" style="gap:8px;">
                     <div class="small text-muted font-weight-bold">
-                        Sumber data: database Pembayaran Siswa (langsung) • Tahun ajaran aktif
+                        Sumber data: database SIMAD (langsung) • Tahun ajaran aktif
                         <span class="sby-tag"><?= htmlspecialchars($tahun_aktif !== '' ? $tahun_aktif : '-') ?></span>
                     </div>
                     <form method="GET">

@@ -177,7 +177,7 @@ if (!function_exists('mapp_item_desc')) {
             'honor & insentif' => 'Kelola honor & insentif guru per periode',
             'honor insentif' => 'Kelola honor & insentif guru per periode',
             'kategori anggaran' => 'Kelola pos & kategori anggaran madrasah',
-            'ringkasan spp' => 'Ringkasan pembayaran SPP langsung dari database Pembayaran Siswa',
+            'ringkasan spp' => 'Ringkasan pembayaran SPP langsung dari database SIMAD',
             'rab madrasah' => 'Rencana anggaran & realisasi belanja madrasah',
             'rab ekstrakurikuler' => 'Rencana anggaran kegiatan ekstrakurikuler',
             'rab ujian' => 'Rencana anggaran pelaksanaan ujian madrasah',
