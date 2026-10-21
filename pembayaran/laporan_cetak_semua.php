@@ -98,9 +98,9 @@ $bulan_col2 = ['Januari', 'Februari', 'Maret', 'April', 'Mei', 'Juni'];
         .payment-section { margin-bottom: 5px; }
         .payment-section h4 { margin: 2px 0; font-size: 10pt; background: #eee; padding: 2px 4px; font-weight: bold; }
 
-        table.app-data-table { width: 100%; border-collapse: collapse; margin-bottom: 3px; }
-        table.app-data-table th, table.app-data-table td { border: 1px solid #000; padding: 2px; font-size: 10pt; text-align: center; }
-        table.app-data-table th { background-color: #f2f2f2; font-weight: bold; }
+        table.print-data-table { width: 100%; border-collapse: collapse; margin-bottom: 3px; }
+        table.print-data-table th, table.print-data-table td { border: 1px solid #000; padding: 2px; font-size: 10pt; text-align: center; }
+        table.print-data-table th { background-color: #f2f2f2; font-weight: bold; }
         
         .badge-lunas { color: green; font-weight: bold; }
         .badge-belum { color: red; font-weight: bold; }
@@ -134,7 +134,7 @@ $bulan_col2 = ['Januari', 'Februari', 'Maret', 'April', 'Mei', 'Juni'];
     <div class="bill-wrapper">
         <div class="header">
             <?php if (!empty($d_info['logo'])): ?>
-                <img src="assets/images/<?= $d_info['logo'] ?>" alt="Logo">
+                <img src="../assets/img/pembayaran/<?= $d_info['logo'] ?>" alt="Logo">
             <?php endif; ?>
             <div class="header-content">
                 <h2>LAPORAN PEMBAYARAN SISWA</h2>
@@ -176,7 +176,7 @@ $bulan_col2 = ['Januari', 'Februari', 'Maret', 'April', 'Mei', 'Juni'];
                     <?php if ($d_jenis['tipe_bayar'] == 'Bulanan') { 
                         $paid_by_month = bulanan_map_pembayaran_per_bulan($koneksi, $nisn, $d_jenis['id_jenis_bayar'], $tahun_ajaran_laporan);
                     ?>
-                        <table class="app-data-table">
+                        <table class="print-data-table">
                             <thead>
                                 <tr>
                                     <th>Bln</th>
@@ -215,7 +215,7 @@ $bulan_col2 = ['Januari', 'Februari', 'Maret', 'April', 'Mei', 'Juni'];
                         $sisa = $d_jenis['nominal'] - $total_bayar;
                         $status_lunas = ($sisa <= 0) ? '<span class="badge-lunas">Lunas</span>' : '<span class="badge-belum">Belum Lunas</span>';
                     ?>
-                        <table class="app-data-table">
+                        <table class="print-data-table">
                             <tr>
                                 <td class="text-left">Dibayar</td>
                                 <td class="text-right">Rp <?= number_format($total_bayar, 0, ',', '.') ?></td>

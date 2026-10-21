@@ -38,6 +38,11 @@ try {
         $after = in_array('nip_kepala', $cols, true) ? 'nip_kepala' : 'kepala_madrasah';
         $pdo->exec("ALTER TABLE tb_profil_madrasah ADD COLUMN id_bendahara INT NULL AFTER {$after}");
     }
+    $cols = $pdo->query('SHOW COLUMNS FROM tb_profil_madrasah')->fetchAll(PDO::FETCH_COLUMN);
+    if (!in_array('tanggal_mulai_tahun_ajaran', $cols, true)) {
+        $after = in_array('tahun_ajaran', $cols, true) ? 'tahun_ajaran' : (in_array('semester', $cols, true) ? 'semester' : 'nama_madrasah');
+        $pdo->exec("ALTER TABLE tb_profil_madrasah ADD COLUMN tanggal_mulai_tahun_ajaran DATE NULL AFTER {$after}");
+    }
 } catch (Throwable $e) {
     error_log('Profil madrasah: pastikan kolom extended — ' . $e->getMessage());
 }
@@ -57,11 +62,19 @@ try {
     error_log('Error fetching kepala madrasah: ' . $e->getMessage());
 }
 
-// Get bendahara (guru dengan jabatan Bendahara)
+// Get bendahara (dipilih dari Data Guru; kolom jabatan bisa berisi beberapa nilai dipisah koma)
 $bendahara = null;
 try {
-    $stmt = $pdo->query("SELECT id_guru, nama_guru, nuptk FROM tb_guru WHERE jabatan = 'Bendahara' ORDER BY id_guru LIMIT 1");
-    $bendahara = $stmt->fetch(PDO::FETCH_ASSOC);
+    $id_bendahara_tersimpan = (int)($school_profile['id_bendahara'] ?? 0);
+    if ($id_bendahara_tersimpan > 0) {
+        $stmt = $pdo->prepare("SELECT id_guru, nama_guru, nuptk, jabatan FROM tb_guru WHERE id_guru = ? LIMIT 1");
+        $stmt->execute([$id_bendahara_tersimpan]);
+        $bendahara = $stmt->fetch(PDO::FETCH_ASSOC) ?: null;
+    }
+    if (!$bendahara) {
+        $stmt = $pdo->query("SELECT id_guru, nama_guru, nuptk, jabatan FROM tb_guru WHERE LOWER(COALESCE(jabatan, '')) LIKE '%bendahara%' ORDER BY id_guru LIMIT 1");
+        $bendahara = $stmt->fetch(PDO::FETCH_ASSOC) ?: null;
+    }
 } catch (Exception $e) {
     error_log('Error fetching bendahara: ' . $e->getMessage());
 }
@@ -204,6 +217,27 @@ rsort($tahun_untuk_opsi_profil, SORT_STRING);
                  $message = ['type' => 'warning', 'text' => 'Harap lengkapi tanggal batas dan konfirmasi pembersihan.'];
              }
         }
+        // Handle Arsip & Hapus Transaksi Pembayaran Lama
+        elseif (isset($_POST['reset_data_pembayaran'])) {
+            require_once __DIR__ . '/../pembayaran/config/config.php';
+
+            $tahun_ajaran_aktif = get_tahun_ajaran_aktif($koneksi);
+            $hasil_reset = arsipkan_dan_hapus_transaksi_tahun_ajaran_lama($koneksi, $tahun_ajaran_aktif);
+
+            if (!empty($hasil_reset['ok'])) {
+                $jumlah_hapus = (int)($hasil_reset['deleted'] ?? 0);
+                $jumlah_arsip = (int)($hasil_reset['archived'] ?? 0);
+                $tahun_dihapus = !empty($hasil_reset['years']) ? implode(', ', $hasil_reset['years']) : 'tidak ada';
+                $msg_text = "Transaksi lama berhasil diarsipkan ($jumlah_arsip ringkasan). $jumlah_hapus data transaksi detail dihapus. Tahun ajaran: $tahun_dihapus.";
+                pembayaran_log_activity($koneksi, 'Reset', $msg_text);
+                if (function_exists('logActivity')) {
+                    logActivity($pdo, $_SESSION['username'] ?? 'admin', 'Reset Pembayaran', $msg_text);
+                }
+                $message = ['type' => 'success', 'text' => $msg_text];
+            } else {
+                $message = ['type' => 'danger', 'text' => 'Gagal mereset data pembayaran: ' . ($hasil_reset['message'] ?? 'Kesalahan tidak diketahui')];
+            }
+        }
         // Handle Reset Data Tahunan
         elseif (isset($_POST['reset_annual_data'])) {
             $tahun_ajaran = isset($_POST['tahun_ajaran']) ? $_POST['tahun_ajaran'] : $school_profile['tahun_ajaran'];
@@ -282,6 +316,13 @@ rsort($tahun_untuk_opsi_profil, SORT_STRING);
                 $message = ['type' => 'danger', 'text' => 'Tahun ajaran tidak valid. Pilih dari daftar yang tersedia.'];
             }
             $semester = sanitizeInput($_POST['semester']);
+             $tanggal_mulai_tahun_ajaran = trim((string)($_POST['tanggal_mulai_tahun_ajaran'] ?? ''));
+             if (empty($message) && $tanggal_mulai_tahun_ajaran !== '' && !preg_match('/^\d{4}-\d{2}-\d{2}$/', $tanggal_mulai_tahun_ajaran)) {
+                 $message = ['type' => 'danger', 'text' => 'Tanggal mulai tahun ajaran tidak valid.'];
+             }
+             if ($tanggal_mulai_tahun_ajaran === '' && preg_match('/^(\d{4})\s*\/\s*(\d{4})$/', $tahun_ajaran, $m_ta_aktif)) {
+                 $tanggal_mulai_tahun_ajaran = $m_ta_aktif[1] . '-07-01';
+             }
             $tanggal_jadwal = sanitizeInput($_POST['tanggal_jadwal']);
             $tempat_jadwal = sanitizeInput($_POST['tempat_jadwal']);
             $hari_libur_mingguan = strtolower(trim((string)($_POST['hari_libur_mingguan'] ?? 'jumat')));
@@ -343,11 +384,50 @@ rsort($tahun_untuk_opsi_profil, SORT_STRING);
     }
     
             if (empty($message)) {
-        $stmt = $pdo->prepare("UPDATE tb_profil_madrasah SET nama_yayasan=?, nama_madrasah=?, id_kepala=?, alamat=?, email_madrasah=?, website_madrasah=?, kepala_madrasah=?, nip_kepala=?, id_bendahara=?, tahun_ajaran=?, semester=?, tanggal_jadwal=?, tempat_jadwal=?, hari_libur_mingguan=?, logo=?, ttd_kepala=? WHERE id=1");
-        if ($stmt->execute([$nama_yayasan, $nama_madrasah, $id_kepala, $alamat, $email_madrasah, $website_madrasah, $kepala_madrasah, $nip_kepala, $id_bendahara, $tahun_ajaran, $semester, $tanggal_jadwal, $tempat_jadwal, $hari_libur_mingguan, $logo, $ttd_kepala])) {
+        $stmt = $pdo->prepare("UPDATE tb_profil_madrasah SET nama_yayasan=?, nama_madrasah=?, id_kepala=?, alamat=?, email_madrasah=?, website_madrasah=?, kepala_madrasah=?, nip_kepala=?, id_bendahara=?, tahun_ajaran=?, semester=?, tanggal_mulai_tahun_ajaran=?, tanggal_jadwal=?, tempat_jadwal=?, hari_libur_mingguan=?, logo=?, ttd_kepala=? WHERE id=1");
+        if ($stmt->execute([$nama_yayasan, $nama_madrasah, $id_kepala, $alamat, $email_madrasah, $website_madrasah, $kepala_madrasah, $nip_kepala, $id_bendahara, $tahun_ajaran, $semester, $tanggal_mulai_tahun_ajaran, $tanggal_jadwal, $tempat_jadwal, $hari_libur_mingguan, $logo, $ttd_kepala])) {
             $message = ['type' => 'success', 'text' => 'Profil madrasah berhasil diperbarui!'];
             // Refresh school profile
             $school_profile = getSchoolProfile($pdo);
+
+            // Refresh bendahara terpilih (dari Data Guru)
+            if (!empty($id_bendahara)) {
+                try {
+                    $stmt_bend = $pdo->prepare("SELECT id_guru, nama_guru, nuptk, jabatan FROM tb_guru WHERE id_guru = ? LIMIT 1");
+                    $stmt_bend->execute([(int)$id_bendahara]);
+                    $bendahara_terpilih = $stmt_bend->fetch(PDO::FETCH_ASSOC);
+                    if ($bendahara_terpilih) {
+                        $bendahara = $bendahara_terpilih;
+                    }
+                } catch (Exception $e) {
+                    error_log('Error refreshing bendahara: ' . $e->getMessage());
+                }
+            }
+
+            // Sinkronkan data sekolah + tahun ajaran + batas tagihan ke modul Pembayaran
+            try {
+                require_once __DIR__ . '/../pembayaran/config/config.php';
+                ensure_pengaturan_tanggal_mulai_column($koneksi);
+                $ta_bayar = trim((string)$tahun_ajaran);
+                $tgl_mulai_bayar = trim((string)$tanggal_mulai_tahun_ajaran);
+                if ($ta_bayar !== '') {
+                    if ($tgl_mulai_bayar === '') {
+                        $tgl_mulai_bayar = default_tanggal_mulai_tahun_ajaran($ta_bayar);
+                    }
+                    $nama_bendahara_bayar = trim((string)($bendahara['nama_guru'] ?? ''));
+                    $nama_sekolah_bayar = trim((string)$nama_madrasah);
+                    $alamat_bayar = trim((string)$alamat);
+                    $stmt_bayar = mysqli_prepare($koneksi, "UPDATE pengaturan SET tahun_ajaran = ?, tanggal_mulai_tahun_ajaran = ?, nama_bendahara = COALESCE(NULLIF(?, ''), nama_bendahara), nama_sekolah = COALESCE(NULLIF(?, ''), nama_sekolah), alamat_sekolah = COALESCE(NULLIF(?, ''), alamat_sekolah) WHERE id_pengaturan = 1");
+                    if ($stmt_bayar) {
+                        mysqli_stmt_bind_param($stmt_bayar, 'sssss', $ta_bayar, $tgl_mulai_bayar, $nama_bendahara_bayar, $nama_sekolah_bayar, $alamat_bayar);
+                        mysqli_stmt_execute($stmt_bayar);
+                        mysqli_stmt_close($stmt_bayar);
+                        pembayaran_log_activity($koneksi, 'Update', 'Sinkron data sekolah, bendahara, tahun ajaran & tanggal mulai tahun ajaran dari Profil Madrasah');
+                    }
+                }
+            } catch (Throwable $e) {
+                error_log('Sinkron pengaturan pembayaran: ' . $e->getMessage());
+            }
         } else {
             $message = ['type' => 'danger', 'text' => 'Gagal memperbarui profil madrasah!'];
         }
@@ -456,11 +536,10 @@ include '../templates/sidebar.php';
                                                        <label>Bendahara</label>
                                                        <input type="text" class="form-control" value="<?= htmlspecialchars($bendahara['nama_guru'] ?? '-') ?>" readonly>
                                                        <input type="hidden" name="id_bendahara" id="id_bendahara" value="<?= htmlspecialchars((string)($bendahara['id_guru'] ?? '')) ?>">
-                                                       <input type="hidden" name="bendahara_name" id="bendahara_name" value="<?= htmlspecialchars($bendahara['nama_guru'] ?? '') ?>">
                                                        <?php if (!empty($bendahara['nama_guru'])): ?>
-                                                           <small class="text-muted">Jabatan: Bendahara</small>
+                                                           <small class="text-muted">Diambil dari Data Guru: <?= htmlspecialchars($bendahara['nama_guru']) ?><?= !empty($bendahara['jabatan']) ? ' (' . htmlspecialchars($bendahara['jabatan']) . ')' : '' ?>.</small>
                                                        <?php else: ?>
-                                                           <small class="text-muted">Belum ada guru dengan jabatan "Bendahara". <a href="data_jabatan.php">Atur di Data Jabatan</a>.</small>
+                                                           <small class="text-muted">Belum ada guru dengan jabatan "Bendahara". <a href="data_guru.php">Atur di Data Guru</a>.</small>
                                                        <?php endif; ?>
                                                    </div>
                                                  <div class="form-group">
@@ -512,6 +591,11 @@ include '../templates/sidebar.php';
                                                         }
                                                         ?>
                                                     </select>
+                                                </div>
+                                                <div class="form-group">
+                                                    <label>Tanggal Mulai Tahun Ajaran</label>
+                                                    <input type="date" class="form-control" name="tanggal_mulai_tahun_ajaran" value="<?php echo htmlspecialchars($school_profile['tanggal_mulai_tahun_ajaran'] ?? ''); ?>">
+                                                    <small class="text-muted">Batas kemunculan tagihan tahun ajaran sebelumnya di modul Pembayaran.</small>
                                                 </div>
                                                 <div class="form-group">
                                                     <label>Semester</label>
@@ -706,6 +790,33 @@ include '../templates/sidebar.php';
                                             </div>
                                         </div>
                                     </form>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="row">
+                        <div class="col-12">
+                            <div class="card shadow border-left-danger">
+                                <div class="card-header py-3">
+                                    <h6 class="m-0 font-weight-bold text-danger">Pembayaran</h6>
+                                </div>
+                                <div class="card-body">
+                                    <h6 class="font-weight-bold text-danger">Arsip &amp; Hapus Transaksi Lama</h6>
+                                    <p class="text-muted mb-3">
+                                        Transaksi pembayaran tahun ajaran lama akan diringkas ke arsip tagihan, lalu data transaksi detailnya dihapus agar database tidak penuh. Tagihan dan status bulan yang sudah dibayar tetap dipertahankan.
+                                        <br><strong class="text-danger">PERINGATAN: Riwayat detail transaksi lama akan hilang dari menu transaksi setelah dihapus.</strong>
+                                    </p>
+                                    <form method="POST" action="" onsubmit="return confirm('PERINGATAN: Transaksi tahun ajaran lama akan diarsipkan ringkas lalu dihapus dari data transaksi. Riwayat detail transaksi lama tidak akan tampil lagi. Pastikan Anda sudah backup/export data. Lanjutkan?');">
+                                        <input type="hidden" name="reset_data_pembayaran" value="1">
+                                        <button type="submit" class="btn btn-danger">
+                                            <i class="fas fa-archive"></i> Arsip &amp; Hapus Transaksi Lama
+                                        </button>
+                                    </form>
+                                    <hr>
+                                    <p class="text-muted mb-0">
+                                        Tahun ajaran aktif dan batas kemunculan tagihan tahun ajaran sebelumnya diatur pada form <strong>Profil Madrasah</strong> di atas (kolom <strong>Tanggal Mulai Tahun Ajaran</strong>). Modul Pembayaran mengikuti nilai tersebut secara otomatis.
+                                    </p>
                                 </div>
                             </div>
                         </div>

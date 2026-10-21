@@ -1,11 +1,9 @@
 <?php
 $title = 'Transaksi Pembayaran';
-include __DIR__ . '/template/header.php';
-include __DIR__ . '/template/sidebar.php';
+include __DIR__ . '/../templates/pembayaran_header.php';
 
-// Include Select2 CSS
+// Select2 styling mengikuti form control Bootstrap/Stisla.
 ?>
-<link rel="stylesheet" href="<?= base_url('assets/vendors/select2/select2.min.css') ?>">
 <style>
     .select2-container {
         width: 100% !important;
@@ -652,29 +650,29 @@ if (isset($_GET['hapus_transaksi'])) {
 }
 ?>
 
-<div class="app-grid">
-    <div class="app-col-full app-section-gap app-stretch">
-        <div class="app-panel">
-            <div class="app-panel-body">
-                <h4 class="app-panel-title">Data Transaksi Pembayaran</h4>
-                <div class="toolbar flex justify-between mb-3 items-center gap-3">
-                    <div class="flex items-center gap-3">
-                        <button type="button" class="app-button app-button-primary" data-tailwind-modal-target="#modalTambah">
-                            <i class="mdi mdi-plus"></i> Tambah Transaksi
+<div class="card">
+    <div class="card-header">
+        <h4>Data Transaksi Pembayaran</h4>
+    </div>
+    <div class="card-body">
+                <div class="d-flex flex-wrap justify-content-between mb-3 align-items-center" style="gap:12px;">
+                    <div class="d-flex align-items-center" style="gap:12px;">
+                        <button type="button" class="btn btn-primary" data-toggle="modal" data-target="#modalTambah">
+                            <i class="fas fa-plus mr-1"></i> Tambah Transaksi
                         </button>
                     </div>
-                    <div class="flex items-center gap-3">
-                        <a href="transaksi_export_excel.php" class="app-button app-button-success" target="_blank">
-                            <i class="mdi mdi-file-excel"></i> Export Excel
+                    <div class="d-flex align-items-center" style="gap:12px;">
+                        <a href="transaksi_export_excel.php" class="btn btn-success" target="_blank">
+                            <i class="fas fa-file-excel mr-1"></i> Export Excel
                         </a>
-                        <a href="transaksi_export_pdf.php" class="app-button app-button-danger" target="_blank">
-                            <i class="mdi mdi-file-pdf"></i> Export PDF
+                        <a href="transaksi_export_pdf.php" class="btn btn-danger" target="_blank">
+                            <i class="fas fa-file-pdf mr-1"></i> Export PDF
                         </a>
                     </div>
                 </div>
 
-                <div class="app-table-scroll">
-                    <table class="app-data-table app-table-striped" id="table-transaksi">
+                <div class="table-responsive">
+                    <table class="table table-striped table-bordered pembayaran-table" id="table-transaksi">
                         <thead>
                             <tr>
                                 <th>No</th>
@@ -713,55 +711,56 @@ if (isset($_GET['hapus_transaksi'])) {
                             while ($row = mysqli_fetch_assoc($query)) :
                             ?>
                                 <tr>
-                                    <td><?= $no++ ?></td>
-                                    <td><?= $row['no_transaksi'] ? $row['no_transaksi'] : '<span class="app-badge app-badge-warning">Old/Null</span>' ?></td>
-                                    <td><?= $row['nama_siswa'] ?></td>
-                                    <td><?= $row['nama_kelas'] ?></td>
-                                    <td><?= $row['nama_pembayaran'] ?></td>
-                                    <td><?= $row['bulan_bayar'] ?></td>
-                                    <td><?= $row['cicilan_ke'] == '0' ? '-' : $row['cicilan_ke'] ?></td>
-                                    <td>Rp <?= number_format($row['jumlah_bayar'], 0, ',', '.') ?></td>
-                                    <td><?= $row['ket'] ? $row['ket'] : '-' ?></td>
-                                    <td><?= date('d/m/Y', strtotime($row['tgl_bayar'])) ?></td>
-                                    <td class="flex gap-2 items-center">
-                                        <a href="cetak_transaksi.php?no_transaksi=<?= $row['no_transaksi'] ?>" class="app-button app-button-info app-button-sm" target="_blank">
-                                            <i class="mdi mdi-printer"></i>
-                                        </a>
-                                        <button type="button" class="app-button app-button-warning app-button-sm btn-edit-transaksi" data-id="<?= $row['no_transaksi'] ?>" data-tailwind-modal-target="#modalEdit">
-                                            <i class="mdi mdi-pencil"></i>
-                                        </button>
-                                        <a href="<?= base_url('transaksi.php?hapus_transaksi=' . $row['no_transaksi']) ?>" class="app-button app-button-danger app-button-sm btn-hapus">
-                                            <i class="mdi mdi-delete"></i>
-                                        </a>
+                                    <td data-label="No"><?= $no++ ?></td>
+                                    <td data-label="No Transaksi"><?= $row['no_transaksi'] ? $row['no_transaksi'] : '<span class="badge badge-warning">Old/Null</span>' ?></td>
+                                    <td data-label="Nama Siswa"><?= $row['nama_siswa'] ?></td>
+                                    <td data-label="Kelas"><?= $row['nama_kelas'] ?></td>
+                                    <td data-label="Jenis Bayar"><?= $row['nama_pembayaran'] ?></td>
+                                    <td data-label="Bulan Bayar"><?= $row['bulan_bayar'] ?></td>
+                                    <td data-label="Cicilan Ke"><?= $row['cicilan_ke'] == '0' ? '-' : $row['cicilan_ke'] ?></td>
+                                    <td data-label="Nominal">Rp <?= number_format($row['jumlah_bayar'], 0, ',', '.') ?></td>
+                                    <td data-label="Keterangan"><?= $row['ket'] ? $row['ket'] : '-' ?></td>
+                                    <td data-label="Tanggal"><?= date('d/m/Y', strtotime($row['tgl_bayar'])) ?></td>
+                                    <td data-label="Aksi" class="text-nowrap">
+                                        <div class="pb-actions">
+                                            <a href="cetak_transaksi.php?no_transaksi=<?= $row['no_transaksi'] ?>" class="pb-chip pb-chip-info" target="_blank" title="Cetak transaksi">
+                                                <i class="fas fa-print"></i> <span class="pb-chip-label">Cetak</span>
+                                            </a>
+                                            <button type="button" class="pb-chip pb-chip-warning btn-edit-transaksi" data-id="<?= $row['no_transaksi'] ?>" data-toggle="modal" data-target="#modalEdit" title="Edit transaksi">
+                                                <i class="fas fa-edit"></i> <span class="pb-chip-label">Edit</span>
+                                            </button>
+                                            <a href="<?= base_url('transaksi.php?hapus_transaksi=' . $row['no_transaksi']) ?>" class="pb-chip pb-chip-danger btn-hapus" title="Hapus transaksi">
+                                                <i class="fas fa-trash"></i> <span class="pb-chip-label">Hapus</span>
+                                            </a>
+                                        </div>
                                     </td>
                                 </tr>
                             <?php endwhile; ?>
                         </tbody>
                     </table>
                 </div>
-            </div>
-        </div>
     </div>
 </div>
 
 <!-- Modal Tambah -->
-<div class="fixed inset-0 z-[1055] hidden overflow-y-auto bg-slate-950/60 px-4 py-6 backdrop-blur-sm" id="modalTambah" tabindex="-1" role="dialog" aria-hidden="true" data-tailwind-modal>
-    <div class="mx-auto flex min-h-full w-full max-w-2xl items-start">
-        <form class="flex max-h-[calc(100vh-3rem)] w-full flex-col overflow-hidden rounded-xl border border-slate-200 bg-white shadow-2xl" action="<?= base_url('transaksi.php') ?>" method="post">
-            <div class="flex shrink-0 items-center justify-between border-b border-slate-200 px-6 py-4">
-                <h5 class="text-base font-extrabold text-slate-900">Tambah Transaksi</h5>
-                <button type="button" class="inline-flex h-9 w-9 items-center justify-center rounded-lg border border-slate-200 bg-white text-slate-500 transition hover:bg-slate-100 hover:text-slate-900" data-tailwind-modal-close aria-label="Close">
-                    <i class="mdi mdi-close"></i>
-                </button>
-            </div>
-            <div class="min-h-0 flex-1 overflow-y-auto px-6 py-5">
-                    <div class="app-field">
-                        <label>Tanggal Bayar</label>
-                        <input type="date" name="tgl_bayar" class="app-control" value="<?= date('Y-m-d') ?>" required>
+<div class="modal fade" id="modalTambah" tabindex="-1" role="dialog" aria-labelledby="modalTambahLabel" aria-hidden="true">
+    <div class="modal-dialog modal-lg modal-dialog-centered modal-dialog-scrollable" role="document">
+        <div class="modal-content">
+            <form action="<?= base_url('transaksi.php') ?>" method="post">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="modalTambahLabel">Tambah Transaksi</h5>
+                    <button type="button" class="close" data-dismiss="modal" aria-label="Tutup">
+                        <span aria-hidden="true">&times;</span>
+                    </button>
+                </div>
+                <div class="modal-body">
+                    <div class="form-group">
+                        <label class="font-weight-bold" for="tgl_bayar_tambah">Tanggal Bayar</label>
+                        <input type="date" name="tgl_bayar" id="tgl_bayar_tambah" class="form-control" value="<?= date('Y-m-d') ?>" required>
                     </div>
-                    <div class="app-field">
-                        <label>Nama Siswa</label>
-                        <select name="nisn" id="nisnTambah" class="app-control select2-modal" style="width: 100%;" required>
+                    <div class="form-group">
+                        <label class="font-weight-bold" for="nisnTambah">Nama Siswa</label>
+                        <select name="nisn" id="nisnTambah" class="form-control select2-modal" style="width: 100%;" required>
                             <option value="">-- Pilih Siswa --</option>
                             <?php foreach ($siswa_list as $s) : ?>
                                 <option value="<?= $s['nisn'] ?>" data-kelas="<?= $s['nama_kelas'] ?>">
@@ -770,12 +769,12 @@ if (isset($_GET['hapus_transaksi'])) {
                             <?php endforeach; ?>
                         </select>
                     </div>
-                    <div class="app-field">
-                        <label>Jenis Bayar</label>
-                        <select name="id_jenis_bayar[]" class="app-control select2-multiple" id="jbTambah" multiple="multiple" style="width: 100%;" required data-placeholder="Pilih Jenis Bayar">
+                    <div class="form-group">
+                        <label class="font-weight-bold" for="jbTambah">Jenis Bayar</label>
+                        <select name="id_jenis_bayar[]" class="form-control select2-multiple" id="jbTambah" multiple="multiple" style="width: 100%;" required data-placeholder="Pilih Jenis Bayar">
                             <?php foreach ($jb_list as $jb) : ?>
-                                <option value="<?= $jb['id_jenis_bayar'] ?>" 
-                                    data-tipe="<?= $jb['tipe_bayar'] ?>" 
+                                <option value="<?= $jb['id_jenis_bayar'] ?>"
+                                    data-tipe="<?= $jb['tipe_bayar'] ?>"
                                     data-nominal="<?= $jb['nominal'] ?>"
                                     data-tagihan="<?= $jb['tagihan_kelas'] ?>"
                                     data-nama="<?= $jb['nama_pembayaran'] ?>">
@@ -784,50 +783,53 @@ if (isset($_GET['hapus_transaksi'])) {
                             <?php endforeach; ?>
                         </select>
                     </div>
-                    
                     <div id="extraTambah">
                         <!-- Dynamic Content -->
                     </div>
                 </div>
-                <div class="flex shrink-0 items-center justify-end gap-3 border-t border-slate-200 px-6 py-4">
-                    <button type="button" class="app-button app-button-secondary" data-tailwind-modal-close>Batal</button>
-                    <button type="submit" name="tambah" class="app-button app-button-primary">Simpan</button>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-dismiss="modal">Batal</button>
+                    <button type="submit" name="tambah" class="btn btn-primary">Simpan</button>
                 </div>
-        </form>
+            </form>
+        </div>
     </div>
 </div>
 
 <!-- Modal Edit -->
-<div class="fixed inset-0 z-[1055] hidden overflow-y-auto bg-slate-950/60 px-4 py-6 backdrop-blur-sm" id="modalEdit" tabindex="-1" role="dialog" aria-hidden="true" data-tailwind-modal>
-    <div class="mx-auto flex min-h-full w-full max-w-2xl items-start">
-        <form class="flex max-h-[calc(100vh-3rem)] w-full flex-col overflow-hidden rounded-xl border border-slate-200 bg-white shadow-2xl" action="<?= base_url('transaksi.php') ?>" method="post">
-            <div class="flex shrink-0 items-center justify-between border-b border-slate-200 px-6 py-4">
-                <h5 class="text-base font-extrabold text-slate-900">Edit Transaksi</h5>
-                <button type="button" class="inline-flex h-9 w-9 items-center justify-center rounded-lg border border-slate-200 bg-white text-slate-500 transition hover:bg-slate-100 hover:text-slate-900" data-tailwind-modal-close aria-label="Close">
-                    <i class="mdi mdi-close"></i>
-                </button>
-            </div>
-            <div class="min-h-0 flex-1 overflow-y-auto px-6 py-5" id="modalEditBody">
-                    <div class="flex justify-center py-5">
-                        <div class="h-8 w-8 animate-spin rounded-full border-2 border-emerald-100 border-t-emerald-600" role="status" aria-label="Loading"></div>
+<div class="modal fade" id="modalEdit" tabindex="-1" role="dialog" aria-labelledby="modalEditLabel" aria-hidden="true">
+    <div class="modal-dialog modal-lg modal-dialog-centered modal-dialog-scrollable" role="document">
+        <div class="modal-content">
+            <form action="<?= base_url('transaksi.php') ?>" method="post">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="modalEditLabel">Edit Transaksi</h5>
+                    <button type="button" class="close" data-dismiss="modal" aria-label="Tutup">
+                        <span aria-hidden="true">&times;</span>
+                    </button>
+                </div>
+                <div class="modal-body" id="modalEditBody">
+                    <div class="text-center py-4">
+                        <div class="spinner-border text-primary" role="status">
+                            <span class="sr-only">Loading...</span>
+                        </div>
                     </div>
                 </div>
-                <div class="flex shrink-0 items-center justify-end gap-3 border-t border-slate-200 px-6 py-4">
-                    <button type="button" class="app-button app-button-secondary" data-tailwind-modal-close>Batal</button>
-                    <button type="submit" name="update_transaksi" class="app-button app-button-primary">Simpan Perubahan</button>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-dismiss="modal">Batal</button>
+                    <button type="submit" name="update_transaksi" class="btn btn-primary">Simpan Perubahan</button>
                 </div>
-        </form>
+            </form>
+        </div>
     </div>
 </div>
 
-<?php include __DIR__ . '/template/footer.php'; ?>
-<!-- Select2 JS -->
-<script src="<?= base_url('assets/vendors/select2/select2.min.js') ?>"></script>
+<?php include __DIR__ . '/../templates/pembayaran_footer.php'; ?>
 
 <script>
     $(document).ready(function() {
         function getSelect2Parent($element) {
-            return $(document.body);
+            var $modal = $element.closest('.modal');
+            return $modal.length ? $modal : $(document.body);
         }
 
         function initSelect2Field($element, extraOptions) {
@@ -920,8 +922,8 @@ if (isset($_GET['hapus_transaksi'])) {
         });
 
         // Re-adjust Select2 when modal is shown (Crucial for width calculation)
-        $('#modalTambah').on('app:modal-open', function () {
-            $(this).find('.overflow-y-auto').first().scrollTop(0);
+        $('#modalTambah').on('shown.bs.modal', function () {
+            $(this).find('.modal-body').first().scrollTop(0);
             $(this).find('.select2-modal, .select2-multiple').each(function() {
                 initSelect2Field($(this), {
                     allowClear: $(this).is('[multiple]') || !!$(this).data('placeholder')
@@ -930,8 +932,8 @@ if (isset($_GET['hapus_transaksi'])) {
             syncJenisBayarByKelas();
         });
 
-        $('#modalEdit').on('app:modal-open', function () {
-            $(this).find('.overflow-y-auto').first().scrollTop(0);
+        $('#modalEdit').on('shown.bs.modal', function () {
+            $(this).find('.modal-body').first().scrollTop(0);
             $(this).find('.select2-modal, .select2-multiple, .select-jenis-bayar').each(function() {
                 initSelect2Field($(this), {
                     allowClear: $(this).is('[multiple]') || !!$(this).data('placeholder')
@@ -950,7 +952,7 @@ if (isset($_GET['hapus_transaksi'])) {
             var modalBody = $('#modalEditBody');
             
             // Show loading
-            modalBody.html('<div class="flex justify-center py-5"><div class="h-8 w-8 animate-spin rounded-full border-2 border-emerald-100 border-t-emerald-600" role="status" aria-label="Loading"></div></div>');
+            modalBody.html('<div class="text-center py-4"><div class="spinner-border text-primary" role="status"><span class="sr-only">Loading...</span></div></div>');
             
             // Fetch Data
             $.ajax({
@@ -961,7 +963,7 @@ if (isset($_GET['hapus_transaksi'])) {
                     modalBody.html(response);
                 },
                 error: function() {
-                    modalBody.html('<div class="py-5 text-center font-semibold text-red-600">Gagal memuat data.</div>');
+                    modalBody.html('<div class="py-4 text-center text-danger font-weight-bold">Gagal memuat data.</div>');
                 }
             });
         });
@@ -988,16 +990,16 @@ if (isset($_GET['hapus_transaksi'])) {
                 var tipe = opt.data('tipe');
                 var nominal = opt.data('nominal');
                 // Build HTML (opsi tidak valid sudah dicegah oleh syncJenisBayarByKelas)
-                var html = '<div class="app-panel mb-2 border"><div class="app-panel-body p-2" style="background: #f8f9fa;">';
+                var html = '<div class="card mb-2"><div class="card-body p-3" style="background: #f8f9fa;">';
                 html += '<h6 class="mb-2 text-primary">' + nama + ' (' + tipe + ')</h6>';
                 
                 html += '<input type="hidden" name="id_jenis_bayar[]" value="' + id + '">';
                 html += '<input type="hidden" name="payment[' + id + '][id_jenis_bayar]" value="' + id + '">';
 
                 if (tipe === 'Bulanan') {
-                    html += '<div class="app-field">';
+                    html += '<div class="form-group">';
                     html += '<label>Bayar Bulan</label>';
-                    html += '<select name="payment[' + id + '][bulan_bayar][]" id="bulan_bayar_' + id + '" class="app-control select2-dynamic-bulan" multiple="multiple" style="width: 100%;" required>';
+                    html += '<select name="payment[' + id + '][bulan_bayar][]" id="bulan_bayar_' + id + '" class="form-control select2-dynamic-bulan" multiple="multiple" style="width: 100%;" required>';
                     var months = ['Juli', 'Agustus', 'September', 'Oktober', 'November', 'Desember', 'Januari', 'Februari', 'Maret', 'April', 'Mei', 'Juni'];
                     var currentMonthIndex = (new Date().getMonth() + 6) % 12;
                     months.forEach(function(m, i) {
@@ -1006,10 +1008,10 @@ if (isset($_GET['hapus_transaksi'])) {
                     });
                     html += '</select></div>';
                 } else {
-                     html += '<div class="app-field"><label>Cicilan Ke</label>';
-                     html += '<input type="number" name="payment[' + id + '][cicilan_ke]" class="app-control" value="1" required></div>';
-                     html += '<div class="app-field"><label>Nominal</label>';
-                     html += '<input type="text" name="payment[' + id + '][nominal]" class="app-control input-nominal-tambah" placeholder="Nominal" inputmode="numeric" autocomplete="off" required></div>';
+                     html += '<div class="form-group"><label>Cicilan Ke</label>';
+                     html += '<input type="number" name="payment[' + id + '][cicilan_ke]" class="form-control" value="1" required></div>';
+                     html += '<div class="form-group"><label>Nominal</label>';
+                     html += '<input type="text" name="payment[' + id + '][nominal]" class="form-control input-nominal-tambah" placeholder="Nominal" inputmode="numeric" autocomplete="off" required></div>';
                 }
                 html += '</div></div>';
                 container.append(html);
@@ -1020,7 +1022,7 @@ if (isset($_GET['hapus_transaksi'])) {
                 initSelect2Field($(this), {
                     placeholder: "Pilih Bulan",
                     allowClear: true,
-                    dropdownParent: $(document.body)
+                    dropdownParent: getSelect2Parent($(this))
                 });
             });
         });
@@ -1052,8 +1054,8 @@ if (isset($_GET['hapus_transaksi'])) {
             var targetId = $(this).data('target');
             
             // Validation Logic
-            var modalId = $(this).closest('[data-tailwind-modal]').attr('id');
-            var siswaSelect = $(this).closest('[data-tailwind-modal]').find('select[name="nisn"]');
+            var $modal = $(this).closest('.modal');
+            var siswaSelect = $modal.find('select[name="nisn"]');
             var selectedSiswa = siswaSelect.find('option:selected');
             var kelasSiswa = selectedSiswa.attr('data-kelas');
             var kelasSiswaNormalized = normalizeKelas(kelasSiswa);

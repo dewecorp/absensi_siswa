@@ -1843,11 +1843,11 @@ function fetchPembayaranData(string $nisn, string $type = 'tagihan', ?string $ta
          }
      }
 
-     // Fallback to cache if API failed
+     // Fallback to cache if API failed (hanya cache dari DB Pembayaran lokal, bukan cache era SiBayar)
      $cache_file = dirname(__DIR__) . '/cache/pembayaran_' . $nisn . '.json';
      if (is_file($cache_file)) {
          $cached = @json_decode(@file_get_contents($cache_file), true);
-         if ($cached && isset($cached['status']) && $cached['status'] === 'success') {
+         if ($cached && isset($cached['status']) && $cached['status'] === 'success' && ($cached['env'] ?? '') === 'simad-local') {
              if ($type === 'tagihan') {
                  return array_merge($cached, [
                      'status' => 'success',

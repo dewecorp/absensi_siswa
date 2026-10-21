@@ -2,6 +2,7 @@
 ob_start();
 require_once 'config/database.php';
 require_once 'config/functions.php';
+require_once __DIR__ . '/pembayaran/include/activity_bridge.php';
 
 ensureStudentPasswords($pdo);
 ensureGuruDefaultPasswords($pdo);
@@ -181,6 +182,17 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
             logActivity($pdo, (string)($_SESSION['username']), 'Login', 'Student logged in successfully');
         }
         
+        // Catat login bendahara/admin ke log aktivitas Pembayaran Siswa.
+        $payment_level = strtolower((string) ($_SESSION['level'] ?? ''));
+        if (in_array($payment_level, ['bendahara', 'admin'], true)) {
+            pembayaran_bridge_log(
+                'Login',
+                'Login SIMAD sebagai ' . $payment_level,
+                (string) ($_SESSION['username'] ?? ''),
+                $payment_level
+            );
+        }
+
         // Pastikan sesi tersimpan permanen sebelum redireksi
         @session_write_close();
     } else {

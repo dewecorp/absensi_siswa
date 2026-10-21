@@ -83,7 +83,7 @@ $boleh_ditagihkan = tahun_ajaran_boleh_ditagihkan($koneksi, $tahun_ajaran);
 <body onload="window.print()">
     <div class="header">
         <?php if (!empty($d_setting['logo'])): ?>
-            <img src="assets/images/<?= $d_setting['logo'] ?>" alt="Logo">
+            <img src="../assets/img/pembayaran/<?= $d_setting['logo'] ?>" alt="Logo">
         <?php endif; ?>
         <div class="header-content">
             <h2>LAPORAN TAGIHAN SISWA</h2>

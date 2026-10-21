@@ -216,7 +216,10 @@ if (!function_exists('pembayaran_local_resolve_tahun')) {
     function pembayaran_local_resolve_tahun($koneksi, string $tahun_ajaran_param = ''): string
     {
         $tahun = trim($tahun_ajaran_param);
-        return $tahun !== '' ? $tahun : pembayaran_local_tahun_ajaran_aktif($koneksi);
+        if ($tahun !== '') return $tahun;
+        // Default mengikuti tahun ajaran berjalan (batas: Tanggal Mulai Tahun Ajaran).
+        $berjalan = trim((string)tahun_ajaran_berjalan($koneksi));
+        return $berjalan !== '' ? $berjalan : pembayaran_local_tahun_ajaran_aktif($koneksi);
     }
 }
 

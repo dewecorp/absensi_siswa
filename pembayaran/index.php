@@ -1,14 +1,7 @@
 <?php
 $title = 'Ringkasan Pembayaran';
-$pembayaran_native_ui = true;
 $pembayaran_dashboard_home = true;
-include 'template/header.php';
-include 'template/sidebar.php';
-
-if (!isset($_SESSION['last_log_cleanup']) || (time() - (int)$_SESSION['last_log_cleanup']) > 3600) {
-    mysqli_query($koneksi, "DELETE FROM log_aktivitas WHERE created_at < NOW() - INTERVAL 24 HOUR");
-    $_SESSION['last_log_cleanup'] = time();
-}
+include __DIR__ . '/../templates/pembayaran_header.php';
 
 function dashboard_kelas_sort_key($nama_kelas) {
     $nama = strtoupper(trim((string) $nama_kelas));
@@ -191,18 +184,6 @@ while ($r = mysqli_fetch_assoc($q_chart)) {
     }
 }
 
-// Data Aktivitas Pengguna (24 Jam Terakhir)
-$q_aktivitas_count = mysqli_query($koneksi, "SELECT COUNT(*) AS total FROM log_aktivitas WHERE created_at >= NOW() - INTERVAL 24 HOUR");
-$d_aktivitas_count = mysqli_fetch_assoc($q_aktivitas_count);
-$jml_aktivitas = $d_aktivitas_count['total'] ?? 0;
-$q_aktivitas = mysqli_query($koneksi, "
-    SELECT l.*, p.nama_lengkap 
-    FROM log_aktivitas l
-    LEFT JOIN pengguna p ON l.id_pengguna = p.id_pengguna
-    WHERE l.created_at >= NOW() - INTERVAL 24 HOUR
-    ORDER BY l.created_at DESC
-    LIMIT 200
-");
 ?>
 
 <style>
@@ -222,6 +203,41 @@ $q_aktivitas = mysqli_query($koneksi, "
     grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
     gap: 12px;
 }
+/* ── Kartu jenis bayar (gaya mobile app) ───────────────────── */
+.pembayaran-jenis-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(230px, 1fr));
+    gap: 12px;
+}
+.pembayaran-jenis {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    background: #fff;
+    border: 1.5px solid rgba(15, 23, 42, .07);
+    border-radius: 16px;
+    padding: 13px 14px;
+    box-shadow: 0 4px 14px rgba(15, 23, 42, .05);
+    transition: transform .18s, box-shadow .18s, border-color .18s;
+}
+.pembayaran-jenis:hover { transform: translateY(-2px); box-shadow: 0 8px 22px rgba(15, 23, 42, .1); border-color: #bfdbfe; }
+.pembayaran-jenis-ico {
+    flex: 0 0 auto; width: 42px; height: 42px; border-radius: 13px;
+    display: grid; place-items: center; font-size: .95rem;
+}
+.pembayaran-jenis-body { flex: 1 1 auto; min-width: 0; }
+.pembayaran-jenis-nama {
+    font-size: .84rem; font-weight: 800; color: #0f172a; line-height: 1.25;
+    white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
+.pembayaran-jenis-meta { font-size: .68rem; font-weight: 600; color: #94a3b8; }
+.pembayaran-jenis-total { flex: 0 0 auto; font-size: .88rem; font-weight: 900; color: #0f172a; white-space: nowrap; }
+.pembayaran-jenis.tint-blue   { background: #f0f7ff; border-color: rgba(59,130,246,.18); }
+.pembayaran-jenis.tint-teal   { background: #f0fdff; border-color: rgba(6,182,212,.18); }
+.pembayaran-jenis.tint-amber  { background: #fffdf0; border-color: rgba(245,158,11,.18); }
+.pembayaran-jenis.tint-green  { background: #f3fdf5; border-color: rgba(34,197,94,.18); }
+.pembayaran-jenis.tint-indigo { background: #f3f4ff; border-color: rgba(99,102,241,.18); }
+.pembayaran-jenis.tint-violet { background: #f7f5ff; border-color: rgba(167,139,250,.18); }
 @media (max-width: 575.98px) {
     .pembayaran-stat-grid {
         grid-template-columns: repeat(2, minmax(0, 1fr));
@@ -240,6 +256,10 @@ $q_aktivitas = mysqli_query($koneksi, "
     .pembayaran-stat-grid .dash-stat-value {
         font-size: 1.15rem;
     }
+    .pembayaran-jenis-grid { gap: 10px; }
+    .pembayaran-jenis { padding: 11px 12px; gap: 10px; }
+    .pembayaran-jenis-ico { width: 36px; height: 36px; border-radius: 11px; font-size: .82rem; }
+    .pembayaran-jenis-total { font-size: .8rem; }
 }
 </style>
 
@@ -301,46 +321,47 @@ $q_aktivitas = mysqli_query($koneksi, "
     <div class="dsh-title"><span class="dsh-dot" style="background:#16a34a;"></span>Pembayaran per Jenis</div>
     <a href="<?= htmlspecialchars(base_url('laporan.php'), ENT_QUOTES, 'UTF-8') ?>" class="small font-weight-bold">Lihat laporan</a>
 </div>
-<div class="card mb-3">
-    <?php if (empty($jenis_totals)) : ?>
+<?php if (empty($jenis_totals)) : ?>
+    <div class="card mb-3">
         <div class="card-body text-center text-muted py-4">Belum ada jenis pembayaran aktif.</div>
-    <?php else : ?>
-        <div class="list-group list-group-flush">
-            <?php
-            $jenis_icons = [
-                'ekstrakurikuler' => 'fas fa-futbol',
-                'lks' => 'fas fa-book-open',
-                'ujian' => 'fas fa-file-alt',
-                'rekreasi' => 'fas fa-bus',
-            ];
-            $jenis_tones = ['green', 'blue', 'amber', 'violet'];
-            foreach ($jenis_totals as $jenis_index => $jenis_item) :
-                $nama_jenis = (string) $jenis_item['nama_pembayaran'];
-                $nama_jenis_tampil = preg_replace('/ekstrakurikuler/i', 'Ekskul', $nama_jenis);
-                $nama_lower = strtolower($nama_jenis);
-                $jenis_icon = 'fas fa-money-bill';
-                foreach ($jenis_icons as $keyword => $mapped_icon) {
-                    if (strpos($nama_lower, $keyword) !== false) {
-                        $jenis_icon = $mapped_icon;
-                        break;
-                    }
+    </div>
+<?php else : ?>
+    <?php
+    $jenis_icons = [
+        'ekstrakurikuler' => 'fas fa-futbol',
+        'lks' => 'fas fa-book-open',
+        'ujian' => 'fas fa-file-alt',
+        'rekreasi' => 'fas fa-bus',
+    ];
+    $jenis_tones = ['green', 'blue', 'amber', 'violet'];
+    ?>
+    <div class="pembayaran-jenis-grid mb-3">
+        <?php foreach ($jenis_totals as $jenis_index => $jenis_item) :
+            $nama_jenis = (string) $jenis_item['nama_pembayaran'];
+            $nama_jenis_tampil = preg_replace('/ekstrakurikuler/i', 'Ekskul', $nama_jenis);
+            $nama_lower = strtolower($nama_jenis);
+            $jenis_icon = 'fas fa-money-bill';
+            foreach ($jenis_icons as $keyword => $mapped_icon) {
+                if (strpos($nama_lower, $keyword) !== false) {
+                    $jenis_icon = $mapped_icon;
+                    break;
                 }
-                $jenis_tone = $jenis_tones[$jenis_index % count($jenis_tones)];
-            ?>
-            <div class="list-group-item d-flex align-items-center" style="gap:12px;padding:12px 16px;">
-                <span class="dash-stat-ico dsi-<?= htmlspecialchars($jenis_tone, ENT_QUOTES, 'UTF-8') ?>" style="width:38px;height:38px;border-radius:12px;font-size:.9rem;flex:0 0 auto;">
+            }
+            $jenis_tone = $jenis_tones[$jenis_index % count($jenis_tones)];
+        ?>
+            <div class="pembayaran-jenis tint-<?= htmlspecialchars($jenis_tone, ENT_QUOTES, 'UTF-8') ?>">
+                <span class="pembayaran-jenis-ico dsi-<?= htmlspecialchars($jenis_tone, ENT_QUOTES, 'UTF-8') ?>">
                     <i class="<?= htmlspecialchars($jenis_icon, ENT_QUOTES, 'UTF-8') ?>"></i>
                 </span>
-                <div class="flex-grow-1" style="min-width:0;">
-                    <div class="font-weight-bold text-truncate" title="Total Bayar <?= htmlspecialchars($nama_jenis_tampil, ENT_QUOTES, 'UTF-8') ?>">Total Bayar <?= htmlspecialchars($nama_jenis_tampil, ENT_QUOTES, 'UTF-8') ?></div>
-                    <div class="small text-muted">Jenis pembayaran</div>
+                <div class="pembayaran-jenis-body">
+                    <div class="pembayaran-jenis-nama" title="<?= htmlspecialchars($nama_jenis_tampil, ENT_QUOTES, 'UTF-8') ?>"><?= htmlspecialchars($nama_jenis_tampil, ENT_QUOTES, 'UTF-8') ?></div>
+                    <div class="pembayaran-jenis-meta">Total dibayar</div>
                 </div>
-                <div class="font-weight-bold text-right text-nowrap">Rp <?= number_format((int) $jenis_item['total_bayar_jenis'], 0, ',', '.') ?></div>
+                <div class="pembayaran-jenis-total">Rp <?= number_format((int) $jenis_item['total_bayar_jenis'], 0, ',', '.') ?></div>
             </div>
-            <?php endforeach; ?>
-        </div>
-    <?php endif; ?>
-</div>
+        <?php endforeach; ?>
+    </div>
+<?php endif; ?>
 
 <div class="dash-section-head mt-2">
     <div class="dsh-title"><span class="dsh-dot" style="background:#f59e0b;"></span>Tunggakan per Kelas</div>
@@ -414,53 +435,6 @@ $q_aktivitas = mysqli_query($koneksi, "
     </div>
 </div>
 
-<div class="card">
-    <div class="card-header bg-white d-flex align-items-center justify-content-between">
-        <h6 class="mb-0 font-weight-bold">Aktivitas Pengguna</h6>
-        <span class="badge badge-primary"><?= number_format((int) $jml_aktivitas, 0, ',', '.') ?> aktivitas / 24 jam</span>
-    </div>
-    <div class="card-body p-0">
-        <?php if ((int) $jml_aktivitas > 0) : ?>
-            <div class="list-group list-group-flush" style="max-height:420px;overflow:auto;">
-                <?php
-                $activity_styles = [
-                    'Login' => ['icon' => 'fas fa-sign-in-alt', 'tone' => 'green'],
-                    'Logout' => ['icon' => 'fas fa-sign-out-alt', 'tone' => 'blue'],
-                    'Create' => ['icon' => 'fas fa-plus-circle', 'tone' => 'indigo'],
-                    'Update' => ['icon' => 'fas fa-edit', 'tone' => 'amber'],
-                    'Delete' => ['icon' => 'fas fa-trash', 'tone' => 'rose'],
-                ];
-                while ($row = mysqli_fetch_assoc($q_aktivitas)) :
-                    $jenis = (string) ($row['jenis_aktivitas'] ?? '');
-                    $activity = $activity_styles[$jenis] ?? ['icon' => 'fas fa-info-circle', 'tone' => 'blue'];
-                    $nama_aktivitas = (string) ($row['nama_lengkap'] ?? 'Sistem');
-                ?>
-                <div class="list-group-item d-flex" style="gap:12px;padding:12px 16px;align-items:flex-start;">
-                    <span class="dash-stat-ico dsi-<?= htmlspecialchars($activity['tone'], ENT_QUOTES, 'UTF-8') ?>" style="width:36px;height:36px;border-radius:50%;font-size:.8rem;flex:0 0 auto;">
-                        <i class="<?= htmlspecialchars($activity['icon'], ENT_QUOTES, 'UTF-8') ?>"></i>
-                    </span>
-                    <div class="flex-grow-1" style="min-width:0;">
-                        <div class="d-flex align-items-center justify-content-between" style="gap:8px;">
-                            <span class="font-weight-bold text-truncate"><?= htmlspecialchars($nama_aktivitas, ENT_QUOTES, 'UTF-8') ?></span>
-                            <span class="badge badge-light text-uppercase" style="font-size:.6rem;"><?= htmlspecialchars($jenis, ENT_QUOTES, 'UTF-8') ?></span>
-                        </div>
-                        <div class="small text-muted mt-1"><?= htmlspecialchars((string) ($row['deskripsi'] ?? ''), ENT_QUOTES, 'UTF-8') ?></div>
-                        <div class="small text-muted mt-1">
-                            <i class="far fa-clock mr-1"></i>
-                            <?= date('d/m/Y H:i', strtotime((string) $row['created_at'])) ?>
-                            <span class="mx-1">&middot;</span>
-                            <?= htmlspecialchars(time_ago((string) $row['created_at']), ENT_QUOTES, 'UTF-8') ?>
-                        </div>
-                    </div>
-                </div>
-                <?php endwhile; ?>
-            </div>
-        <?php else : ?>
-            <div class="card-body text-center text-muted py-4">Belum ada aktivitas dalam 24 jam terakhir.</div>
-        <?php endif; ?>
-    </div>
-</div>
-
 <?php
 $chart_labels_json = json_encode($chart_labels);
 $chart_data_json = json_encode($chart_data);
@@ -523,4 +497,4 @@ document.addEventListener('DOMContentLoaded', function () {
 JS;
 $js_page = $js_page ?? [];
 $js_page[] = $dashboard_js;
-include 'template/footer.php';
+include __DIR__ . '/../templates/pembayaran_footer.php';

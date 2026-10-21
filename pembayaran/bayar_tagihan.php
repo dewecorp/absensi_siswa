@@ -1,7 +1,6 @@
 <?php
 $title = 'Bayar Tagihan';
-include __DIR__ . '/template/header.php';
-include __DIR__ . '/template/sidebar.php';
+include __DIR__ . '/../templates/pembayaran_header.php';
 
 // Proses pembayaran tagihan
 if (isset($_POST['bayar_tagihan'])) {
@@ -120,26 +119,24 @@ if ($has_id_kelas) {
 $q_kelas = mysqli_query($koneksi, "SELECT * FROM kelas ORDER BY nama_kelas ASC");
 ?>
 
-<div class="app-page">
-    <div class="app-surface">
-        <div class="app-titlebar">
-            <div class="flex min-w-0 flex-wrap items-center gap-3">
-                <a href="tagihan.php?id_kelas=<?= $id_kelas ?>" class="inline-flex items-center gap-2 rounded-lg border border-primary px-4 py-2 text-sm font-bold text-primary shadow-sm transition hover:bg-primary hover:text-white">
-                    <i class="mdi mdi-arrow-left"></i> Kembali
-                </a>
-                <h4 class="truncate text-xl font-extrabold tracking-normal text-slate-950">Bayar Tagihan Tunggakan</h4>
-                <span class="app-badge app-badge-info">Tahun Ajaran <?= htmlspecialchars($tahun_ajaran, ENT_QUOTES, 'UTF-8') ?></span>
-            </div>
+<div class="card mb-4">
+    <div class="card-body">
+        <div class="d-flex flex-wrap align-items-center mb-3" style="gap:12px;">
+            <a href="tagihan.php?id_kelas=<?= $id_kelas ?>" class="btn btn-outline-primary">
+                <i class="fas fa-arrow-left mr-1"></i> Kembali
+            </a>
+            <h4 class="mb-0">Bayar Tagihan Tunggakan</h4>
+            <span class="badge badge-info">Tahun Ajaran <?= htmlspecialchars($tahun_ajaran, ENT_QUOTES, 'UTF-8') ?></span>
         </div>
 
-        <div class="app-panel">
-            <div class="app-panel-body">
+        <div class="card">
+            <div class="card-body">
                 <form method="get" action="">
                     <?php if (!$has_id_kelas): ?>
                     <input type="hidden" name="tahun_ajaran" value="<?= htmlspecialchars($tahun_ajaran, ENT_QUOTES, 'UTF-8') ?>">
-                    <div class="app-field">
-                        <label>Pilih Kelas</label>
-                        <select name="id_kelas" class="app-control" required onchange="this.form.submit()">
+                    <div class="form-group">
+                        <label class="font-weight-bold">Pilih Kelas</label>
+                        <select name="id_kelas" class="form-control" required onchange="this.form.submit()">
                             <option value="">-- Pilih Kelas --</option>
                             <?php while ($k = mysqli_fetch_assoc($q_kelas)): ?>
                                 <option value="<?= $k['id_kelas'] ?>"><?= $k['nama_kelas'] ?></option>
@@ -155,9 +152,9 @@ $q_kelas = mysqli_query($koneksi, "SELECT * FROM kelas ORDER BY nama_kelas ASC")
                 <form method="get" action="">
                     <input type="hidden" name="id_kelas" value="<?= $id_kelas ?>">
                     <input type="hidden" name="tahun_ajaran" value="<?= htmlspecialchars($tahun_ajaran, ENT_QUOTES, 'UTF-8') ?>">
-                    <div class="app-field">
-                        <label>Pilih Siswa</label>
-                        <select name="nisn" class="app-control" required onchange="this.form.submit()">
+                    <div class="form-group">
+                        <label class="font-weight-bold">Pilih Siswa</label>
+                        <select name="nisn" class="form-control" required onchange="this.form.submit()">
                             <option value="">-- Pilih Siswa --</option>
                             <?php while ($s = mysqli_fetch_assoc($q_siswa_list)):
                                 $nm_kelas = trim($s['nama_kelas'] ?? '');
@@ -173,18 +170,20 @@ $q_kelas = mysqli_query($koneksi, "SELECT * FROM kelas ORDER BY nama_kelas ASC")
                 </form>
 
                 <?php if ($selected_siswa && $tagihan): ?>
-                    <div class="mb-6 p-4 bg-slate-50 rounded-lg">
-                        <h5 class="font-bold mb-2">Data Siswa</h5>
+                    <div class="card bg-light mb-4">
+                        <div class="card-body">
+                        <h5 class="font-weight-bold mb-2">Data Siswa</h5>
                         <p><strong>NISN:</strong> <?= $selected_siswa['nisn'] ?></p>
                         <p><strong>Nama:</strong> <?= $selected_siswa['nama'] ?></p>
                         <p><strong>Kelas:</strong> <?= $selected_siswa['nama_kelas'] ?></p>
-                        <p><strong>Tahun Ajaran:</strong> <?= htmlspecialchars($tahun_ajaran, ENT_QUOTES, 'UTF-8') ?></p>
+                        <p class="mb-0"><strong>Tahun Ajaran:</strong> <?= htmlspecialchars($tahun_ajaran, ENT_QUOTES, 'UTF-8') ?></p>
+                        </div>
                     </div>
 
-                    <div class="mb-6">
-                        <h5 class="font-bold mb-3">Detail Tagihan Tunggakan</h5>
-                        <div class="app-table-scroll">
-                            <table class="app-table app-table-bordered">
+                    <div class="mb-4">
+                        <h5 class="font-weight-bold mb-3">Detail Tagihan Tunggakan</h5>
+                        <div class="table-responsive">
+                            <table class="table table-bordered pembayaran-table">
                                 <thead>
                                     <tr>
                                         <th>No</th>
@@ -197,20 +196,20 @@ $q_kelas = mysqli_query($koneksi, "SELECT * FROM kelas ORDER BY nama_kelas ASC")
                                 <tbody>
                                     <?php $total_tagihan = 0; $no = 1; foreach ($tagihan as $t): $total_tagihan += $t['sisa']; ?>
                                     <tr>
-                                        <td><?= $no++ ?></td>
-                                        <td><?= $t['nama_pembayaran'] ?></td>
-                                        <td><?= $t['tipe_bayar'] ?></td>
-                                        <td>
+                                        <td data-label="No"><?= $no++ ?></td>
+                                        <td data-label="Jenis Pembayaran"><?= $t['nama_pembayaran'] ?></td>
+                                        <td data-label="Tipe"><?= $t['tipe_bayar'] ?></td>
+                                        <td data-label="Detail Tagihan">
                                             <?php foreach ($t['unpaid_details'] as $d): ?>
-                                                <span class="inline-block bg-yellow-100 text-yellow-800 px-2 py-1 rounded text-sm mr-1 mb-1"><?= $d ?></span>
+                                                <span class="badge badge-warning mr-1 mb-1"><?= $d ?></span>
                                             <?php endforeach; ?>
                                         </td>
-                                        <td class="text-right font-bold">Rp <?= number_format($t['sisa'], 0, ',', '.') ?></td>
+                                        <td data-label="Jumlah Tagihan" class="text-right font-weight-bold">Rp <?= number_format($t['sisa'], 0, ',', '.') ?></td>
                                     </tr>
                                     <?php endforeach; ?>
-                                    <tr class="bg-slate-100">
-                                        <td colspan="4" class="text-right font-bold">Total:</td>
-                                        <td class="text-right font-bold text-red-600">Rp <?= number_format($total_tagihan, 0, ',', '.') ?></td>
+                                    <tr class="table-light">
+                                        <td colspan="4" class="text-right font-weight-bold">Total:</td>
+                                        <td class="text-right font-weight-bold text-danger">Rp <?= number_format($total_tagihan, 0, ',', '.') ?></td>
                                     </tr>
                                 </tbody>
                             </table>
@@ -218,8 +217,8 @@ $q_kelas = mysqli_query($koneksi, "SELECT * FROM kelas ORDER BY nama_kelas ASC")
                     </div>
 
                     <?php if ($is_tahun_ajaran_aktif): ?>
-                        <div class="p-4 bg-yellow-50 text-yellow-800 rounded-lg">
-                            <i class="mdi mdi-information-outline mr-2"></i> Tagihan tahun ajaran berjalan hanya untuk dilihat. Pembayaran dilakukan melalui menu Transaksi.
+                        <div class="alert alert-warning">
+                            <i class="fas fa-info-circle mr-2"></i> Tagihan tahun ajaran berjalan hanya untuk dilihat. Pembayaran dilakukan melalui menu Transaksi.
                         </div>
                     <?php else: ?>
                         <form method="post" action="">
@@ -227,24 +226,24 @@ $q_kelas = mysqli_query($koneksi, "SELECT * FROM kelas ORDER BY nama_kelas ASC")
                             <input type="hidden" name="nisn" value="<?= $selected_nisn ?>">
                             <input type="hidden" name="tahun_ajaran" value="<?= htmlspecialchars($tahun_ajaran, ENT_QUOTES, 'UTF-8') ?>">
 
-                            <div class="app-field">
-                                <label>Tanggal Bayar</label>
-                                <input type="date" name="tgl_bayar" class="app-control" value="<?= date('Y-m-d') ?>" required>
+                            <div class="form-group">
+                                <label class="font-weight-bold">Tanggal Bayar</label>
+                                <input type="date" name="tgl_bayar" class="form-control" value="<?= date('Y-m-d') ?>" required>
                             </div>
 
-                            <div class="flex items-center gap-3 mt-4">
-                                <button type="submit" name="bayar_tagihan" class="app-button app-button-success">
-                                    <i class="mdi mdi-check-circle"></i> Bayar Semua Tagihan
+                            <div class="d-flex align-items-center mt-4" style="gap:12px;">
+                                <button type="submit" name="bayar_tagihan" class="btn btn-success">
+                                    <i class="fas fa-check-circle mr-1"></i> Bayar Semua Tagihan
                                 </button>
-                                <a href="tagihan.php?id_kelas=<?= $id_kelas ?>" class="app-button app-button-secondary">
+                                <a href="tagihan.php?id_kelas=<?= $id_kelas ?>" class="btn btn-secondary">
                                     Batal
                                 </a>
                             </div>
                         </form>
                     <?php endif; ?>
                 <?php elseif ($selected_siswa && !$tagihan): ?>
-                    <div class="p-4 bg-green-50 text-green-800 rounded-lg">
-                        <i class="mdi mdi-check-circle mr-2"></i> Siswa ini tidak memiliki tagihan tunggakan!
+                    <div class="alert alert-success">
+                        <i class="fas fa-check-circle mr-2"></i> Siswa ini tidak memiliki tagihan tunggakan!
                     </div>
                 <?php endif; ?>
                 <?php endif; ?>
@@ -253,4 +252,4 @@ $q_kelas = mysqli_query($koneksi, "SELECT * FROM kelas ORDER BY nama_kelas ASC")
     </div>
 </div>
 
-<?php include __DIR__ . '/template/footer.php'; ?>
+<?php include __DIR__ . '/../templates/pembayaran_footer.php'; ?>

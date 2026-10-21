@@ -802,37 +802,61 @@ if (getUserLevel() === 'siswa' && isset($_SESSION['user_id'])) {
         }
     </style>
 
-    <?php if (!empty($pembayaran_module) && empty($pembayaran_native_ui)): ?>
-    <!-- Pembayaran Siswa: aset modul, dimuat hanya pada halaman /pembayaran -->
-    <link rel="stylesheet" href="<?= htmlspecialchars(simad_url('pembayaran/assets/vendors/mdi/css/materialdesignicons.min.css'), ENT_QUOTES, 'UTF-8') ?>">
+    <?php if (!empty($pembayaran_module)): ?>
+    <!-- Pembayaran Siswa: dependensi tabel dan pilihan kelas, memakai CDN Stisla/Bootstrap -->
     <link rel="stylesheet" href="https://cdn.datatables.net/1.10.24/css/jquery.dataTables.min.css">
-    <link rel="stylesheet" href="<?= htmlspecialchars(simad_url('pembayaran/assets/vendors/select2/select2.min.css'), ENT_QUOTES, 'UTF-8') ?>">
-    <link rel="stylesheet" href="<?= htmlspecialchars(simad_url('pembayaran/assets/css/custom.css'), ENT_QUOTES, 'UTF-8') ?>?v=<?= (int) @filemtime(__DIR__ . '/../pembayaran/assets/css/custom.css') ?>">
-
-    <script src="https://cdn.tailwindcss.com"></script>
-    <script>
-        // Tailwind utilities are scoped to module content so Stisla/Bootstrap
-        // navbar, sidebar, footer, buttons, and forms keep their native styles.
-        tailwind.config = {
-            corePlugins: { preflight: false },
-            important: '.pembayaran-app',
-            theme: {
-                extend: {
-                    colors: {
-                        primary: { DEFAULT: '#10b981', dark: '#059669', light: '#34d399', soft: '#d1fae5' }
-                    }
-                }
-            }
-        };
-    </script>
-
-    <!-- jQuery dimuat lebih awal agar script inline halaman modul langsung tersedia. -->
-    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/select2/4.0.13/css/select2.min.css">
     <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
-    <script src="https://cdn.datatables.net/1.10.24/js/jquery.dataTables.min.js"></script>
-    <script src="<?= htmlspecialchars(simad_url('pembayaran/assets/vendors/select2/select2.min.js'), ENT_QUOTES, 'UTF-8') ?>"></script>
-    <script src="<?= htmlspecialchars(simad_url('pembayaran/assets/vendors/chart.js/chart.umd.js'), ENT_QUOTES, 'UTF-8') ?>"></script>
-    <script src="<?= htmlspecialchars(simad_url('pembayaran/assets/js/pembayaran.js'), ENT_QUOTES, 'UTF-8') ?>?v=<?= (int) @filemtime(__DIR__ . '/../pembayaran/assets/js/pembayaran.js') ?>"></script>
+    <style>
+        .pembayaran-app table.pembayaran-table th,
+        .pembayaran-app table.pembayaran-table td {
+            vertical-align: middle;
+            white-space: nowrap;
+        }
+        .pembayaran-app .dataTables_wrapper .dataTables_length,
+        .pembayaran-app .dataTables_wrapper .dataTables_filter {
+            margin-bottom: 1rem;
+        }
+        .pembayaran-app .dataTables_wrapper .dataTables_filter input {
+            margin-left: .5rem;
+        }
+        .pembayaran-app .dataTables_wrapper .dataTables_info {
+            padding-top: .5rem;
+            color: #6c757d !important;
+            font-size: .875rem;
+        }
+        .pembayaran-app .dataTables_wrapper .dataTables_paginate .paginate_button {
+            display: inline-block !important;
+            float: none !important;
+            min-width: 32px;
+            margin: 0 0 0 .25rem !important;
+            padding: .375rem .5rem !important;
+            border: 1px solid #e4e6fc;
+            border-radius: .25rem;
+            background: #fff;
+            color: #34395e !important;
+            text-align: center;
+        }
+        .pembayaran-app .dataTables_wrapper .dataTables_paginate .paginate_button.current,
+        .pembayaran-app .dataTables_wrapper .dataTables_paginate .paginate_button.current:hover {
+            border-color: #6777ef;
+            background: #6777ef !important;
+            color: #fff !important;
+        }
+        .pembayaran-app .dataTables_wrapper .dataTables_paginate .paginate_button.disabled,
+        .pembayaran-app .dataTables_wrapper .dataTables_paginate .paginate_button.disabled:hover {
+            border-color: #e4e6fc;
+            background: #f8f9ff !important;
+            color: #a1a8c3 !important;
+            cursor: default;
+        }
+    </style>
+    <!-- Pembayaran Mobile App CSS -->
+    <?php
+    $_pb_css_path = __DIR__ . '/../assets/css/pembayaran-app.css';
+    $_pb_css_v = is_readable($_pb_css_path) ? (string) filemtime($_pb_css_path) : '1';
+    ?>
+    <link rel="stylesheet" href="../assets/css/pembayaran-app.css?v=<?php echo htmlspecialchars($_pb_css_v, ENT_QUOTES, 'UTF-8'); ?>">
     <?php endif; ?>
 </head>
 

@@ -1,0 +1,613 @@
+/* ============================================================
+   SIMAD Mobile App Styling: Modul Pembayaran Siswa
+   File: assets/css/pembayaran-app.css
+   Dipakai oleh semua halaman di folder /pembayaran
+   ============================================================ */
+
+.pembayaran-app {
+    --pb-radius: 16px;
+    --pb-line: #e8edf5;
+    --pb-ink: #0f172a;
+    --pb-muted: #64748b;
+}
+
+.pembayaran-app .section-header {
+    padding-bottom: 10px;
+}
+
+.pembayaran-app .section-header h1 {
+    font-size: 1.15rem;
+    font-weight: 800;
+    color: var(--pb-ink);
+    letter-spacing: -.01em;
+}
+
+.pembayaran-app .section-header-breadcrumb .breadcrumb-item,
+.pembayaran-app .section-header-breadcrumb .breadcrumb-item a {
+    font-size: .8rem;
+    font-weight: 600;
+    color: var(--pb-muted);
+}
+
+/* ---------- Cards ---------- */
+.pembayaran-app .card {
+    border: 1px solid var(--pb-line);
+    border-radius: var(--pb-radius);
+    box-shadow: 0 6px 20px rgba(15, 23, 42, .06);
+    overflow: hidden;
+    background: #fff;
+}
+
+.pembayaran-app .card-header {
+    background: #fff;
+    border-bottom: 1px solid var(--pb-line);
+    padding: 14px 16px;
+}
+
+.pembayaran-app .card-header h4,
+.pembayaran-app .card-header h5,
+.pembayaran-app .card-header h6 {
+    font-size: 1rem;
+    font-weight: 800;
+    margin: 0;
+    color: var(--pb-ink);
+}
+
+.pembayaran-app .card-body {
+    padding: 16px;
+}
+
+.pembayaran-app .card-footer {
+    background: #fbfdff;
+    border-top: 1px solid var(--pb-line);
+}
+
+/* ---------- Form controls ---------- */
+.pembayaran-app label {
+    font-weight: 800;
+    color: #334155;
+    font-size: .78rem;
+    text-transform: uppercase;
+    letter-spacing: .03em;
+    margin-bottom: 6px;
+}
+
+.pembayaran-app .form-control,
+.pembayaran-app .custom-select {
+    border-radius: 12px;
+    border: 1.5px solid #e2e8f0;
+    min-height: 42px;
+    color: var(--pb-ink);
+    box-shadow: none;
+}
+
+.pembayaran-app textarea.form-control {
+    min-height: 90px;
+}
+
+.pembayaran-app .form-control:focus,
+.pembayaran-app .custom-select:focus {
+    border-color: #93c5fd;
+    box-shadow: 0 0 0 3px rgba(59, 130, 246, .12);
+}
+
+.pembayaran-app .select2-container {
+    width: 100% !important;
+}
+
+.pembayaran-app .select2-container--default .select2-selection--single {
+    height: 42px;
+    border-radius: 12px;
+    border: 1.5px solid #e2e8f0;
+    display: flex;
+    align-items: center;
+}
+
+.pembayaran-app .select2-container--default .select2-selection--single .select2-selection__arrow {
+    height: 40px;
+}
+
+.pembayaran-app .select2-container--default .select2-selection--single .select2-selection__rendered {
+    line-height: 40px;
+    padding-left: 12px;
+    color: var(--pb-ink);
+    font-weight: 600;
+}
+
+.pembayaran-app .select2-dropdown {
+    border-radius: 12px;
+    border: 1.5px solid #e2e8f0;
+    overflow: hidden;
+}
+
+.pembayaran-app .input-group-text {
+    border-radius: 12px;
+    border: 1.5px solid #e2e8f0;
+    background: #f8fafc;
+    font-weight: 700;
+}
+
+/* ---------- Buttons ---------- */
+.pembayaran-app .btn {
+    border-radius: 12px;
+    font-weight: 700;
+    padding: .5rem .9rem;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+}
+
+.pembayaran-app .btn-sm {
+    border-radius: 10px;
+    padding: .35rem .7rem;
+}
+
+.pembayaran-app .btn i {
+    font-size: .85em;
+}
+
+.pembayaran-app .btn:active {
+    transform: scale(.98);
+}
+
+/* ---------- Action chips (mobile app style) ---------- */
+.pembayaran-app .pb-actions {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 8px;
+}
+
+.pembayaran-app .pb-chip {
+    --chip-bg: #eef2ff;
+    --chip-fg: #3730a3;
+    --chip-line: #dfe5ff;
+    display: inline-flex;
+    align-items: center;
+    gap: 7px;
+    padding: 8px 12px;
+    border-radius: 12px;
+    background: var(--chip-bg);
+    color: var(--chip-fg);
+    border: 1px solid var(--chip-line);
+    font-size: .8rem;
+    font-weight: 800;
+    line-height: 1;
+    text-decoration: none;
+    white-space: nowrap;
+    cursor: pointer;
+    font-family: inherit;
+    -webkit-appearance: none;
+    appearance: none;
+    transition: transform .12s ease, box-shadow .12s ease;
+}
+
+.pembayaran-app .pb-chip:hover,
+.pembayaran-app .pb-chip:focus {
+    color: var(--chip-fg);
+    text-decoration: none;
+    transform: translateY(-1px);
+    box-shadow: 0 6px 14px rgba(15, 23, 42, .12);
+}
+
+.pembayaran-app .pb-chip:active {
+    transform: scale(.97);
+    box-shadow: none;
+}
+
+.pembayaran-app .pb-chip i {
+    font-size: .78rem;
+}
+
+.pembayaran-app .pb-chip .pb-chip-year {
+    padding: 3px 8px;
+    border-radius: 999px;
+    background: rgba(255, 255, 255, .75);
+    font-size: .7rem;
+    font-weight: 800;
+    letter-spacing: .02em;
+}
+
+.pembayaran-app .pb-chip-info {
+    --chip-bg: #e0f2fe;
+    --chip-fg: #075985;
+    --chip-line: #bae6fd;
+}
+
+.pembayaran-app .pb-chip-warning {
+    --chip-bg: #fef3c7;
+    --chip-fg: #92400e;
+    --chip-line: #fde68a;
+}
+
+.pembayaran-app .pb-chip-success {
+    --chip-bg: #dcfce7;
+    --chip-fg: #166534;
+    --chip-line: #bbf7d0;
+}
+
+.pembayaran-app .pb-chip-primary {
+    --chip-bg: #e0e7ff;
+    --chip-fg: #3730a3;
+    --chip-line: #c7d2fe;
+}
+
+.pembayaran-app .pb-chip-danger {
+    --chip-bg: #fee2e2;
+    --chip-fg: #991b1b;
+    --chip-line: #fecaca;
+}
+
+.pembayaran-app .pb-chip-muted {
+    --chip-bg: #f1f5f9;
+    --chip-fg: #475569;
+    --chip-line: #e2e8f0;
+}
+
+/* ---------- Kartu informatif (mode mobile) ---------- */
+.pembayaran-app .pb-cards {
+    display: grid;
+    gap: 12px;
+}
+
+.pembayaran-app .pb-card {
+    background: #fff;
+    border: 1px solid var(--pb-line);
+    border-radius: 18px;
+    padding: 14px;
+    box-shadow: 0 6px 18px rgba(15, 23, 42, .06);
+}
+
+.pembayaran-app .pb-card-head {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+}
+
+.pembayaran-app .pb-avatar {
+    flex: 0 0 42px;
+    width: 42px;
+    height: 42px;
+    border-radius: 14px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: 800;
+    font-size: 1rem;
+    color: #1e40af;
+    background: linear-gradient(135deg, #e0e7ff 0%, #cffafe 100%);
+    border: 1px solid #dbeafe;
+}
+
+.pembayaran-app .pb-card-id {
+    min-width: 0;
+}
+
+.pembayaran-app .pb-card-name {
+    font-weight: 800;
+    font-size: .92rem;
+    line-height: 1.25;
+    color: var(--pb-ink);
+    word-break: break-word;
+}
+
+.pembayaran-app .pb-card-meta {
+    margin-top: 3px;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 4px 12px;
+    color: var(--pb-muted);
+    font-size: .74rem;
+    font-weight: 700;
+}
+
+.pembayaran-app .pb-card-meta i {
+    font-size: .72rem;
+    color: #94a3b8;
+}
+
+.pembayaran-app .pb-card-lines {
+    margin-top: 12px;
+    display: grid;
+    gap: 8px;
+}
+
+.pembayaran-app .pb-line {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 10px;
+    padding: 9px 12px;
+    border-radius: 12px;
+    background: #f8fafc;
+    border: 1px solid #eef2f7;
+}
+
+.pembayaran-app .pb-line-label {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    font-size: .76rem;
+    font-weight: 800;
+    color: #334155;
+}
+
+.pembayaran-app .pb-line-value {
+    font-size: .84rem;
+    font-weight: 800;
+    color: var(--pb-ink);
+    white-space: nowrap;
+}
+
+.pembayaran-app .pb-line.is-berjalan {
+    background: #eff6ff;
+    border-color: #dbeafe;
+}
+
+.pembayaran-app .pb-line.is-berjalan .pb-line-label {
+    color: #1d4ed8;
+}
+
+.pembayaran-app .pb-line.is-tunggakan {
+    background: #fffbeb;
+    border-color: #fde68a;
+}
+
+.pembayaran-app .pb-line.is-tunggakan .pb-line-label,
+.pembayaran-app .pb-line.is-tunggakan .pb-line-value {
+    color: #b45309;
+}
+
+.pembayaran-app .pb-line.is-lunas {
+    background: #f0fdf4;
+    border-color: #bbf7d0;
+}
+
+.pembayaran-app .pb-line.is-lunas .pb-line-label,
+.pembayaran-app .pb-line.is-lunas .pb-line-value {
+    color: #15803d;
+}
+
+.pembayaran-app .pb-card-actions {
+    margin-top: 12px;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+}
+
+.pembayaran-app .pb-card-actions > .pb-actions {
+    width: 100%;
+}
+
+.pembayaran-app .pb-card-actions .pb-chip {
+    flex: 1 1 auto;
+    justify-content: center;
+}
+
+.pembayaran-app .pb-card-actions .badge {
+    padding: .5em .8em;
+}
+
+/* ---------- Tables ---------- */
+.pembayaran-app table.pembayaran-table {
+    border-collapse: separate;
+    border-spacing: 0;
+    margin-bottom: 0;
+    width: 100% !important;
+}
+
+.pembayaran-app table.pembayaran-table thead th {
+    background: #f8fafc;
+    color: #475569;
+    text-transform: uppercase;
+    font-size: .72rem;
+    font-weight: 800;
+    letter-spacing: .05em;
+    border: 0 !important;
+    border-bottom: 1px solid var(--pb-line) !important;
+    padding: 12px 14px;
+    white-space: nowrap;
+}
+
+.pembayaran-app table.pembayaran-table thead th.sorting,
+.pembayaran-app table.pembayaran-table thead th.sorting_asc,
+.pembayaran-app table.pembayaran-table thead th.sorting_desc,
+.pembayaran-app table.pembayaran-table thead th.sorting_asc_disabled,
+.pembayaran-app table.pembayaran-table thead th.sorting_desc_disabled {
+    padding-right: 22px;
+    background-position: right 6px center;
+}
+
+/* Kolom "No" cukup nomor urut: sembunyikan ikon sorting agar tidak menimpa label */
+.pembayaran-app table.pembayaran-table thead th:first-child {
+    background-image: none !important;
+    padding-right: 14px;
+}
+
+@media (min-width: 992px) {
+    .pembayaran-app table.pembayaran-table thead th:first-child {
+        width: 64px !important;
+        min-width: 64px;
+    }
+}
+
+.pembayaran-app table.pembayaran-table tbody td {
+    border: 0 !important;
+    border-bottom: 1px solid #eef2f7 !important;
+    padding: 12px 14px;
+    vertical-align: middle;
+}
+
+.pembayaran-app table.pembayaran-table tbody tr:last-child td {
+    border-bottom: 0 !important;
+}
+
+.pembayaran-app table.pembayaran-table tbody tr:hover {
+    background: #f8fbff;
+}
+
+.pembayaran-app .table-responsive {
+    border-radius: var(--pb-radius);
+    -webkit-overflow-scrolling: touch;
+}
+
+/* ---------- Badges & alerts ---------- */
+.pembayaran-app .badge {
+    border-radius: 999px;
+    padding: .4em .75em;
+    font-weight: 800;
+    letter-spacing: .01em;
+}
+
+.pembayaran-app .alert {
+    border-radius: 14px;
+    border: 0;
+}
+
+/* ---------- DataTables ---------- */
+.pembayaran-app .dataTables_wrapper .dataTables_filter input {
+    border-radius: 12px;
+    border: 1.5px solid #e2e8f0;
+    padding: 8px 12px;
+    min-height: 40px;
+    box-shadow: none;
+}
+
+.pembayaran-app .dataTables_wrapper .dataTables_length select {
+    border-radius: 12px;
+    border: 1.5px solid #e2e8f0;
+    min-height: 40px;
+    padding: 0 28px 0 10px;
+}
+
+.pembayaran-app .dataTables_wrapper .dataTables_info {
+    font-weight: 600;
+}
+
+/* ---------- Modal ---------- */
+.pembayaran-app .modal-content,
+body.modal-open .modal .modal-content {
+    border-radius: 18px;
+    border: 0;
+    box-shadow: 0 24px 60px rgba(15, 23, 42, .25);
+}
+
+.pembayaran-app .modal-header,
+body.modal-open .modal .modal-header {
+    border-bottom: 1px solid var(--pb-line);
+    padding: 16px 18px;
+}
+
+.pembayaran-app .modal-footer,
+body.modal-open .modal .modal-footer {
+    border-top: 1px solid var(--pb-line);
+}
+
+/* ---------- Mobile: tabel berubah jadi kartu ---------- */
+@media (max-width: 991.98px) {
+    .pembayaran-app .section-header h1 {
+        font-size: 1.05rem;
+    }
+
+    .pembayaran-app .card-body {
+        padding: 14px;
+    }
+
+    .pembayaran-app table.pembayaran-table thead {
+        display: none;
+    }
+
+    /* DataTables scrollX tidak dipakai lagi saat tabel jadi kartu */
+    .pembayaran-app .dataTables_scrollHead {
+        display: none !important;
+    }
+
+    .pembayaran-app .dataTables_scroll,
+    .pembayaran-app .dataTables_scrollBody {
+        overflow: visible !important;
+        width: 100% !important;
+        max-width: 100% !important;
+    }
+
+    .pembayaran-app .dataTables_scrollBody > table.pembayaran-table {
+        width: 100% !important;
+        min-width: 0 !important;
+        max-width: 100% !important;
+    }
+
+    .pembayaran-app table.pembayaran-table,
+    .pembayaran-app table.pembayaran-table tbody,
+    .pembayaran-app table.pembayaran-table tr,
+    .pembayaran-app table.pembayaran-table td {
+        display: block;
+        width: 100%;
+    }
+
+    .pembayaran-app table.pembayaran-table tr {
+        background: #fff;
+        border: 1px solid var(--pb-line);
+        border-radius: 14px;
+        padding: 6px 12px;
+        margin-bottom: 10px;
+        box-shadow: 0 2px 10px rgba(15, 23, 42, .04);
+    }
+
+    .pembayaran-app table.pembayaran-table tbody td {
+        border: 0 !important;
+        border-bottom: 1px dashed #eef2f7 !important;
+        padding: 8px 0;
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 12px;
+        text-align: right;
+        white-space: normal !important;
+        word-break: break-word;
+    }
+
+    .pembayaran-app table.pembayaran-table tbody tr td:last-child {
+        border-bottom: 0 !important;
+    }
+
+    .pembayaran-app table.pembayaran-table tbody td[data-label]::before {
+        content: attr(data-label);
+        color: var(--pb-muted);
+        font-size: .7rem;
+        font-weight: 800;
+        text-transform: uppercase;
+        letter-spacing: .04em;
+        text-align: left;
+        flex: 0 0 auto;
+    }
+
+    .pembayaran-app table.pembayaran-table tbody td[data-label="Aksi"] {
+        justify-content: flex-start;
+        padding-top: 10px;
+    }
+
+    .pembayaran-app table.pembayaran-table tbody td[data-label="Aksi"]::before {
+        display: none;
+    }
+
+    .pembayaran-app .pb-actions {
+        width: 100%;
+    }
+
+    .pembayaran-app .pb-chip {
+        flex: 1 1 auto;
+        justify-content: center;
+        padding: 10px 12px;
+        font-size: .82rem;
+    }
+
+    .pembayaran-app .btn {
+        width: 100%;
+    }
+
+    .pembayaran-app .btn.btn-sm,
+    .pembayaran-app .pb-chip,
+    .pembayaran-app .d-flex > .btn {
+        width: auto;
+    }
+}

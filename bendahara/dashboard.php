@@ -16,20 +16,45 @@ $display_name = $_SESSION['nama'] ?? $_SESSION['username'] ?? 'Bendahara';
 /* ── Anggaran madrasah ─────────────────────────────────────── */
 $total_sumber = 0;
 $total_pengeluaran = 0;
-$jumlah_kategori = 0;
+$jumlah_sumber = 0;
+$jumlah_rencana = 0;
+$nama_sumber = [];
 try {
+    $rows_sumber = $pdo->query("SELECT uraian FROM tb_sumber_anggaran ORDER BY id_sumber ASC")->fetchAll(PDO::FETCH_ASSOC);
+    foreach ($rows_sumber as $row_sumber) {
+        $uraian = trim((string)($row_sumber['uraian'] ?? ''));
+        if ($uraian !== '') {
+            $nama_sumber[] = $uraian;
+        }
+    }
+    $jumlah_sumber = count($rows_sumber);
     $total_sumber = (int)$pdo->query("SELECT COALESCE(SUM(total),0) FROM tb_sumber_anggaran")->fetchColumn();
 } catch (Throwable $e) {}
 try {
     $total_pengeluaran = (int)$pdo->query("SELECT COALESCE(SUM(total),0) FROM tb_rencana_pengeluaran")->fetchColumn();
-} catch (Throwable $e) {}
-try {
-    $jumlah_kategori = (int)$pdo->query("SELECT COUNT(*) FROM tb_kategori_anggaran")->fetchColumn();
+    $jumlah_rencana = (int)$pdo->query("SELECT COUNT(*) FROM tb_rencana_pengeluaran")->fetchColumn();
 } catch (Throwable $e) {}
 $sisa_anggaran = $total_sumber - $total_pengeluaran;
 
 /* ── Ringkasan pembayaran siswa ───────────────────────────── */
 $pembayaran_summary = bendahara_pembayaran_summary($koneksi);
+
+/* ── Aktivitas Pembayaran (CRUD, login, logout) ───────────── */
+if (!isset($_SESSION['last_log_cleanup']) || (time() - (int) $_SESSION['last_log_cleanup']) > 3600) {
+    mysqli_query($koneksi, "DELETE FROM log_aktivitas WHERE created_at < NOW() - INTERVAL 24 HOUR");
+    $_SESSION['last_log_cleanup'] = time();
+}
+$q_aktivitas_count = mysqli_query($koneksi, "SELECT COUNT(*) AS total FROM log_aktivitas WHERE created_at >= NOW() - INTERVAL 24 HOUR");
+$d_aktivitas_count = $q_aktivitas_count ? mysqli_fetch_assoc($q_aktivitas_count) : null;
+$jml_aktivitas = (int) ($d_aktivitas_count['total'] ?? 0);
+$q_aktivitas = mysqli_query($koneksi, "
+    SELECT l.*, p.nama_lengkap
+    FROM log_aktivitas l
+    LEFT JOIN pengguna p ON l.id_pengguna = p.id_pengguna
+    WHERE l.created_at >= NOW() - INTERVAL 24 HOUR
+    ORDER BY l.created_at DESC
+    LIMIT 200
+");
 
 include '../templates/header.php';
 include_once '../templates/sidebar.php';
@@ -79,6 +104,141 @@ include_once '../templates/sidebar.php';
     .bdh-payment-grid .dash-stat-card { padding: 11px 12px; gap: 10px; }
     .bdh-payment-grid .dash-stat-ico { width: 40px; height: 40px; border-radius: 12px; font-size: .95rem; }
     .bdh-payment-grid .dash-stat-value { font-size: 1.15rem; }
+}
+
+/* ── Kartu jenis bayar (gaya mobile app) ───────────────────── */
+.bdh-jenis-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(230px, 1fr)); gap: 12px; }
+.bdh-jenis {
+    display: flex; align-items: center; gap: 12px;
+    background: #fff;
+    border: 1.5px solid rgba(15, 23, 42, .07);
+    border-radius: 16px;
+    padding: 13px 14px;
+    box-shadow: 0 4px 14px rgba(15, 23, 42, .05);
+    transition: transform .18s, box-shadow .18s, border-color .18s;
+}
+.bdh-jenis:hover { transform: translateY(-2px); box-shadow: 0 8px 22px rgba(15, 23, 42, .1); border-color: #bfdbfe; }
+.bdh-jenis-ico {
+    flex: 0 0 auto; width: 42px; height: 42px; border-radius: 13px;
+    display: grid; place-items: center; font-size: .95rem;
+}
+.bdh-jenis-body { flex: 1 1 auto; min-width: 0; }
+.bdh-jenis-nama {
+    font-size: .84rem; font-weight: 800; color: #0f172a; line-height: 1.25;
+    white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
+.bdh-jenis-meta { font-size: .68rem; font-weight: 600; color: #94a3b8; }
+.bdh-jenis-total { flex: 0 0 auto; font-size: .88rem; font-weight: 900; color: #0f172a; white-space: nowrap; }
+.bdh-jenis.tint-blue   { background: #f0f7ff; border-color: rgba(59,130,246,.18); }
+.bdh-jenis.tint-teal   { background: #f0fdff; border-color: rgba(6,182,212,.18); }
+.bdh-jenis.tint-amber  { background: #fffdf0; border-color: rgba(245,158,11,.18); }
+.bdh-jenis.tint-green  { background: #f3fdf5; border-color: rgba(34,197,94,.18); }
+.bdh-jenis.tint-indigo { background: #f3f4ff; border-color: rgba(99,102,241,.18); }
+.bdh-jenis.tint-violet { background: #f7f5ff; border-color: rgba(167,139,250,.18); }
+@media (max-width: 575.98px) {
+    .bdh-jenis-grid { gap: 10px; }
+    .bdh-jenis { padding: 11px 12px; gap: 10px; }
+    .bdh-jenis-ico { width: 36px; height: 36px; border-radius: 11px; font-size: .82rem; }
+    .bdh-jenis-total { font-size: .8rem; }
+}
+
+/* ── Timeline aktivitas (gaya sama dengan Dashboard Admin) ── */
+.act-feed { position: relative; padding: 4px 0; }
+.act-feed::before {
+    content: '';
+    position: absolute;
+    left: 23px;
+    top: 8px; bottom: 8px;
+    width: 2px;
+    border-radius: 2px;
+    background: #e2e8f0;
+}
+.act-item {
+    position: relative;
+    display: flex;
+    gap: 14px;
+    margin-bottom: 14px;
+}
+.act-item:last-child { margin-bottom: 0; }
+.act-dot {
+    flex: 0 0 auto;
+    width: 46px; height: 46px;
+    border-radius: 14px;
+    display: grid; place-items: center;
+    font-size: 1rem;
+    color: #fff !important;
+    box-shadow: 0 4px 12px var(--act-shadow, rgba(37,99,235,.22));
+    background: var(--act-bg, #2563eb);
+    z-index: 1;
+    position: relative;
+}
+.act-dot i { color: #fff !important; }
+.act-body {
+    flex: 1; min-width: 0;
+    background: var(--act-card-bg, #eff6ff);
+    border: 1.5px solid var(--act-card-border, #bfdbfe);
+    border-radius: 14px;
+    padding: 12px 14px;
+    transition: box-shadow .18s, transform .18s;
+}
+.act-body:hover {
+    box-shadow: 0 6px 20px rgba(15,23,42,.08);
+    transform: translateY(-1px);
+}
+.act-top {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+    flex-wrap: wrap;
+    margin-bottom: 6px;
+}
+.act-name {
+    font-size: .88rem;
+    font-weight: 800;
+    color: #0f172a;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+.act-ago {
+    font-size: .72rem;
+    font-weight: 700;
+    color: #94a3b8;
+    white-space: nowrap;
+    display: flex; align-items: center; gap: 4px;
+}
+.act-action-pill {
+    display: inline-flex; align-items: center; gap: 5px;
+    font-size: .7rem; font-weight: 800;
+    padding: 3px 10px; border-radius: 999px;
+    background: var(--act-bg, #2563eb);
+    color: #fff;
+    margin-bottom: 6px;
+}
+.act-desc {
+    font-size: .82rem;
+    color: #334155;
+    line-height: 1.5;
+    margin-bottom: 6px;
+    word-break: break-word;
+}
+.act-footer {
+    display: flex; align-items: center; gap: 12px;
+    font-size: .7rem; color: #94a3b8; font-weight: 600;
+    border-top: 1px solid rgba(15,23,42,.06);
+    padding-top: 6px; margin-top: 2px;
+    flex-wrap: wrap;
+}
+.act-footer span { display: flex; align-items: center; gap: 4px; }
+.act-scroll::-webkit-scrollbar { width: 5px; }
+.act-scroll::-webkit-scrollbar-track { background: #f1f5f9; border-radius: 5px; }
+.act-scroll::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 5px; }
+.act-scroll::-webkit-scrollbar-thumb:hover { background: #94a3b8; }
+@media (max-width: 575.98px) {
+    .act-dot { width: 38px; height: 38px; border-radius: 11px; font-size: .88rem; }
+    .act-feed::before { left: 18px; }
+    .act-body { padding: 10px 12px; }
 }
 </style>
 
@@ -156,8 +316,8 @@ include_once '../templates/sidebar.php';
                         <div class="dash-stat-ico dsi-indigo"><i class="fas fa-wallet"></i></div>
                         <div class="dash-stat-body">
                             <div class="dash-stat-label">Sumber Dana</div>
-                            <div class="dash-stat-value" style="font-size:1.15rem;" title="<?= htmlspecialchars(bendahara_rupiah($total_sumber)) ?>"><?= bendahara_rupiah_short($total_sumber) ?></div>
-                            <div class="dash-stat-sub"><span style="color:#4338ca;"><?= $jumlah_kategori ?> kategori</span></div>
+                            <div class="dash-stat-value" style="font-size:1.15rem;" title="<?= htmlspecialchars(implode(', ', $nama_sumber)) ?>"><?= bendahara_rupiah($total_sumber) ?></div>
+                            <div class="dash-stat-sub"><span style="color:#4338ca;"><?= $jumlah_sumber ?> sumber dana</span></div>
                         </div>
                     </div>
                 </div>
@@ -166,8 +326,8 @@ include_once '../templates/sidebar.php';
                         <div class="dash-stat-ico dsi-amber"><i class="fas fa-exchange-alt"></i></div>
                         <div class="dash-stat-body">
                             <div class="dash-stat-label">Pengeluaran</div>
-                            <div class="dash-stat-value" style="font-size:1.15rem;" title="<?= htmlspecialchars(bendahara_rupiah($total_pengeluaran)) ?>"><?= bendahara_rupiah_short($total_pengeluaran) ?></div>
-                            <div class="dash-stat-sub"><span style="color:#b45309;">RAB tersusun</span></div>
+                            <div class="dash-stat-value" style="font-size:1.15rem;" title="<?= htmlspecialchars(bendahara_rupiah($total_pengeluaran)) ?>"><?= bendahara_rupiah($total_pengeluaran) ?></div>
+                            <div class="dash-stat-sub"><span style="color:#b45309;"><?= $jumlah_rencana ?> rencana pengeluaran</span></div>
                         </div>
                     </div>
                 </div>
@@ -176,7 +336,7 @@ include_once '../templates/sidebar.php';
                         <div class="dash-stat-ico <?= $sisa_anggaran >= 0 ? 'dsi-green' : 'dsi-rose' ?>"><i class="fas fa-balance-scale"></i></div>
                         <div class="dash-stat-body">
                             <div class="dash-stat-label">Sisa Anggaran</div>
-                            <div class="dash-stat-value" style="font-size:1.15rem;" title="<?= htmlspecialchars(bendahara_rupiah($sisa_anggaran)) ?>"><?= bendahara_rupiah_short($sisa_anggaran) ?></div>
+                            <div class="dash-stat-value" style="font-size:1.15rem;" title="<?= htmlspecialchars(bendahara_rupiah($sisa_anggaran)) ?>"><?= bendahara_rupiah($sisa_anggaran) ?></div>
                             <div class="dash-stat-sub"><span style="color:<?= $sisa_anggaran >= 0 ? '#15803d' : '#be123c' ?>;"><?= $sisa_anggaran >= 0 ? 'Surplus' : 'Defisit' ?></span></div>
                         </div>
                     </div>
@@ -243,45 +403,145 @@ include_once '../templates/sidebar.php';
                 <?php endforeach; ?>
             </div>
 
-            <div class="card mb-0">
-                <?php if (empty($pembayaran_summary['jenis_totals'])) : ?>
+            <!-- Total Bayar per Jenis Pembayaran -->
+            <div class="dash-section-head" style="margin-top:24px;">
+                <div class="dsh-title">
+                    <span class="dsh-dot" style="background:#10b981;"></span>
+                    Total Bayar per Jenis
+                </div>
+                <span class="badge badge-primary"><?= number_format(count($pembayaran_summary['jenis_totals'] ?? []), 0, ',', '.') ?> jenis pembayaran</span>
+            </div>
+            <?php if (empty($pembayaran_summary['jenis_totals'])) : ?>
+                <div class="card mb-0">
                     <div class="card-body text-center text-muted py-4">Belum ada jenis pembayaran aktif.</div>
-                <?php else : ?>
-                    <div class="list-group list-group-flush">
-                        <?php
-                        $payment_jenis_icons = [
-                            'ekstrakurikuler' => 'fas fa-futbol',
-                            'lks' => 'fas fa-book-open',
-                            'ujian' => 'fas fa-file-alt',
-                            'rekreasi' => 'fas fa-bus',
-                        ];
-                        $payment_jenis_tones = ['green', 'blue', 'amber', 'indigo'];
-                        foreach ($pembayaran_summary['jenis_totals'] as $payment_jenis_index => $payment_jenis) :
-                            $payment_jenis_nama = (string) $payment_jenis['nama_pembayaran'];
-                            $payment_jenis_tampil = preg_replace('/ekstrakurikuler/i', 'Ekskul', $payment_jenis_nama);
-                            $payment_jenis_lower = strtolower($payment_jenis_nama);
-                            $payment_jenis_icon = 'fas fa-money-bill';
-                            foreach ($payment_jenis_icons as $payment_keyword => $payment_icon) {
-                                if (strpos($payment_jenis_lower, $payment_keyword) !== false) {
-                                    $payment_jenis_icon = $payment_icon;
-                                    break;
-                                }
+                </div>
+            <?php else : ?>
+                <div class="bdh-jenis-grid">
+                    <?php
+                    $payment_jenis_icons = [
+                        'ekstrakurikuler' => 'fas fa-futbol',
+                        'lks' => 'fas fa-book-open',
+                        'ujian' => 'fas fa-file-alt',
+                        'rekreasi' => 'fas fa-bus',
+                    ];
+                    $payment_jenis_tones = ['green', 'blue', 'amber', 'indigo'];
+                    foreach ($pembayaran_summary['jenis_totals'] as $payment_jenis_index => $payment_jenis) :
+                        $payment_jenis_nama = (string) $payment_jenis['nama_pembayaran'];
+                        $payment_jenis_tampil = preg_replace('/ekstrakurikuler/i', 'Ekskul', $payment_jenis_nama);
+                        $payment_jenis_lower = strtolower($payment_jenis_nama);
+                        $payment_jenis_icon = 'fas fa-money-bill';
+                        foreach ($payment_jenis_icons as $payment_keyword => $payment_icon) {
+                            if (strpos($payment_jenis_lower, $payment_keyword) !== false) {
+                                $payment_jenis_icon = $payment_icon;
+                                break;
                             }
-                            $payment_jenis_tone = $payment_jenis_tones[$payment_jenis_index % count($payment_jenis_tones)];
-                        ?>
-                            <div class="list-group-item d-flex align-items-center" style="gap:12px;padding:12px 16px;">
-                                <span class="dash-stat-ico dsi-<?= htmlspecialchars($payment_jenis_tone, ENT_QUOTES, 'UTF-8') ?>" style="width:38px;height:38px;border-radius:12px;font-size:.9rem;flex:0 0 auto;">
-                                    <i class="<?= htmlspecialchars($payment_jenis_icon, ENT_QUOTES, 'UTF-8') ?>"></i>
-                                </span>
-                                <div class="flex-grow-1" style="min-width:0;">
-                                    <div class="font-weight-bold text-truncate" title="Total Bayar <?= htmlspecialchars($payment_jenis_tampil, ENT_QUOTES, 'UTF-8') ?>">Total Bayar <?= htmlspecialchars($payment_jenis_tampil, ENT_QUOTES, 'UTF-8') ?></div>
-                                    <div class="small text-muted">Jenis pembayaran</div>
-                                </div>
-                                <div class="font-weight-bold text-right text-nowrap"><?= bendahara_rupiah($payment_jenis['total_bayar_jenis']) ?></div>
+                        }
+                        $payment_jenis_tone = $payment_jenis_tones[$payment_jenis_index % count($payment_jenis_tones)];
+                    ?>
+                        <div class="bdh-jenis tint-<?= htmlspecialchars($payment_jenis_tone, ENT_QUOTES, 'UTF-8') ?>">
+                            <span class="bdh-jenis-ico dsi-<?= htmlspecialchars($payment_jenis_tone, ENT_QUOTES, 'UTF-8') ?>">
+                                <i class="<?= htmlspecialchars($payment_jenis_icon, ENT_QUOTES, 'UTF-8') ?>"></i>
+                            </span>
+                            <div class="bdh-jenis-body">
+                                <div class="bdh-jenis-nama" title="<?= htmlspecialchars($payment_jenis_tampil, ENT_QUOTES, 'UTF-8') ?>"><?= htmlspecialchars($payment_jenis_tampil, ENT_QUOTES, 'UTF-8') ?></div>
+                                <div class="bdh-jenis-meta">Total dibayar</div>
                             </div>
-                        <?php endforeach; ?>
+                            <div class="bdh-jenis-total"><?= bendahara_rupiah($payment_jenis['total_bayar_jenis']) ?></div>
+                        </div>
+                    <?php endforeach; ?>
+                </div>
+            <?php endif; ?>
+
+            <!-- Aktivitas Pembayaran -->
+            <?php
+            /* ── colour map Bootstrap class → token modern (sama dengan Dashboard Admin) ── */
+            $act_color_map = [
+                'bg-success'   => ['bg'=>'#16a34a','shadow'=>'rgba(22,163,74,.22)'],
+                'bg-warning'   => ['bg'=>'#d97706','shadow'=>'rgba(217,119,6,.22)'],
+                'bg-danger'    => ['bg'=>'#dc2626','shadow'=>'rgba(220,38,38,.22)'],
+                'bg-info'      => ['bg'=>'#0891b2','shadow'=>'rgba(8,145,178,.22)'],
+                'bg-secondary' => ['bg'=>'#64748b','shadow'=>'rgba(100,116,139,.22)'],
+                'bg-primary'   => ['bg'=>'#2563eb','shadow'=>'rgba(37,99,235,.22)'],
+            ];
+            $act_border_map = [
+                'bg-success'   => '#bbf7d0',
+                'bg-warning'   => '#fde68a',
+                'bg-danger'    => '#fecaca',
+                'bg-info'      => '#a5f3fc',
+                'bg-secondary' => '#e2e8f0',
+                'bg-primary'   => '#bfdbfe',
+            ];
+            $act_bg_map = [
+                'bg-success'   => '#f0fdf4',
+                'bg-warning'   => '#fffbeb',
+                'bg-danger'    => '#fff1f2',
+                'bg-info'      => '#ecfeff',
+                'bg-secondary' => '#f8fafc',
+                'bg-primary'   => '#eff6ff',
+            ];
+            ?>
+            <div class="dash-section-head" style="margin-top:28px;">
+                <div class="dsh-title">
+                    <span class="dsh-dot" style="background:#6366f1;"></span>
+                    Aktivitas Pembayaran
+                    <span style="display:inline-flex;align-items:center;justify-content:center;background:#2563eb;color:#fff;font-size:.72rem;font-weight:900;border-radius:999px;padding:2px 10px;"><?= number_format($jml_aktivitas, 0, ',', '.') ?></span>
+                </div>
+                <span class="badge badge-primary">24 jam terakhir</span>
+            </div>
+            <div class="card mb-0">
+                <div class="card-body" style="padding:16px 20px;">
+                    <div class="act-feed act-scroll" style="max-height:620px;overflow-y:auto;padding-right:4px;">
+                        <?php if ($jml_aktivitas > 0 && $q_aktivitas) : ?>
+                            <?php while ($activity_row = mysqli_fetch_assoc($q_aktivitas)) :
+                                $activity_jenis = (string) ($activity_row['jenis_aktivitas'] ?? '');
+                                $actClass  = function_exists('getActivityColor') ? getActivityColor($activity_jenis) : 'bg-primary';
+                                $actIcon   = function_exists('getActivityIcon')  ? getActivityIcon($activity_jenis)  : 'fas fa-info-circle';
+                                $actToken  = $act_color_map[$actClass]   ?? $act_color_map['bg-primary'];
+                                $actBorder = $act_border_map[$actClass] ?? '#bfdbfe';
+                                $actCardBg = $act_bg_map[$actClass]      ?? '#eff6ff';
+                                $activity_nama = (string) ($activity_row['nama_lengkap'] ?? 'Sistem');
+                                $actTs     = strtotime((string) $activity_row['created_at']);
+                            ?>
+                                <div class="act-item" style="
+                                    --act-bg: <?= $actToken['bg'] ?>;
+                                    --act-shadow: <?= $actToken['shadow'] ?>;
+                                    --act-card-bg: <?= $actCardBg ?>;
+                                    --act-card-border: <?= $actBorder ?>;
+                                ">
+                                    <div class="act-dot">
+                                        <i class="<?= htmlspecialchars($actIcon, ENT_QUOTES, 'UTF-8') ?>"></i>
+                                    </div>
+                                    <div class="act-body">
+                                        <div class="act-top">
+                                            <span class="act-name"><?= htmlspecialchars($activity_nama, ENT_QUOTES, 'UTF-8') ?></span>
+                                            <span class="act-ago">
+                                                <i class="far fa-clock"></i>
+                                                <?= timeAgo((string) $activity_row['created_at']) ?>
+                                            </span>
+                                        </div>
+                                        <div class="act-action-pill">
+                                            <i class="<?= htmlspecialchars($actIcon, ENT_QUOTES, 'UTF-8') ?>"></i>
+                                            <?= htmlspecialchars($activity_jenis, ENT_QUOTES, 'UTF-8') ?>
+                                        </div>
+                                        <div class="act-desc"><?= htmlspecialchars((string) ($activity_row['deskripsi'] ?? ''), ENT_QUOTES, 'UTF-8') ?></div>
+                                        <div class="act-footer">
+                                            <span><i class="far fa-calendar-alt"></i><?= date('d M Y', $actTs) ?></span>
+                                            <span><i class="far fa-clock"></i><?= date('H:i:s', $actTs) ?></span>
+                                        </div>
+                                    </div>
+                                </div>
+                            <?php endwhile; ?>
+                        <?php else : ?>
+                            <div class="text-center py-5">
+                                <div style="width:56px;height:56px;border-radius:16px;background:#eff6ff;display:grid;place-items:center;margin:0 auto 12px;">
+                                    <i class="fas fa-bolt" style="color:#2563eb;font-size:1.4rem;"></i>
+                                </div>
+                                <div style="font-weight:700;color:#334155;font-size:.9rem;">Belum ada aktivitas</div>
+                                <div style="font-size:.8rem;color:#94a3b8;margin-top:4px;">Aktivitas pembayaran akan muncul di sini</div>
+                            </div>
+                        <?php endif; ?>
                     </div>
-                <?php endif; ?>
+                </div>
             </div>
         </div>
     </section>

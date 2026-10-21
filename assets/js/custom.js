@@ -81,27 +81,6 @@ $(document).ready(function() {
     $('body').css('pointer-events', 'auto');
   });
   
-  // Prevent backdrop from blocking interactions
-  $(document).on('shown.bs.modal', '.modal', function() {
-    // Make sure backdrop doesn't block interactions
-    $('.modal-backdrop').off('click.backdrop').on('click.backdrop', function(e) {
-      e.stopPropagation();
-    });
-    
-    // Ensure page content remains accessible
-    $('body').removeClass('modal-open');
-    $('body').css('overflow', 'visible');
-  });
-  
-  // Adjust modal size and scrolling for long forms
-  $(document).on('show.bs.modal', '.modal', function() {
-    // Ensure the modal body can scroll if content is too long
-    var $modalBody = $(this).find('.modal-body');
-    if ($modalBody.length > 0) {
-      $modalBody.css({
-        'max-height': '60vh',
-        'overflow-y': 'auto'
-      });
-    }
-  });
+  // Keep Bootstrap's body scroll lock and backdrop click behavior.
+  // Long forms use .modal-dialog-scrollable on the dialog itself.
 });

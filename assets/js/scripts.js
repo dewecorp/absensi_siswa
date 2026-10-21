@@ -341,8 +341,10 @@ $(function() {
 
   // Select2
   if(jQuery().select2) {
-    const select2Opts = $(".select2").data('select2-opts')
-    $(".select2").select2(select2Opts || {});
+    const select2Opts = $("select.select2").data('select2-opts')
+    // Only initialize native <select> elements. Generated Select2 containers
+    // also have the .select2 class; selecting them creates a second, empty UI.
+    $("select.select2").select2(select2Opts || {});
   }
 
   // Global Select2 initializer for all <select> inside modals

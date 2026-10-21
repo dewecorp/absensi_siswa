@@ -28,7 +28,8 @@ $d_setting = mysqli_fetch_assoc($q_setting);
 $nama_sekolah = $d_setting['nama_sekolah'] ?? 'SMK NEGERI 1 CONTOH';
 $nama_bendahara = $d_setting['nama_bendahara'] ?? 'Bendahara Sekolah';
 $tahun_ajaran_aktif = $d_setting['tahun_ajaran'] ?? get_tahun_ajaran_aktif($koneksi);
-$tahun_ajaran_default = $is_kelas_alumni ? (tahun_ajaran_sebelumnya($tahun_ajaran_aktif) ?: $tahun_ajaran_aktif) : $tahun_ajaran_aktif;
+$tahun_ajaran_berjalan = tahun_ajaran_berjalan($koneksi);
+$tahun_ajaran_default = $is_kelas_alumni ? (tahun_ajaran_sebelumnya($tahun_ajaran_aktif) ?: $tahun_ajaran_berjalan) : $tahun_ajaran_berjalan;
 
 // Date strings
 $tgl = date('d');
@@ -144,7 +145,7 @@ while ($d_siswa = mysqli_fetch_assoc($q_siswa)) {
     // Header
     echo '<div class="header">';
     if (!empty($d_setting['logo'])) {
-        echo '<img src="assets/images/' . $d_setting['logo'] . '" alt="Logo">';
+        echo '<img src="../assets/img/pembayaran/' . $d_setting['logo'] . '" alt="Logo">';
     }
     echo '<div class="header-content">';
     echo '<h2>LAPORAN TAGIHAN SISWA</h2>';

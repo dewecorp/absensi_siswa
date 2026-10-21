@@ -440,6 +440,16 @@ switch ($user_level) {
             ['title' => 'Struktur Kelas', 'url' => '../admin/struktur_kelas.php', 'active' => $current_page === 'struktur_kelas.php'],
         ];
 
+        $is_pembayaran_path_admin = strpos(str_replace('\\', '/', $current_uri), '/pembayaran/') !== false;
+        $pembayaran_submenu_admin = [
+            ['title' => 'Ringkasan', 'url' => '../pembayaran/index.php?session_type=admin', 'active' => $is_pembayaran_path_admin && $current_page === 'index.php'],
+            ['title' => 'Jenis Bayar', 'url' => '../pembayaran/jenis_bayar.php?session_type=admin', 'active' => $is_pembayaran_path_admin && $current_page === 'jenis_bayar.php'],
+            ['title' => 'Transaksi', 'url' => '../pembayaran/transaksi.php?session_type=admin', 'active' => $is_pembayaran_path_admin && $current_page === 'transaksi.php'],
+            ['title' => 'Riwayat Transaksi', 'url' => '../pembayaran/riwayat.php?session_type=admin', 'active' => $is_pembayaran_path_admin && $current_page === 'riwayat.php'],
+            ['title' => 'Tagihan', 'url' => '../pembayaran/tagihan.php?session_type=admin', 'active' => $is_pembayaran_path_admin && $current_page === 'tagihan.php'],
+            ['title' => 'Laporan', 'url' => '../pembayaran/laporan.php?session_type=admin', 'active' => $is_pembayaran_path_admin && $current_page === 'laporan.php'],
+        ];
+
         $menu_items = [
             [
                 'title' => 'Dashboard',
@@ -512,12 +522,42 @@ switch ($user_level) {
                 'title' => 'Keuangan',
                 'icon' => 'fas fa-money-bill-wave',
                 'submenu' => [
-                    ['title' => 'Kategori Anggaran', 'url' => '../admin/kategori_anggaran.php', 'active' => $current_page === 'kategori_anggaran.php'],
-                    ['title' => 'RAB Madrasah', 'url' => '../admin/rab_madrasah.php', 'active' => $current_page === 'rab_madrasah.php'],
-                    ['title' => 'RAB Ekstrakurikuler', 'url' => '../admin/rab_ekstrakurikuler.php', 'active' => $current_page === 'rab_ekstrakurikuler.php'],
-                    ['title' => 'RAB Ujian', 'url' => '../admin/rab_ujian.php', 'active' => $current_page === 'rab_ujian.php']
+                    ['title' => 'Kategori Anggaran', 'url' => '../admin/kategori_anggaran.php?session_type=admin', 'active' => $current_page === 'kategori_anggaran.php'],
+                    ['title' => 'RAB Madrasah', 'url' => '../admin/rab_madrasah.php?session_type=admin', 'active' => $current_page === 'rab_madrasah.php'],
+                    ['title' => 'RAB Ekstrakurikuler', 'url' => '../admin/rab_ekstrakurikuler.php?session_type=admin', 'active' => $current_page === 'rab_ekstrakurikuler.php'],
+                    ['title' => 'RAB Ujian', 'url' => '../admin/rab_ujian.php?session_type=admin', 'active' => $current_page === 'rab_ujian.php']
                 ],
                 'active' => in_array($current_page, ['kategori_anggaran.php', 'rab_madrasah.php', 'rab_ekstrakurikuler.php', 'rab_ujian.php'])
+            ],
+            [
+                'title' => 'Pembayaran Siswa',
+                'icon' => 'fas fa-wallet',
+                'submenu' => $pembayaran_submenu_admin,
+                'active' => $is_pembayaran_path_admin
+            ],
+            [
+                'title' => 'Tabungan',
+                'icon' => 'fas fa-piggy-bank',
+                'submenu' => [
+                    ['title' => 'Tabungan Siswa', 'url' => '../bendahara/tabungan_siswa.php?session_type=admin', 'active' => $current_page === 'tabungan_siswa.php' && $current_dir === 'bendahara'],
+                ],
+                'active' => $current_page === 'tabungan_siswa.php' && $current_dir === 'bendahara'
+            ],
+            [
+                'title' => 'Gaji Guru',
+                'icon' => 'fas fa-money-bill-wave',
+                'submenu' => [
+                    ['title' => 'Data Gaji Guru', 'url' => '../bendahara/gaji_guru.php?session_type=admin', 'active' => $current_page === 'gaji_guru.php' && $current_dir === 'bendahara'],
+                ],
+                'active' => $current_page === 'gaji_guru.php' && $current_dir === 'bendahara'
+            ],
+            [
+                'title' => 'Honor & Insentif',
+                'icon' => 'fas fa-award',
+                'submenu' => [
+                    ['title' => 'Data Honor & Insentif', 'url' => '../bendahara/honor_insentif.php?session_type=admin', 'active' => $current_page === 'honor_insentif.php' && $current_dir === 'bendahara'],
+                ],
+                'active' => $current_page === 'honor_insentif.php' && $current_dir === 'bendahara'
             ],
             [
                 'title' => 'Nilai Siswa',
@@ -1006,16 +1046,14 @@ switch ($user_level) {
                 'title' => 'Pembayaran Siswa',
                 'icon' => 'fas fa-wallet',
                 'submenu' => [
-                    ['title' => 'Ringkasan Pembayaran', 'url' => '../pembayaran/index.php', 'active' => $is_pembayaran_path && $current_page === 'index.php'],
+                    ['title' => 'Ringkasan', 'url' => '../pembayaran/index.php', 'active' => $is_pembayaran_path && $current_page === 'index.php'],
                     ['title' => 'Jenis Bayar', 'url' => '../pembayaran/jenis_bayar.php', 'active' => $is_pembayaran_path && $current_page === 'jenis_bayar.php'],
+                    ['title' => 'Transaksi', 'url' => '../pembayaran/transaksi.php', 'active' => $is_pembayaran_path && $current_page === 'transaksi.php'],
+                    ['title' => 'Riwayat Transaksi', 'url' => '../pembayaran/riwayat.php', 'active' => $is_pembayaran_path && $current_page === 'riwayat.php'],
+                    ['title' => 'Tagihan', 'url' => '../pembayaran/tagihan.php', 'active' => $is_pembayaran_path && $current_page === 'tagihan.php'],
                     ['title' => 'Laporan', 'url' => '../pembayaran/laporan.php', 'active' => $is_pembayaran_path && $current_page === 'laporan.php'],
-                    ['title' => 'Pengaturan', 'url' => '../pembayaran/pengaturan.php', 'active' => $is_pembayaran_path && $current_page === 'pengaturan.php'],
-                    ['title' => 'Riwayat Bayar', 'url' => '../pembayaran/riwayat.php', 'active' => $is_pembayaran_path && $current_page === 'riwayat.php'],
-                    ['title' => 'Tagihan & Cetak', 'url' => '../pembayaran/tagihan.php', 'active' => $is_pembayaran_path && $current_page === 'tagihan.php'],
-                    ['title' => 'Tagihan Siswa', 'url' => '../bendahara/tagihan_siswa.php', 'active' => $current_page === 'tagihan_siswa.php'],
-                    ['title' => 'Transaksi Bayar', 'url' => '../pembayaran/transaksi.php', 'active' => $is_pembayaran_path && $current_page === 'transaksi.php'],
                 ],
-                'active' => $is_pembayaran_path || $current_page === 'tagihan_siswa.php'
+                'active' => $is_pembayaran_path
             ],
             [
                 'title' => 'Tabungan',

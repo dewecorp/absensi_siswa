@@ -268,7 +268,7 @@ $qr_src_bendahara = generate_qr_bendahara($nama_bendahara, $nama_sekolah, 40);
             <div>
                 <div class="header-section">
                     <?php if (!empty($setting['logo'])): ?>
-                        <img src="assets/images/<?= $setting['logo'] ?>" alt="Logo">
+                        <img src="../assets/img/pembayaran/<?= $setting['logo'] ?>" alt="Logo">
                     <?php endif; ?>
                     <div class="header-title-box">
                         <h2><?= strtoupper($setting['nama_sekolah']) ?></h2>

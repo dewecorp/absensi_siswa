@@ -72,27 +72,6 @@ if (!function_exists('bendahara_rupiah')) {
     }
 }
 
-if (!function_exists('bendahara_rupiah_short')) {
-    /**
-     * Rupiah ringkas untuk kartu statistik sempit: Rp 53,6 jt / Rp 1,2 M / Rp 425 rb.
-     */
-    function bendahara_rupiah_short($amount): string
-    {
-        $n = (int)$amount;
-        $abs = abs($n);
-        if ($abs >= 1000000000) {
-            return 'Rp ' . number_format($n / 1000000000, 1, ',', '.') . ' M';
-        }
-        if ($abs >= 1000000) {
-            return 'Rp ' . number_format($n / 1000000, 1, ',', '.') . ' jt';
-        }
-        if ($abs >= 1000) {
-            return 'Rp ' . number_format($n / 1000, 0, ',', '.') . ' rb';
-        }
-        return 'Rp ' . number_format($n, 0, ',', '.');
-    }
-}
-
 if (!function_exists('bendahara_kelas_label')) {
     function bendahara_kelas_label(string $kelas): string
     {

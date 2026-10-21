@@ -345,7 +345,7 @@ if (!isset($school_profile)) {
     <?php endif; ?>
 
     <!-- Template JS File -->
-    <script src="../assets/js/scripts.js"></script>
+    <script src="../assets/js/scripts.js?v=<?= (int) @filemtime(__DIR__ . '/../assets/js/scripts.js') ?>"></script>
     <script src="../assets/js/custom.js"></script>
     <script src="../assets/js/global_dropdown.js?v=<?= filemtime(__DIR__ . '/../assets/js/global_dropdown.js') ?>"></script>
     <!-- Rekap semester: tabel di desktop, kartu di mobile -->

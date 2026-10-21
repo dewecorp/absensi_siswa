@@ -19,6 +19,35 @@ function kelas_adalah_alumni($nama_kelas) {
     return stripos(trim((string) $nama_kelas), 'alumni') !== false;
 }
 
+/**
+ * Cek apakah alumni masih memiliki tagihan/tunggakan yang belum dibayar.
+ * Alumni tetap ditampilkan (dan tidak dihapus) sampai tagihannya dibayarkan.
+ */
+function alumni_masih_punya_tagihan($koneksi, $nisn) {
+    $nisn = trim((string) $nisn);
+    if ($nisn === '') {
+        return false;
+    }
+
+    if (cek_tunggakan_tahun_ajaran_lama($koneksi, $nisn)) {
+        return true;
+    }
+
+    $berjalan = trim((string) tahun_ajaran_berjalan($koneksi));
+    if ($berjalan === '') {
+        return false;
+    }
+
+    // Alumni tidak ditagih untuk tahun ajaran baru; acuan = tahun terakhir mereka.
+    $aktif = trim((string) get_tahun_ajaran_aktif($koneksi));
+    $tahun_alumni = ($berjalan === $aktif) ? tahun_ajaran_sebelumnya($berjalan) : $berjalan;
+    if (trim((string) $tahun_alumni) === '') {
+        return false;
+    }
+
+    return (bool) cek_tagihan_tunggakan($koneksi, $nisn, $tahun_alumni);
+}
+
 function hapus_siswa_alumni_jika_lunas($koneksi, $nisn, $tahun_ajaran_aktif = null) {
     $nisn = trim((string) $nisn);
     if ($nisn === '') {
@@ -40,7 +69,7 @@ function hapus_siswa_alumni_jika_lunas($koneksi, $nisn, $tahun_ajaran_aktif = nu
     }
 
     $tahun_ajaran_aktif = trim((string) ($tahun_ajaran_aktif ?? get_tahun_ajaran_aktif($koneksi)));
-    if (cek_tunggakan_tahun_ajaran_lama($koneksi, $nisn, $tahun_ajaran_aktif)) {
+    if (alumni_masih_punya_tagihan($koneksi, $nisn)) {
         return false;
     }
 
@@ -71,7 +100,7 @@ function daftar_siswa_alumni_lunas($koneksi, $tahun_ajaran_aktif = null, $limit 
     $alumni_lunas = [];
     while ($row = mysqli_fetch_assoc($q_alumni)) {
         $nisn = trim((string) ($row['nisn'] ?? ''));
-        if ($nisn !== '' && !cek_tunggakan_tahun_ajaran_lama($koneksi, $nisn, $tahun_ajaran_aktif)) {
+        if ($nisn !== '' && !alumni_masih_punya_tagihan($koneksi, $nisn)) {
             $alumni_lunas[] = $row;
         }
     }
@@ -227,6 +256,22 @@ function tahun_ajaran_aktif_sudah_mulai($koneksi) {
 
     $today = new DateTime(date('Y-m-d'));
     return $today >= $mulai;
+}
+
+/**
+ * Tahun ajaran yang sedang berjalan (acuan tagihan aktif).
+ * - Sebelum Tanggal Mulai Tahun Ajaran aktif → tahun ajaran sebelumnya masih berjalan.
+ * - Pada/sesudah Tanggal Mulai Tahun Ajaran aktif → tahun ajaran aktif berjalan,
+ *   dan tahun ajaran sebelumnya berubah menjadi tunggakan.
+ */
+function tahun_ajaran_berjalan($koneksi) {
+    $aktif = get_tahun_ajaran_aktif($koneksi);
+    if (tahun_ajaran_aktif_sudah_mulai($koneksi)) {
+        return $aktif;
+    }
+
+    $sebelumnya = tahun_ajaran_sebelumnya($aktif);
+    return $sebelumnya !== '' ? $sebelumnya : $aktif;
 }
 
 function tahun_ajaran_boleh_ditagihkan($koneksi, $tahun_ajaran) {
@@ -505,11 +550,16 @@ function arsipkan_dan_hapus_transaksi_tahun_ajaran_lama($koneksi, $tahun_ajaran_
 function daftar_tahun_ajaran_lama_untuk_tunggakan($koneksi, $nisn, $tahun_ajaran_aktif = null) {
     ensure_pembayaran_tahun_ajaran_column($koneksi);
 
-    $tahun_ajaran_aktif = trim((string) ($tahun_ajaran_aktif ?? get_tahun_ajaran_aktif($koneksi)));
-    $tahun_aktif_awal = tahun_ajaran_awal($tahun_ajaran_aktif);
+    // Acuan tunggakan = tahun ajaran yang sedang berjalan.
+    // Sebelum Tanggal Mulai Tahun Ajaran, tahun sebelumnya masih berjalan (belum menjadi tunggakan).
+    $acuan = tahun_ajaran_berjalan($koneksi);
+    if (trim((string) $acuan) === '') {
+        $acuan = trim((string) ($tahun_ajaran_aktif ?? get_tahun_ajaran_aktif($koneksi)));
+    }
+    $tahun_aktif_awal = tahun_ajaran_awal($acuan);
     $tahun_ajaran_opsi = [];
 
-    $tahun_sebelumnya = tahun_ajaran_sebelumnya($tahun_ajaran_aktif);
+    $tahun_sebelumnya = tahun_ajaran_sebelumnya($acuan);
     if ($tahun_sebelumnya !== '') {
         $tahun_ajaran_opsi[] = $tahun_sebelumnya;
     }
