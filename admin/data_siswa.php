@@ -405,6 +405,7 @@ include '../templates/header.php';
 include '../templates/sidebar.php';
 ?>
 
+<link rel="stylesheet" href="../assets/css/simad-card-view.css?v=<?= (int) @filemtime(__DIR__ . '/../assets/css/simad-card-view.css') ?>">
 <style>
 @media (max-width: 768px) {
     .dropdown { position: static !important; }
@@ -419,14 +420,6 @@ include '../templates/sidebar.php';
         z-index: 5000 !important;
         transform: none !important;
     }
-}
-#table-1 td:last-child {
-    white-space: nowrap;
-    min-width: 140px;
-}
-#table-1 th:nth-child(4),
-#table-1 td:nth-child(4) {
-    min-width: 220px;
 }
 </style>
 
@@ -561,58 +554,73 @@ include '../templates/sidebar.php';
                             <?php $edit_modals = ''; ?>
                             <!-- Table Section - Only shown when class is selected -->
                             <?php if ($selected_kelas_id > 0): ?>
-                            <div class="table-responsive">
-                                <table class="table table-striped" id="table-1">
-                                    <thead>
-                                        <tr>
-                                            <th>
-                                                <div class="custom-checkbox custom-control">
-                                                    <input type="checkbox" data-checkboxes="siswa" data-checkbox-role="dad" class="custom-control-input" id="checkbox-all">
-                                                    <label for="checkbox-all" class="custom-control-label">&nbsp;</label>
-                                                </div>
-                                            </th>
-                                            <th>No</th>
-                                            <th>Foto</th>
-                                            <th>Nama Siswa</th>
-                                            <th>NISN</th>
-                                            <th>Password</th>
-                                            <th>Jenis Kelamin</th>
-                                            <th>Tempat, Tgl Lahir</th>
-                                            <th>Orang Tua/Wali</th>
-                                            <th>Aksi</th>
-                                        </tr>
-                                    </thead>
-                                    <tbody>
-                                        <?php foreach ($students as $index => $student): ?>
-                                        <tr data-id-kelas="<?php echo $student['id_kelas'] ?? ''; ?>" data-tanggal-masuk="<?php echo $student['tanggal_masuk'] ?? ''; ?>">
-                                            <td>
-                                                <div class="custom-checkbox custom-control">
-                                                    <input type="checkbox" data-checkboxes="siswa" class="custom-control-input" id="checkbox-<?php echo $student['id_siswa']; ?>" value="<?php echo $student['id_siswa']; ?>">
-                                                    <label for="checkbox-<?php echo $student['id_siswa']; ?>" class="custom-control-label">&nbsp;</label>
-                                                </div>
-                                            </td>
-                                            <td><?php echo $index + 1; ?></td>
-                                            <td>
-                                                <?php if (!empty($student['foto']) && file_exists('../assets/img/siswa/' . $student['foto'])): ?>
-                                                    <img alt="image" src="../assets/img/siswa/<?php echo $student['foto']; ?>" class="rounded-circle shadow-sm" width="35" height="35" style="object-fit: cover;">
-                                                <?php else: ?>
-                                                    <div class="rounded-circle bg-primary text-white d-flex align-items-center justify-content-center shadow-sm" style="width: 35px; height: 35px; font-weight: bold; font-size: 12px;">
-                                                        <?php echo strtoupper(substr($student['nama_siswa'], 0, 1)); ?>
+                            <div class="simad-card-view-wrapper">
+                                <div class="simad-card-toolbar">
+                                    <div class="custom-checkbox custom-control">
+                                        <input type="checkbox" class="custom-control-input" id="checkbox-all-card">
+                                        <label for="checkbox-all-card" class="custom-control-label font-weight-bold">Pilih Semua Siswa</label>
+                                    </div>
+                                    <div class="text-muted small">
+                                        Total: <?= count($students) ?> Siswa
+                                    </div>
+                                </div>
+                                <div class="table-responsive">
+                                    <table class="table simad-card-view" id="table-1">
+                                        <thead>
+                                            <tr>
+                                                <th>
+                                                    <div class="custom-checkbox custom-control">
+                                                        <input type="checkbox" data-checkboxes="siswa" data-checkbox-role="dad" class="custom-control-input" id="checkbox-all">
+                                                        <label for="checkbox-all" class="custom-control-label">&nbsp;</label>
                                                     </div>
-                                                <?php endif; ?>
-                                            </td>
-                                            <td><?php echo htmlspecialchars(htmlspecialchars_decode($student['nama_siswa'], ENT_QUOTES)); ?></td>
-                                            <td><?php echo htmlspecialchars($student['nisn']); ?></td>
-                                            <td><span class="badge badge-light border font-weight-bold"><?php echo htmlspecialchars($student['password_plain'] ?? '-'); ?></span></td>
-                                            <td><?php echo $student['jenis_kelamin'] == 'L' ? 'Laki-laki' : ($student['jenis_kelamin'] == 'P' ? 'Perempuan' : '-'); ?></td>
-                                            <td><?php echo htmlspecialchars($student['tempat_lahir'] ?? '-') . ', ' . ($student['tanggal_lahir'] ? date('d-m-Y', strtotime($student['tanggal_lahir'])) : '-'); ?></td>
-                                            <td><?php echo htmlspecialchars($student['wali'] ?? '-'); ?></td>
-                                            <td>
-                                                <a href="cetak_qr_siswa.php?id=<?php echo $student['id_siswa']; ?>" target="_blank" class="btn btn-dark btn-sm" title="Cetak QR Code"><i class="fas fa-qrcode"></i></a>
-                                                <a href="#" class="btn btn-primary btn-sm" data-toggle="modal" data-target="#editModal<?php echo $student['id_siswa']; ?>"><i class="fas fa-edit"></i></a>
-                                                <a href="#" class="btn btn-danger btn-sm delete-btn" data-id="<?php echo $student['id_siswa']; ?>" data-name="<?php echo htmlspecialchars($student['nama_siswa']); ?>" data-action="delete_siswa"><i class="fas fa-trash"></i></a>
-                                            </td>
-                                        </tr>
+                                                </th>
+                                                <th>No</th>
+                                                <th>Foto</th>
+                                                <th>Nama Siswa</th>
+                                                <th>NISN</th>
+                                                <th>Password</th>
+                                                <th>Jenis Kelamin</th>
+                                                <th>Tempat, Tgl Lahir</th>
+                                                <th>Orang Tua/Wali</th>
+                                                <th>Aksi</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+                                            <?php foreach ($students as $index => $student): ?>
+                                            <tr data-id-kelas="<?php echo $student['id_kelas'] ?? ''; ?>" data-tanggal-masuk="<?php echo $student['tanggal_masuk'] ?? ''; ?>">
+                                                <td class="simad-card-check">
+                                                    <div class="custom-checkbox custom-control">
+                                                        <input type="checkbox" data-checkboxes="siswa" class="custom-control-input" id="checkbox-<?php echo $student['id_siswa']; ?>" value="<?php echo $student['id_siswa']; ?>">
+                                                        <label for="checkbox-<?php echo $student['id_siswa']; ?>" class="custom-control-label">&nbsp;</label>
+                                                    </div>
+                                                </td>
+                                                <td class="simad-card-no"><span class="badge-card-no">#<?php echo $index + 1; ?></span></td>
+                                                <td class="simad-card-photo">
+                                                    <?php if (!empty($student['foto']) && file_exists('../assets/img/siswa/' . $student['foto'])): ?>
+                                                        <img alt="image" src="../assets/img/siswa/<?php echo $student['foto']; ?>" class="rounded-circle shadow-sm" width="64" height="64" style="object-fit: cover;">
+                                                    <?php else: ?>
+                                                        <div class="avatar-fallback shadow-sm">
+                                                            <?php echo strtoupper(substr($student['nama_siswa'], 0, 1)); ?>
+                                                        </div>
+                                                    <?php endif; ?>
+                                                </td>
+                                                <td class="simad-card-name">
+                                                    <div class="person-name"><?php echo htmlspecialchars(htmlspecialchars_decode($student['nama_siswa'], ENT_QUOTES)); ?></div>
+                                                    <?php if (!empty($selected_kelas_name)): ?>
+                                                        <div class="person-sub"><span class="badge badge-info">Kelas <?php echo htmlspecialchars($selected_kelas_name); ?></span></div>
+                                                    <?php endif; ?>
+                                                </td>
+                                                <td data-label="NISN"><?php echo htmlspecialchars($student['nisn']); ?></td>
+                                                <td data-label="Password"><span class="badge badge-light border font-weight-bold"><?php echo htmlspecialchars($student['password_plain'] ?? '-'); ?></span></td>
+                                                <td data-label="Jenis Kelamin"><?php echo $student['jenis_kelamin'] == 'L' ? 'Laki-laki' : ($student['jenis_kelamin'] == 'P' ? 'Perempuan' : '-'); ?></td>
+                                                <td data-label="TTL"><?php echo htmlspecialchars($student['tempat_lahir'] ?? '-') . ', ' . ($student['tanggal_lahir'] ? date('d-m-Y', strtotime($student['tanggal_lahir'])) : '-'); ?></td>
+                                                <td data-label="Orang Tua / Wali"><?php echo htmlspecialchars($student['wali'] ?? '-'); ?></td>
+                                                <td class="simad-card-actions">
+                                                    <a href="cetak_qr_siswa.php?id=<?php echo $student['id_siswa']; ?>" target="_blank" class="btn btn-dark btn-sm" title="Cetak QR Code"><i class="fas fa-qrcode"></i> QR</a>
+                                                    <a href="#" class="btn btn-primary btn-sm" data-toggle="modal" data-target="#editModal<?php echo $student['id_siswa']; ?>"><i class="fas fa-edit"></i> Edit</a>
+                                                    <a href="#" class="btn btn-danger btn-sm delete-btn" data-id="<?php echo $student['id_siswa']; ?>" data-name="<?php echo htmlspecialchars($student['nama_siswa']); ?>" data-action="delete_siswa"><i class="fas fa-trash"></i> Hapus</a>
+                                                </td>
+                                            </tr>
                                         <?php
                                         $edit_modals .= '<div class="modal fade edit-modal" id="editModal' . $student['id_siswa'] . '" tabindex="-1" role="dialog" aria-hidden="true">
                                             <div class="modal-dialog" role="document">
@@ -702,6 +710,7 @@ include '../templates/sidebar.php';
                                         <?php endforeach; ?>
                                     </tbody>
                                 </table>
+                            </div>
                             </div>
                             <div id="exportTableContainer" style="display:none;">
                                 <table>
@@ -825,38 +834,6 @@ include '../templates/sidebar.php';
 if (!isset($js_page)) {
     $js_page = [];
 }
-$js_page[] = "
-$(document).ready(function() {
-    // Initialize DataTables with pagination and show entries
-    if ($.fn.DataTable) {
-        $('#table-1').DataTable({
-            \"columnDefs\": [
-                { \"sortable\": false, \"targets\": [5] } // Disable sorting for action column
-            ],
-            \"paging\": true,
-            \"lengthChange\": true,
-            \"pageLength\": 10,
-            \"lengthMenu\": [[10, 25, 50, 100, -1], [10, 25, 50, 100, 'Semua']],
-            \"dom\": 'lfrtip',
-            \"info\": true,
-            \"language\": {
-                \"lengthMenu\": \"Tampilkan _MENU_ entri\",
-                \"zeroRecords\": \"Tidak ada data yang ditemukan\",
-                \"info\": \"Menampilkan _START_ sampai _END_ dari _TOTAL_ entri\",
-                \"infoEmpty\": \"Menampilkan 0 sampai 0 dari 0 entri\",
-                \"infoFiltered\": \"(disaring dari _MAX_ total entri)\",
-                \"search\": \"Cari:\",
-                \"paginate\": {
-                    \"first\": \"Pertama\",
-                    \"last\": \"Terakhir\",
-                    \"next\": \"Selanjutnya\",
-                    \"previous\": \"Sebelumnya\"
-                }
-            }
-        });
-    }
-});
-";
 $js_page[] = '
 $(document).ready(function() {
     console.log("Delete handler initialized");
@@ -1209,13 +1186,14 @@ $(document).ready(function() {
         }
         
         // Update select all checkbox state based on visible checkboxes
-        $('#checkbox-all').prop('checked', allVisibleChecked && totalCount > 0);
-        $('#checkbox-all').prop('indeterminate', checkedCount > 0 && checkedCount < totalCount);
+        $('#checkbox-all, #checkbox-all-card').prop('checked', allVisibleChecked && totalCount > 0);
+        $('#checkbox-all, #checkbox-all-card').prop('indeterminate', checkedCount > 0 && checkedCount < totalCount);
     }
     
     // Handle select all checkbox
-    $(document).on('change', '#checkbox-all', function() {
+    $(document).on('change', '#checkbox-all, #checkbox-all-card', function() {
         const isChecked = $(this).is(':checked');
+        $('#checkbox-all, #checkbox-all-card').prop('checked', isChecked);
         // Only check/uncheck visible checkboxes (current page)
         $('#table-1 tbody tr:visible input[data-checkboxes=\"siswa\"]:not([data-checkbox-role=\"dad\"])').prop('checked', isChecked);
         updateBulkButtons();
@@ -1284,8 +1262,9 @@ $(document).ready(function() {
             }
             
             $('#table-1').DataTable({
+                \"order\": [[3, \"asc\"]],
                 \"columnDefs\": [
-                    { \"sortable\": false, \"targets\": [0, 6] } // Disable sorting for checkbox (col 0) and action (col 6) columns
+                    { \"sortable\": false, \"targets\": [0, 2, 9] } // Disable sorting for checkbox (col 0), foto (col 2), and action (col 9)
                 ],
                 \"paging\": true,
                 \"lengthChange\": true,
@@ -1308,6 +1287,11 @@ $(document).ready(function() {
                     }
                 },
                 \"drawCallback\": function(settings) {
+                    var api = this.api();
+                    var startIndex = api.context[0]._iDisplayStart;
+                    api.rows({page: 'current'}).nodes().each(function(row, i) {
+                        $(row).find('.badge-card-no').text('#' + (startIndex + i + 1));
+                    });
                     setTimeout(updateBulkButtons, 100);
                 }
             });

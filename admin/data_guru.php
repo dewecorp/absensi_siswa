@@ -960,15 +960,16 @@ $(document).ready(function() {
         $('#bulk-delete-btn').prop('disabled', checkedCount === 0);
         
         // Update select all checkbox state based on visible checkboxes
-        $('#checkbox-all').prop('checked', allVisibleChecked && totalCount > 0);
-        $('#checkbox-all').prop('indeterminate', checkedCount > 0 && checkedCount < totalCount);
+        $('#checkbox-all, #checkbox-all-card').prop('checked', allVisibleChecked && totalCount > 0);
+        $('#checkbox-all, #checkbox-all-card').prop('indeterminate', checkedCount > 0 && checkedCount < totalCount);
         
         console.log('Checked count:', checkedCount, 'Total:', totalCount, 'Visible checked:', visibleChecked, 'Visible total:', visibleCheckboxes.length);
     }
     
     // Handle select all checkbox
-    $(document).on('change', '#checkbox-all', function() {
+    $(document).on('change', '#checkbox-all, #checkbox-all-card', function() {
         const isChecked = $(this).is(':checked');
+        $('#checkbox-all, #checkbox-all-card').prop('checked', isChecked);
         // Only check/uncheck visible checkboxes (current page)
         $('#table-1 tbody tr:visible input[data-checkboxes=\"guru\"]:not([data-checkbox-role=\"dad\"])').prop('checked', isChecked);
         updateBulkButtons();
@@ -1040,8 +1041,9 @@ $(document).ready(function() {
             }
             
             $('#table-1').DataTable({
+                \"order\": [[3, \"asc\"]],
                 \"columnDefs\": [
-                    { \"sortable\": false, \"targets\": [1, 2, 14] } // Disable sorting for checkbox, foto, and action columns
+                    { \"sortable\": false, \"targets\": [1, 2, 15] } // Disable sorting for checkbox, foto, and action columns
                 ],
                 \"paging\": true,
                 \"lengthChange\": true,
@@ -1064,8 +1066,14 @@ $(document).ready(function() {
                     }
                 },
                 \"drawCallback\": function(settings) {
+                    var api = this.api();
+                    var startIndex = api.context[0]._iDisplayStart;
+                    api.rows({page: 'current'}).nodes().each(function(row, i) {
+                        $(row).find('.badge-card-no').text('#' + (startIndex + i + 1));
+                    });
                     // Update bulk buttons after table redraw
                     setTimeout(updateBulkButtons, 100);
+                }
                 }
             });
             console.log('DataTables initialized successfully');
@@ -1100,6 +1108,7 @@ include '../templates/sidebar.php';
 
 echo "<!-- DEBUG: After template inclusion -->\n";
 ?>
+<link rel="stylesheet" href="../assets/css/simad-card-view.css?v=<?= (int) @filemtime(__DIR__ . '/../assets/css/simad-card-view.css') ?>">
 <style>
 @media (max-width: 768px) {
     .dropdown { position: static !important; }
@@ -1114,49 +1123,6 @@ echo "<!-- DEBUG: After template inclusion -->\n";
         z-index: 5000 !important;
         transform: none !important;
     }
-}
-
-/* Kolom sticky hanya untuk desktop */
-@media (min-width: 992px) {
-#table-1 th:nth-child(1),
-#table-1 td:nth-child(1) {
-    position: sticky;
-    left: 0;
-    z-index: 1;
-    background-color: #fff;
-    min-width: 50px;
-    text-align: center;
-}
-#table-1 th:nth-child(3),
-#table-1 td:nth-child(3) {
-    position: sticky;
-    left: 55px;
-    z-index: 2;
-    background-color: #fff;
-    min-width: 50px;
-}
-#table-1 th:nth-child(4),
-#table-1 td:nth-child(4) {
-    position: sticky;
-    left: 115px;
-    z-index: 3;
-    background-color: #fff;
-    min-width: 220px;
-}
-#table-1 th:nth-child(1),
-#table-1 th:nth-child(3),
-#table-1 th:nth-child(4) {
-    z-index: 4;
-}
-#table-1 tbody tr:nth-child(odd) td:nth-child(1),
-#table-1 tbody tr:nth-child(odd) td:nth-child(3),
-#table-1 tbody tr:nth-child(odd) td:nth-child(4) {
-    background-color: #f2f2f2;
-}
-#table-1 td:last-child {
-    white-space: nowrap;
-    min-width: 140px;
-}
 }
 </style>
             <!-- Main Content -->
@@ -1273,102 +1239,118 @@ echo "<!-- DEBUG: After template inclusion -->\n";
                                         </script>
                                     <?php endif; ?>
 
-                                    <div class="table-responsive">
-                                        <table class="table table-striped" id="table-1">
-                                            <thead>
-                                                <tr>
-                                                    <th>No</th>
-                                                    <th class="text-center">
-                                                        <div class="custom-checkbox custom-control">
-                                                            <input type="checkbox" data-checkboxes="guru" data-checkbox-role="dad" class="custom-control-input" id="checkbox-all">
-                                                            <label for="checkbox-all" class="custom-control-label">&nbsp;</label>
-                                                        </div>
-                                                    </th>
-                                                    <th>Foto</th>
-                                                    <th>Nama Guru</th>
-                                                    <th>Kode Guru</th>
-                                                    <th>NUPTK</th>
-                                                    <th>Tempat Tanggal Lahir</th>
-                                                    <th>Jenis Kelamin</th>
-                                                    <th>Pendidikan</th>
-                                                    <th>TMT</th>
-                                                    <th>Masa Bakti</th>
-                                                     <th>Mengajar</th>
-                                                    <th>Jabatan</th>
-                                                    <th>Wali Kelas</th>
-                                                    <th>Password</th>
-                                                    <th>Aksi</th>
-                                                </tr>
-                                            </thead>
-                                            <tbody>
-                                                <?php 
-                                                $no = 1;
-                                                // Create lookup array for classes (ID => name)
-                                                $class_lookup = [];
-                                                foreach ($classes as $kelas) {
-                                                    $class_lookup[$kelas['id_kelas']] = $kelas['nama_kelas'];
-                                                }
-                                                
-                                                foreach ($teachers as $teacher): 
-                                                    // Decode mengajar JSON and get class names
-                                                    $mengajar_classes = [];
-                                                    $mengajar_names = [];
-                                                    if (!empty($teacher['mengajar'])) {
-                                                        $decoded = json_decode($teacher['mengajar'], true);
-                                                        if (is_array($decoded)) {
-                                                            $mengajar_classes = $decoded;
-                                                            // Get class names from IDs
-                                                            foreach ($decoded as $kelas_id) {
-                                                                // Handle both numeric IDs and string IDs
-                                                                $kelas_id = (string)$kelas_id;
-                                                                if (isset($class_lookup[(int)$kelas_id])) {
-                                                                    $mengajar_names[] = $class_lookup[(int)$kelas_id];
-                                                                } elseif (isset($class_lookup[$kelas_id])) {
-                                                                    $mengajar_names[] = $class_lookup[$kelas_id];
-                                                                } else {
-                                                                    // If not found by ID, check if it's a name
-                                                                    foreach ($classes as $kelas) {
-                                                                        if ($kelas['nama_kelas'] == $kelas_id) {
-                                                                            $mengajar_names[] = $kelas['nama_kelas'];
-                                                                            break;
+                                    <div class="simad-card-view-wrapper">
+                                        <div class="simad-card-toolbar">
+                                            <div class="custom-checkbox custom-control">
+                                                <input type="checkbox" class="custom-control-input" id="checkbox-all-card">
+                                                <label for="checkbox-all-card" class="custom-control-label font-weight-bold">Pilih Semua Guru</label>
+                                            </div>
+                                            <div class="text-muted small">
+                                                Total: <?= count($teachers) ?> Guru
+                                            </div>
+                                        </div>
+                                        <div class="table-responsive">
+                                            <table class="table simad-card-view" id="table-1">
+                                                <thead>
+                                                    <tr>
+                                                        <th>No</th>
+                                                        <th class="text-center">
+                                                            <div class="custom-checkbox custom-control">
+                                                                <input type="checkbox" data-checkboxes="guru" data-checkbox-role="dad" class="custom-control-input" id="checkbox-all">
+                                                                <label for="checkbox-all" class="custom-control-label">&nbsp;</label>
+                                                            </div>
+                                                        </th>
+                                                        <th>Foto</th>
+                                                        <th>Nama Guru</th>
+                                                        <th>Kode Guru</th>
+                                                        <th>NUPTK</th>
+                                                        <th>Tempat Tanggal Lahir</th>
+                                                        <th>Jenis Kelamin</th>
+                                                        <th>Pendidikan</th>
+                                                        <th>TMT</th>
+                                                        <th>Masa Bakti</th>
+                                                        <th>Mengajar</th>
+                                                        <th>Jabatan</th>
+                                                        <th>Wali Kelas</th>
+                                                        <th>Password</th>
+                                                        <th>Aksi</th>
+                                                    </tr>
+                                                </thead>
+                                                <tbody>
+                                                    <?php 
+                                                    $no = 1;
+                                                    // Create lookup array for classes (ID => name)
+                                                    $class_lookup = [];
+                                                    foreach ($classes as $kelas) {
+                                                        $class_lookup[$kelas['id_kelas']] = $kelas['nama_kelas'];
+                                                    }
+                                                    
+                                                    foreach ($teachers as $teacher): 
+                                                        // Decode mengajar JSON and get class names
+                                                        $mengajar_classes = [];
+                                                        $mengajar_names = [];
+                                                        if (!empty($teacher['mengajar'])) {
+                                                            $decoded = json_decode($teacher['mengajar'], true);
+                                                            if (is_array($decoded)) {
+                                                                $mengajar_classes = $decoded;
+                                                                // Get class names from IDs
+                                                                foreach ($decoded as $kelas_id) {
+                                                                    // Handle both numeric IDs and string IDs
+                                                                    $kelas_id = (string)$kelas_id;
+                                                                    if (isset($class_lookup[(int)$kelas_id])) {
+                                                                        $mengajar_names[] = $class_lookup[(int)$kelas_id];
+                                                                    } elseif (isset($class_lookup[$kelas_id])) {
+                                                                        $mengajar_names[] = $class_lookup[$kelas_id];
+                                                                    } else {
+                                                                        // If not found by ID, check if it's a name
+                                                                        foreach ($classes as $kelas) {
+                                                                            if ($kelas['nama_kelas'] == $kelas_id) {
+                                                                                $mengajar_names[] = $kelas['nama_kelas'];
+                                                                                break;
+                                                                            }
                                                                         }
                                                                     }
                                                                 }
                                                             }
                                                         }
-                                                    }
-                                                    $mengajar_display = !empty($mengajar_names) ? implode(', ', $mengajar_names) : '-';
-                                                ?>
-                                                <tr>
-                                                    <td class="text-center"><?php echo $no++; ?></td>
-                                                    <td>
-                                                        <div class="custom-checkbox custom-control">
-                                                            <input type="checkbox" data-checkboxes="guru" class="custom-control-input" id="checkbox-<?php echo $teacher['id_guru']; ?>" value="<?php echo $teacher['id_guru']; ?>">
-                                                            <label for="checkbox-<?php echo $teacher['id_guru']; ?>" class="custom-control-label">&nbsp;</label>
-                                                        </div>
-                                                    </td>
-                                                    <td><?php echo getTeacherAvatarImage($teacher, 30); ?></td>
-                                                    <td><?php echo htmlspecialchars($teacher['nama_guru']); ?></td>
-                                                    <td><?php echo htmlspecialchars($teacher['kode_guru'] ?? '-'); ?></td>
-                                                    <td><?php echo htmlspecialchars($teacher['nuptk']); ?></td>
-                                                    <td><?php echo htmlspecialchars($teacher['tempat_lahir']); ?>, <?php echo $teacher['tanggal_lahir'] ? date('d-m-Y', strtotime($teacher['tanggal_lahir'])) : '-'; ?></td>
-                                                    <td><?php echo htmlspecialchars($teacher['jenis_kelamin']); ?></td>
-                                                    <td><?php echo !empty($teacher['pendidikan']) ? htmlspecialchars($teacher['pendidikan']) : '-'; ?></td>
-                                                    <td><?php echo !empty($teacher['tmt']) ? date('d-m-Y', strtotime($teacher['tmt'])) : '-'; ?></td>
-                                                    <td><?php echo calculateMasaBakti($teacher['tmt'] ?? null); ?></td>
-                                                     <td><?php echo htmlspecialchars($mengajar_display ?: '-'); ?></td>
-                                                    <td><?php echo !empty($teacher['jabatan']) ? htmlspecialchars($teacher['jabatan']) : '-'; ?></td>
-                                                    <td><?php echo htmlspecialchars($teacher['kelas_wali'] ?? '-'); ?></td>
-                                                    <td><?php echo !empty($teacher['password_plain']) ? htmlspecialchars($teacher['password_plain']) : ($teacher['password'] ? '***' : 'Belum Diatur'); ?></td>
-                                                    <td>
-                                                        <a href="cetak_qr_guru.php?id=<?php echo $teacher['id_guru']; ?>" target="_blank" class="btn btn-info btn-sm" title="Cetak QR"><i class="fas fa-qrcode"></i></a>
-                                                        <a href="#" class="btn btn-primary btn-sm" data-toggle="modal" data-target="#editModal<?php echo $teacher['id_guru']; ?>"><i class="fas fa-edit"></i></a>
-                                                        <a href="#" class="btn btn-danger btn-sm delete-btn" data-id="<?php echo $teacher['id_guru']; ?>" data-name="<?php echo htmlspecialchars($teacher['nama_guru']); ?>" data-action="delete_guru"><i class="fas fa-trash"></i></a>
-                                                    </td>
-                                                </tr>
-                                                <?php endforeach; ?>
-                                            </tbody>
-                                        </table>
+                                                        $mengajar_display = !empty($mengajar_names) ? implode(', ', $mengajar_names) : '-';
+                                                    ?>
+                                                    <tr>
+                                                        <td class="simad-card-no" data-order="<?php echo $no; ?>"><span class="badge-card-no">#<?php echo $no++; ?></span></td>
+                                                        <td class="simad-card-check">
+                                                            <div class="custom-checkbox custom-control">
+                                                                <input type="checkbox" data-checkboxes="guru" class="custom-control-input" id="checkbox-<?php echo $teacher['id_guru']; ?>" value="<?php echo $teacher['id_guru']; ?>">
+                                                                <label for="checkbox-<?php echo $teacher['id_guru']; ?>" class="custom-control-label">&nbsp;</label>
+                                                            </div>
+                                                        </td>
+                                                        <td class="simad-card-photo"><?php echo getTeacherAvatarImage($teacher, 64); ?></td>
+                                                        <td class="simad-card-name" data-order="<?php echo htmlspecialchars($teacher['nama_guru']); ?>">
+                                                            <div class="person-name"><?php echo htmlspecialchars($teacher['nama_guru']); ?></div>
+                                                            <?php if (!empty($teacher['jabatan'])): ?>
+                                                                <div class="person-sub"><span class="badge badge-primary"><?php echo htmlspecialchars($teacher['jabatan']); ?></span></div>
+                                                            <?php endif; ?>
+                                                        </td>
+                                                        <td data-label="Kode Guru"><?php echo htmlspecialchars($teacher['kode_guru'] ?? '-'); ?></td>
+                                                        <td data-label="NUPTK"><?php echo htmlspecialchars($teacher['nuptk'] ?: '-'); ?></td>
+                                                        <td data-label="TTL"><?php echo htmlspecialchars($teacher['tempat_lahir']); ?>, <?php echo $teacher['tanggal_lahir'] ? date('d-m-Y', strtotime($teacher['tanggal_lahir'])) : '-'; ?></td>
+                                                        <td data-label="Jenis Kelamin"><?php echo htmlspecialchars($teacher['jenis_kelamin']); ?></td>
+                                                        <td data-label="Pendidikan"><?php echo !empty($teacher['pendidikan']) ? htmlspecialchars($teacher['pendidikan']) : '-'; ?></td>
+                                                        <td data-label="TMT"><?php echo !empty($teacher['tmt']) ? date('d-m-Y', strtotime($teacher['tmt'])) : '-'; ?></td>
+                                                        <td data-label="Masa Bakti"><?php echo calculateMasaBakti($teacher['tmt'] ?? null); ?></td>
+                                                        <td data-label="Mengajar"><?php echo htmlspecialchars($mengajar_display ?: '-'); ?></td>
+                                                        <td data-label="Jabatan"><?php echo !empty($teacher['jabatan']) ? htmlspecialchars($teacher['jabatan']) : '-'; ?></td>
+                                                        <td data-label="Wali Kelas"><?php echo htmlspecialchars($teacher['kelas_wali'] ?? '-'); ?></td>
+                                                        <td data-label="Password"><?php echo !empty($teacher['password_plain']) ? htmlspecialchars($teacher['password_plain']) : ($teacher['password'] ? '***' : 'Belum Diatur'); ?></td>
+                                                        <td class="simad-card-actions">
+                                                            <a href="cetak_qr_guru.php?id=<?php echo $teacher['id_guru']; ?>" target="_blank" class="btn btn-dark btn-sm" title="Cetak QR"><i class="fas fa-qrcode"></i> QR</a>
+                                                            <a href="#" class="btn btn-primary btn-sm" data-toggle="modal" data-target="#editModal<?php echo $teacher['id_guru']; ?>"><i class="fas fa-edit"></i> Edit</a>
+                                                            <a href="#" class="btn btn-danger btn-sm delete-btn" data-id="<?php echo $teacher['id_guru']; ?>" data-name="<?php echo htmlspecialchars($teacher['nama_guru']); ?>" data-action="delete_guru"><i class="fas fa-trash"></i> Hapus</a>
+                                                        </td>
+                                                    </tr>
+                                                    <?php endforeach; ?>
+                                                </tbody>
+                                            </table>
+                                        </div>
                                     </div>
                                 </div>
                             </div>

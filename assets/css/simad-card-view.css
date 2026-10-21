@@ -1,0 +1,383 @@
+/* ============================================================
+   SIMAD - Grid Card Styling untuk Data Guru & Data Siswa
+   Desktop, Tablet & Mobile Mode
+   ============================================================ */
+
+/* Wrapper Card View */
+.simad-card-view-wrapper {
+    position: relative;
+    width: 100% !important;
+    max-width: 100% !important;
+    overflow-x: hidden !important;
+    box-sizing: border-box !important;
+}
+
+/* Override Stisla .table-responsive overflow & 800px min-width */
+.simad-card-view-wrapper .table-responsive {
+    overflow: visible !important;
+    width: 100% !important;
+    max-width: 100% !important;
+    min-width: 0 !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    border: none !important;
+}
+
+/* Sembunyikan thead tabel */
+.simad-card-view thead {
+    display: none !important;
+}
+
+/* Kontrol DataTables length & filter */
+.simad-card-view-wrapper .dataTables_wrapper {
+    padding-top: 4px;
+    width: 100% !important;
+    max-width: 100% !important;
+    min-width: 0 !important;
+    box-sizing: border-box !important;
+}
+
+.simad-card-view-wrapper .dataTables_wrapper .dataTables_length,
+.simad-card-view-wrapper .dataTables_wrapper .dataTables_filter {
+    margin-bottom: 14px;
+}
+
+.simad-card-view-wrapper .dataTables_length select,
+.simad-card-view-wrapper .dataTables_filter input {
+    border-radius: 8px !important;
+    border: 1px solid #cbd5e1 !important;
+    padding: 6px 12px !important;
+    font-size: 0.85rem !important;
+}
+
+.simad-card-view-wrapper .dataTables_filter input:focus,
+.simad-card-view-wrapper .dataTables_length select:focus {
+    border-color: #6366f1 !important;
+    box-shadow: 0 0 0 3px rgba(99, 102, 241, .15) !important;
+    outline: none !important;
+}
+
+/* Toolbar Select All */
+.simad-card-toolbar {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    background: #f8fafc;
+    border: 1px solid #e2e8f0;
+    border-radius: 10px;
+    padding: 8px 14px;
+    margin-bottom: 16px;
+    font-size: 0.85rem;
+    width: 100% !important;
+    box-sizing: border-box !important;
+}
+
+.simad-card-toolbar .select-all-box {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin: 0;
+    cursor: pointer;
+    font-weight: 600;
+    color: #475569;
+    user-select: none;
+}
+
+/* Table element reset - PENTING: min-width: 0 override style.css/components.css (800px) */
+.table-responsive table.simad-card-view,
+table.dataTable.simad-card-view,
+table.simad-card-view {
+    display: block !important;
+    border: none !important;
+    border-collapse: separate !important;
+    border-spacing: 0 !important;
+    width: 100% !important;
+    min-width: 0 !important;
+    max-width: 100% !important;
+    background: transparent !important;
+    box-sizing: border-box !important;
+    margin: 0 !important;
+}
+
+/* Container tbody menjadi CSS Grid */
+.simad-card-view tbody {
+    display: grid !important;
+    grid-template-columns: 1fr !important;
+    gap: 14px !important;
+    padding: 4px 0 20px !important;
+    background: transparent !important;
+    border: none !important;
+    width: 100% !important;
+    max-width: 100% !important;
+    min-width: 0 !important;
+    box-sizing: border-box !important;
+}
+
+/* Tablet: 2 kolom */
+@media (min-width: 768px) {
+    .simad-card-view tbody {
+        grid-template-columns: repeat(auto-fill, minmax(290px, 1fr)) !important;
+        gap: 16px !important;
+    }
+}
+
+/* Desktop: 3-4 kolom */
+@media (min-width: 1200px) {
+    .simad-card-view tbody {
+        grid-template-columns: repeat(auto-fill, minmax(320px, 1fr)) !important;
+        gap: 18px !important;
+    }
+}
+
+/* Setiap tr menjadi satu Card modern */
+.simad-card-view tbody tr {
+    display: flex !important;
+    flex-direction: column !important;
+    position: relative !important;
+    background: #ffffff !important;
+    border: 1px solid #e2e8f0 !important;
+    border-radius: 14px !important;
+    padding: 16px !important;
+    box-shadow: 0 3px 12px rgba(15, 23, 42, .04) !important;
+    transition: transform .18s ease, box-shadow .18s ease, border-color .18s ease !important;
+    margin: 0 !important;
+    min-width: 0 !important;
+    width: 100% !important;
+    max-width: 100% !important;
+    height: 100% !important;
+    box-sizing: border-box !important;
+}
+
+.simad-card-view tbody tr:hover {
+    transform: translateY(-3px) !important;
+    box-shadow: 0 10px 22px rgba(15, 23, 42, .08) !important;
+    border-color: #cbd5e1 !important;
+}
+
+/* Reset stripe zebra */
+.simad-card-view tbody tr:nth-child(odd),
+.simad-card-view tbody tr:nth-child(even) {
+    background-color: #ffffff !important;
+}
+
+/* Checkbox top right */
+.simad-card-view tbody tr td.simad-card-check {
+    position: absolute !important;
+    top: 14px !important;
+    right: 14px !important;
+    width: auto !important;
+    padding: 0 !important;
+    border: none !important;
+    z-index: 5 !important;
+    background: transparent !important;
+    margin: 0 !important;
+}
+
+.simad-card-view tbody tr td.simad-card-check .custom-control-label {
+    cursor: pointer;
+}
+
+/* Nomor badge top left */
+.simad-card-view tbody tr td.simad-card-no {
+    position: absolute !important;
+    top: 14px !important;
+    left: 14px !important;
+    width: auto !important;
+    padding: 0 !important;
+    border: none !important;
+    z-index: 5 !important;
+    background: transparent !important;
+    margin: 0 !important;
+}
+
+.simad-card-view tbody tr td.simad-card-no .badge-card-no {
+    display: inline-block;
+    padding: 3px 8px;
+    border-radius: 6px;
+    background: #f1f5f9;
+    color: #475569;
+    font-weight: 700;
+    font-size: 0.72rem;
+    border: 1px solid #e2e8f0;
+}
+
+/* Foto center */
+.simad-card-view tbody tr td.simad-card-photo {
+    border: none !important;
+    padding: 14px 0 6px !important;
+    margin: 0 !important;
+    display: flex !important;
+    justify-content: center !important;
+    align-items: center !important;
+    width: 100% !important;
+    min-width: 0 !important;
+    background: transparent !important;
+    box-sizing: border-box !important;
+}
+
+.simad-card-view tbody tr td.simad-card-photo img {
+    width: 64px !important;
+    height: 64px !important;
+    object-fit: cover !important;
+    border-radius: 50% !important;
+    border: 3px solid #e0e7ff !important;
+    box-shadow: 0 4px 10px rgba(99, 102, 241, .15) !important;
+    margin: 0 !important;
+}
+
+.simad-card-view tbody tr td.simad-card-photo .avatar-fallback {
+    width: 64px !important;
+    height: 64px !important;
+    border-radius: 50% !important;
+    background: linear-gradient(135deg, #6366f1, #4f46e5) !important;
+    color: #fff !important;
+    font-size: 1.5rem !important;
+    font-weight: 700 !important;
+    display: flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    border: 3px solid #e0e7ff !important;
+    box-shadow: 0 4px 10px rgba(99, 102, 241, .15) !important;
+    margin: 0 !important;
+}
+
+/* Nama & Subtitle */
+.simad-card-view tbody tr td.simad-card-name {
+    border: none !important;
+    border-bottom: 2px solid #f1f5f9 !important;
+    padding: 4px 0 10px !important;
+    margin-bottom: 8px !important;
+    display: flex !important;
+    flex-direction: column !important;
+    align-items: center !important;
+    justify-content: center !important;
+    text-align: center !important;
+    width: 100% !important;
+    min-width: 0 !important;
+    background: transparent !important;
+    box-sizing: border-box !important;
+}
+
+.simad-card-view tbody tr td.simad-card-name .person-name {
+    font-size: 0.98rem !important;
+    font-weight: 800 !important;
+    color: #0f172a !important;
+    line-height: 1.35 !important;
+    word-break: break-word !important;
+}
+
+.simad-card-view tbody tr td.simad-card-name .person-sub {
+    font-size: 0.75rem !important;
+    color: #64748b !important;
+    font-weight: 600 !important;
+    margin-top: 4px !important;
+}
+
+/* Detail baris field berpasangan key: value */
+.simad-card-view tbody tr td[data-label] {
+    display: flex !important;
+    align-items: flex-start !important;
+    justify-content: space-between !important;
+    padding: 6px 0 !important;
+    border: none !important;
+    border-bottom: 1px dashed #f1f5f9 !important;
+    font-size: 0.81rem !important;
+    color: #334155 !important;
+    width: 100% !important;
+    min-width: 0 !important;
+    background: transparent !important;
+    text-align: right !important;
+    box-sizing: border-box !important;
+    word-break: break-word !important;
+    white-space: normal !important;
+}
+
+.simad-card-view tbody tr td[data-label]::before {
+    content: attr(data-label);
+    font-size: 0.72rem;
+    font-weight: 700;
+    color: #64748b;
+    text-transform: uppercase;
+    letter-spacing: .02em;
+    text-align: left;
+    margin-right: 12px;
+    flex-shrink: 0;
+    padding-top: 1px;
+}
+
+/* Tombol Aksi di bagian bawah */
+.simad-card-view tbody tr td.simad-card-actions {
+    border: none !important;
+    border-top: 1.5px solid #f1f5f9 !important;
+    margin-top: auto !important;
+    padding-top: 12px !important;
+    padding-bottom: 0 !important;
+    display: flex !important;
+    align-items: center !important;
+    justify-content: flex-end !important;
+    flex-wrap: wrap !important;
+    gap: 6px !important;
+    width: 100% !important;
+    min-width: 0 !important;
+    background: transparent !important;
+    box-sizing: border-box !important;
+}
+
+.simad-card-view tbody tr td.simad-card-actions .btn {
+    border-radius: 8px !important;
+    padding: 5px 10px !important;
+    font-size: 0.78rem !important;
+    font-weight: 600 !important;
+    display: inline-flex !important;
+    align-items: center !important;
+    gap: 5px !important;
+}
+
+/* State data kosong (empty DataTables) */
+.simad-card-view tbody tr:has(td.dataTables_empty) {
+    grid-column: 1 / -1 !important;
+    display: block !important;
+    text-align: center !important;
+    padding: 40px 20px !important;
+    border: 1px dashed #cbd5e1 !important;
+    background: #f8fafc !important;
+    box-shadow: none !important;
+}
+
+.simad-card-view tbody tr td.dataTables_empty {
+    display: block !important;
+    text-align: center !important;
+    padding: 0 !important;
+    width: 100% !important;
+    border: none !important;
+    color: #94a3b8 !important;
+    font-size: 0.92rem !important;
+}
+
+.simad-card-view tbody tr td.dataTables_empty::before {
+    display: none !important;
+}
+
+/* Responsif Mobile (< 576px) */
+@media (max-width: 575.98px) {
+    .simad-card-view tbody {
+        grid-template-columns: 1fr !important;
+        gap: 12px !important;
+    }
+    
+    .simad-card-view tbody tr {
+        padding: 14px 14px 12px !important;
+    }
+
+    .simad-card-view tbody tr td.simad-card-actions {
+        justify-content: stretch !important;
+        gap: 5px !important;
+    }
+
+    .simad-card-view tbody tr td.simad-card-actions .btn {
+        flex: 1 1 auto !important;
+        justify-content: center !important;
+        padding: 6px 6px !important;
+        font-size: 0.75rem !important;
+    }
+}
