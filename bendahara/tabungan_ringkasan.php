@@ -94,7 +94,7 @@ include_once __DIR__ . '/../templates/sidebar.php';
                 </div>
             </div>
 
-            <div class="card mb-3">
+            <div class="card mb-3 d-md-none">
                 <div class="card-header">
                     <h5 class="mb-0"><i class="fas fa-bolt mr-2" style="color:#d97706;"></i>Aksi Cepat</h5>
                 </div>

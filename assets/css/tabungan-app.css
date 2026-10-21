@@ -665,84 +665,27 @@ body.modal-open .modal .modal-footer {
 .tabungan-app .tb-jumlah-info { font-size: .68rem; font-weight: 700; color: #94a3b8; }
 
 /* ============================================================
-   Aksi tabel (gaya Stisla: chip ikon + label)
+   Aksi tabel (gaya Stisla: tombol kecil btn-sm + ikon)
    ============================================================ */
 .tabungan-app .tb-actions {
     display: inline-flex;
     align-items: center;
-    gap: 6px;
+    gap: 4px;
     flex-wrap: wrap;
 }
 
-.tabungan-app .tb-act {
-    --tb-act-bg: #eef2ff;
-    --tb-act-fg: #3730a3;
-    --tb-act-line: #dfe5ff;
-    display: inline-flex;
-    align-items: center;
-    gap: 6px;
-    padding: 6px 10px;
-    border-radius: 10px;
-    background: var(--tb-act-bg);
-    color: var(--tb-act-fg);
-    border: 1px solid var(--tb-act-line);
-    font-size: .72rem;
-    font-weight: 800;
-    line-height: 1;
-    text-decoration: none;
-    white-space: nowrap;
-    cursor: pointer;
-    font-family: inherit;
-    -webkit-appearance: none;
-    appearance: none;
-    transition: transform .12s ease, box-shadow .12s ease;
+.tabungan-app .tb-actions .btn.btn-sm,
+.tabungan-app .tb-actions > a.btn.btn-sm,
+.tabungan-app .tb-actions > form button.btn.btn-sm {
+    padding: 4px 8px;
+    font-size: .75rem;
+    line-height: 1.2;
+    border-radius: 4px;
 }
 
-.tabungan-app .tb-act:hover,
-.tabungan-app .tb-act:focus {
-    color: var(--tb-act-fg);
-    text-decoration: none;
-    transform: translateY(-1px);
-    box-shadow: 0 6px 14px rgba(15, 23, 42, .12);
-}
-
-.tabungan-app .tb-act:active { transform: scale(.97); box-shadow: none; }
-.tabungan-app .tb-act i { font-size: .72rem; }
-
-.tabungan-app .tb-act-info {
-    --tb-act-bg: #e0f2fe;
-    --tb-act-fg: #075985;
-    --tb-act-line: #bae6fd;
-}
-
-.tabungan-app .tb-act-warning {
-    --tb-act-bg: #fef3c7;
-    --tb-act-fg: #92400e;
-    --tb-act-line: #fde68a;
-}
-
-.tabungan-app .tb-act-success {
-    --tb-act-bg: #dcfce7;
-    --tb-act-fg: #166534;
-    --tb-act-line: #bbf7d0;
-}
-
-.tabungan-app .tb-act-primary {
-    --tb-act-bg: #e0e7ff;
-    --tb-act-fg: #3730a3;
-    --tb-act-line: #c7d2fe;
-}
-
-.tabungan-app .tb-act-danger {
-    --tb-act-bg: #fee2e2;
-    --tb-act-fg: #991b1b;
-    --tb-act-line: #fecaca;
-}
-
-.tabungan-app .tb-act-muted {
-    --tb-act-bg: #f1f5f9;
-    --tb-act-fg: #475569;
-    --tb-act-line: #e2e8f0;
+.tabungan-app .tb-actions > form {
+    display: inline;
+    margin: 0;
 }
 
 /* Badge sinkronisasi */
@@ -789,21 +732,15 @@ body.modal-open .modal .modal-footer {
         justify-content: space-between;
     }
 
-    /* Aksi tabel jadi chip penuh (ramah jari) */
+    /* Aksi tabel (gaya Stisla) */
     .tabungan-app .tb-actions {
-        width: 100%;
+        width: auto;
         flex-wrap: wrap;
-    }
-
-    .tabungan-app .tb-actions > .tb-act {
-        flex: 1 1 auto;
-        justify-content: center;
-        padding: 9px 12px;
-        font-size: .8rem;
+        gap: 6px;
     }
 
     .tabungan-app .tb-actions > form {
-        display: contents;
+        display: inline;
     }
 
     /* Input & tombol comfortable untuk jari */

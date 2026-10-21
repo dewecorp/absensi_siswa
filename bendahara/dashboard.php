@@ -76,7 +76,23 @@ $q_aktivitas = mysqli_query($koneksi, "
 
 /* ── Aktivitas CRUD SIMAD (Tabungan, Gaji, dsb) dari tb_activity_log ── */
 $aktivitas_simad = [];
+$teacher_map = [];
+$user_map = [];
 try {
+    $guru_stmt = $pdo->query("SELECT nuptk, nama_guru, id_guru FROM tb_guru");
+    $gurus = $guru_stmt ? $guru_stmt->fetchAll(PDO::FETCH_ASSOC) : [];
+    foreach ($gurus as $guru) {
+        $teacher_map[$guru['nuptk']] = $guru['nama_guru'];
+        $teacher_map[$guru['nama_guru']] = $guru['nama_guru'];
+        $teacher_map[$guru['id_guru']] = $guru['nama_guru'];
+    }
+
+    $pengguna_stmt = $pdo->query("SELECT username, nama FROM tb_pengguna");
+    $penggunas = $pengguna_stmt ? $pengguna_stmt->fetchAll(PDO::FETCH_ASSOC) : [];
+    foreach ($penggunas as $pengguna) {
+        $user_map[$pengguna['username']] = $pengguna['nama'];
+    }
+
     $st_aktivitas_simad = $pdo->prepare("
         SELECT username, action, description, created_at
         FROM tb_activity_log
@@ -104,11 +120,12 @@ if ($q_aktivitas) {
     }
 }
 foreach ($aktivitas_simad as $row_aktivitas) {
+    $u = (string) ($row_aktivitas['username'] ?? '');
     $aktivitas_gabung[] = [
         'created_at' => (string) ($row_aktivitas['created_at'] ?? ''),
         'jenis' => (string) ($row_aktivitas['action'] ?? ''),
         'deskripsi' => (string) ($row_aktivitas['description'] ?? ''),
-        'nama' => (string) ($row_aktivitas['username'] ?? 'Sistem'),
+        'nama' => $teacher_map[$u] ?? $user_map[$u] ?? ($u !== '' ? $u : 'Sistem'),
     ];
 }
 usort($aktivitas_gabung, function ($a, $b) {

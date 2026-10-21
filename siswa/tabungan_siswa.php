@@ -181,7 +181,7 @@ include_once '../templates/sidebar.php';
                                         <?= $is_setor ? '+' : '-' ?> Rp <?= number_format($nominal_trx, 0, ',', '.') ?>
                                     </td>
                                     <td><?= htmlspecialchars($keterangan) ?></td>
-                                    <td><?= htmlspecialchars((string)($transaksi['petugas'] ?? '-')) ?></td>
+                                    <td><?= htmlspecialchars(tabungan_aktor_label($transaksi['petugas'] ?? '-')) ?></td>
                                 </tr>
                             <?php endforeach; ?>
                         </tbody>

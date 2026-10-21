@@ -20,6 +20,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['hapus_riwayat'])) {
         }
         $hasil = tabungan_hapus_riwayat($pdo, $ids);
         $pesan = $hasil['message'];
+        if ($hasil['ok'] && function_exists('logActivity')) {
+            logActivity($pdo, (string)($_SESSION['username'] ?? 'bendahara'), 'Hapus Riwayat Tabungan', 'Menghapus ' . ($hasil['jumlah'] ?? count($ids)) . ' riwayat transaksi tabungan');
+        }
     }
 }
 

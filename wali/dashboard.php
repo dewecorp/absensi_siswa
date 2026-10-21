@@ -1082,7 +1082,7 @@ include_once '../templates/sidebar.php';
                         <?php endif; ?>
                     </div>
 
-                    <div class="row">
+                    <div class="row d-md-none">
                         <div class="col-12">
                             <div class="card mapp-link-card">
                                 <div class="card-header d-flex justify-content-between align-items-center">

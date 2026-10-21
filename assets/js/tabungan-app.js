@@ -150,7 +150,7 @@
 
     /* ---------- Select2 ---------- */
     function select2Options($el) {
-        return {
+        var opts = {
             width: '100%',
             placeholder: $el.attr('data-placeholder') || 'Cari...',
             allowClear: true,
@@ -159,6 +159,11 @@
                 noResults: function () { return 'Tidak ada data'; }
             }
         };
+        var $modal = $el.closest('.modal');
+        if ($modal.length) {
+            opts.dropdownParent = $modal;
+        }
+        return opts;
     }
 
     /* Select di dalam modal yang belum tampil: inisialisasi ditunda sampai modal dibuka

@@ -77,53 +77,88 @@ try {
     error_log("Error deleting old activities: " . $e->getMessage());
 }
 
-// Get recent activities from the activity log
+// Get recent activities from the activity log (tb_activity_log + log_aktivitas modul Pembayaran)
 $activities = []; // Initialize as empty array
 $total_activities = 0;
 try {
-    // Get total count of all activities first
-    $count_stmt = $pdo->query("SELECT COUNT(*) as total FROM tb_activity_log");
-    $count_result = $count_stmt->fetch(PDO::FETCH_ASSOC);
-    $total_activities = isset($count_result['total']) ? (int)$count_result['total'] : 0;
-    
-    if ($total_activities > 0) {
-        // Create teacher mapping to avoid JOIN collation issues
-        $teacher_map = [];
-        $guru_stmt = $pdo->query("SELECT nuptk, nama_guru, id_guru FROM tb_guru");
-        $gurus = $guru_stmt->fetchAll(PDO::FETCH_ASSOC);
-        foreach ($gurus as $guru) {
-            $teacher_map[$guru['nuptk']] = $guru['nama_guru'];
-            $teacher_map[$guru['nama_guru']] = $guru['nama_guru'];
-            $teacher_map[$guru['id_guru']] = $guru['nama_guru'];
-        }
-        
-        // Create user mapping for tb_pengguna
-        $user_map = [];
-        $pengguna_stmt = $pdo->query("SELECT username, nama FROM tb_pengguna");
-        $penggunas = $pengguna_stmt->fetchAll(PDO::FETCH_ASSOC);
-        foreach ($penggunas as $pengguna) {
-            $user_map[$pengguna['username']] = $pengguna['nama'];
-        }
-        
-        // Get latest 20 activities
-        $activity_stmt = $pdo->query(
-            "SELECT 
-                username, 
-                action, 
-                description, 
-                created_at
-            FROM tb_activity_log 
-            ORDER BY created_at DESC 
-            LIMIT 20"
-        );
-        $activities = $activity_stmt->fetchAll(PDO::FETCH_ASSOC);
-        
-        // Add display_name to each activity
-        foreach ($activities as &$activity) {
-            $display_name = $teacher_map[$activity['username']] ?? $user_map[$activity['username']] ?? $activity['username'];
-            $activity['display_name'] = $display_name;
-        }
+    // Create teacher mapping to avoid JOIN collation issues
+    $teacher_map = [];
+    $guru_stmt = $pdo->query("SELECT nuptk, nama_guru, id_guru FROM tb_guru");
+    $gurus = $guru_stmt ? $guru_stmt->fetchAll(PDO::FETCH_ASSOC) : [];
+    foreach ($gurus as $guru) {
+        $teacher_map[$guru['nuptk']] = $guru['nama_guru'];
+        $teacher_map[$guru['nama_guru']] = $guru['nama_guru'];
+        $teacher_map[$guru['id_guru']] = $guru['nama_guru'];
     }
+    
+    // Create user mapping for tb_pengguna
+    $user_map = [];
+    $pengguna_stmt = $pdo->query("SELECT username, nama FROM tb_pengguna");
+    $penggunas = $pengguna_stmt ? $pengguna_stmt->fetchAll(PDO::FETCH_ASSOC) : [];
+    foreach ($penggunas as $pengguna) {
+        $user_map[$pengguna['username']] = $pengguna['nama'];
+    }
+    
+    // 1. Ambil dari tb_activity_log (24 jam terakhir)
+    $activity_stmt = $pdo->query(
+        "SELECT 
+            username, 
+            action, 
+            description, 
+            created_at
+        FROM tb_activity_log 
+        WHERE created_at >= NOW() - INTERVAL 24 HOUR
+        ORDER BY created_at DESC 
+        LIMIT 200"
+    );
+    $raw_simad = $activity_stmt ? $activity_stmt->fetchAll(PDO::FETCH_ASSOC) : [];
+    foreach ($raw_simad as $r) {
+        $u = (string) ($r['username'] ?? '');
+        $activities[] = [
+            'username'     => $u,
+            'action'       => (string) ($r['action'] ?? ''),
+            'description'  => (string) ($r['description'] ?? ''),
+            'created_at'   => (string) ($r['created_at'] ?? ''),
+            'display_name' => $teacher_map[$u] ?? $user_map[$u] ?? ($u !== '' ? $u : 'Sistem'),
+        ];
+    }
+
+    // 2. Ambil dari log_aktivitas (modul Pembayaran)
+    try {
+        $pemb_stmt = $pdo->query("
+            SELECT l.jenis_aktivitas, l.deskripsi, l.created_at, COALESCE(p.nama_lengkap, p.username, 'Sistem') AS display_name, p.username
+            FROM log_aktivitas l
+            LEFT JOIN pengguna p ON l.id_pengguna = p.id_pengguna
+            WHERE l.created_at >= NOW() - INTERVAL 24 HOUR
+            ORDER BY l.created_at DESC
+            LIMIT 200
+        ");
+        $raw_pemb = $pemb_stmt ? $pemb_stmt->fetchAll(PDO::FETCH_ASSOC) : [];
+        foreach ($raw_pemb as $r) {
+            $activities[] = [
+                'username'     => (string) ($r['username'] ?? ''),
+                'action'       => (string) ($r['jenis_aktivitas'] ?? ''),
+                'description'  => (string) ($r['deskripsi'] ?? ''),
+                'created_at'   => (string) ($r['created_at'] ?? ''),
+                'display_name' => (string) ($r['display_name'] ?? 'Sistem'),
+            ];
+        }
+    } catch (Throwable $e) {
+        // Abaikan jika tabel log_aktivitas belum ada
+    }
+
+    // Urutkan gabungan aktivitas berdasarkan tanggal terbaru
+    usort($activities, function ($a, $b) {
+        $sa = strtotime((string) $a['created_at']);
+        $sb = strtotime((string) $b['created_at']);
+        if ($sa === $sb) return 0;
+        if ($sa === false) return 1;
+        if ($sb === false) return -1;
+        return $sb <=> $sa;
+    });
+
+    $total_activities = count($activities);
+    $activities = array_slice($activities, 0, 50);
 } catch (Exception $e) {
     // If there's an error (e.g., table doesn't exist), keep the array empty
     $activities = [];
@@ -924,6 +959,15 @@ include_once '../templates/sidebar.php';
                         'bg-secondary' => '#f8fafc',
                         'bg-primary'   => '#eff6ff',
                     ];
+                    /* Warna & ikon khusus untuk aktivitas Tabungan */
+                    $act_jenis_map = [
+                        'Setoran Tabungan'    => 'bg-success',
+                        'Penarikan Tabungan'  => 'bg-danger',
+                    ];
+                    $act_icon_map = [
+                        'Setoran Tabungan'   => 'fas fa-plus-circle',
+                        'Penarikan Tabungan' => 'fas fa-money-bill-transfer',
+                    ];
                     ?>
                     <style>
                     .act-feed { position: relative; padding: 4px 0; }
@@ -1043,8 +1087,9 @@ include_once '../templates/sidebar.php';
                                     <div class="act-feed act-scroll" style="max-height:620px; overflow-y:auto; padding-right:4px;">
                                         <?php if (!empty($activities)): ?>
                                             <?php foreach ($activities as $activity):
-                                                $actClass  = function_exists('getActivityColor') ? getActivityColor($activity['action']) : 'bg-primary';
-                                                $actIcon   = function_exists('getActivityIcon')  ? getActivityIcon($activity['action'])  : 'fas fa-info-circle';
+                                                $activity_action = (string) ($activity['action'] ?? '');
+                                                $actClass  = $act_jenis_map[$activity_action] ?? (function_exists('getActivityColor') ? getActivityColor($activity_action) : 'bg-primary');
+                                                $actIcon   = $act_icon_map[$activity_action] ?? (function_exists('getActivityIcon')  ? getActivityIcon($activity_action)  : 'fas fa-info-circle');
                                                 $actToken  = $act_color_map[$actClass]  ?? $act_color_map['bg-primary'];
                                                 $actBorder = $act_border_map[$actClass] ?? '#bfdbfe';
                                                 $actCardBg = $act_bg_map[$actClass]     ?? '#eff6ff';
