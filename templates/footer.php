@@ -507,6 +507,12 @@
     <script src="../assets/js/pembayaran.js?v=<?= (int) @filemtime(__DIR__ . '/../assets/js/pembayaran.js') ?>"></script>
     <?php endif; ?>
 
+    <?php if (!empty($tabungan_module_page)): ?>
+    <!-- Tabungan Siswa: Select2 & DataTables -->
+    <script src="https://cdn.datatables.net/1.10.24/js/jquery.dataTables.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/select2/4.0.13/js/select2.min.js"></script>
+    <?php endif; ?>
+
     <!-- Toastr Library -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/toastr.js/latest/toastr.min.css">
     <script src="https://cdnjs.cloudflare.com/ajax/libs/toastr.js/latest/toastr.min.js"></script>

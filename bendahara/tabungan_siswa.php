@@ -14,57 +14,45 @@ $display_name = $_SESSION['nama'] ?? $_SESSION['username'] ?? 'Bendahara';
 $q = trim((string)($_GET['q'] ?? ''));
 $nisn = trim((string)($_GET['nisn'] ?? ''));
 
-$summary = bendahara_fetch_summary();
-$rows = $summary['status'] === 'success' ? $summary['data'] : [];
-$api_ok = $summary['status'] === 'success';
+/* ── Data tabungan dari modul Tabungan (database SIMAD) ────── */
+require_once __DIR__ . '/tabungan/config/schema.php';
+require_once __DIR__ . '/tabungan/config/helpers.php';
+tabungan_ensure_schema($pdo);
 
-/* Detail tabungan (eTabs) */
-$student_info = [];
-$tabs_ok = false;
+$api_ok = true;
+$tabs_ok = true;
 $tabs_msg = '';
+
+/* Detail tabungan siswa */
+$student_info = ['nama' => '-', 'nisn' => $nisn, 'kelas' => ''];
 $saldo = 0;
 $total_setor = 0;
 $total_tarik = 0;
 $transaksi = [];
 
 if ($nisn !== '') {
-    $tabs_summary = fetchEtabsData($nisn, 'summary');
-    $tabs_riwayat = fetchEtabsData($nisn, 'riwayat');
-
-    $tabs_ok = !empty($tabs_summary['success']);
-    if (!$tabs_ok) {
-        $tabs_msg = (string)($tabs_summary['message'] ?? 'Tidak dapat mengambil data tabungan.');
+    $siswa_tabungan = tabungan_siswa($pdo, $nisn);
+    if ($siswa_tabungan) {
+        $student_info = [
+            'nama' => (string)($siswa_tabungan['nama_siswa'] ?? '-'),
+            'nisn' => (string)($siswa_tabungan['nisn'] ?? $nisn),
+            'kelas' => (string)($siswa_tabungan['nama_kelas'] ?? ''),
+        ];
     }
 
-    $sdata = is_array($tabs_summary['data'] ?? null) ? $tabs_summary['data'] : $tabs_summary;
-    $saldo = (int)($sdata['saldo'] ?? 0);
-    $total_setor = (int)($sdata['total_setor'] ?? $sdata['total_setoran'] ?? 0);
-    $total_tarik = (int)($sdata['total_tarik'] ?? $sdata['total_penarikan'] ?? 0);
-
-    $rdata = $tabs_riwayat['data'] ?? [];
-    $transaksi = is_array($rdata['transaksi'] ?? null) ? $rdata['transaksi'] : (is_array($rdata) ? $rdata : []);
-
-    /* identitas dari ringkasan Pembayaran */
-    foreach ($rows as $r) {
-        if ((string)($r['nisn'] ?? '') === $nisn) {
-            $student_info = ['nama' => $r['nama'] ?? '-', 'nisn' => $r['nisn'] ?? '-', 'kelas' => $r['kelas'] ?? ''];
-            break;
-        }
+    $transaksi = tabungan_transaksi($pdo, ['nisn' => $nisn]);
+    foreach ($transaksi as $trx) {
+        $total_setor += (int)$trx['setor'];
+        $total_tarik += (int)$trx['tarik'];
     }
-    if (empty($student_info)) {
-        $student_info = ['nama' => '-', 'nisn' => $nisn, 'kelas' => ''];
-    }
+    $saldo = $total_setor - $total_tarik;
 }
 
 /* daftar siswa untuk pemilihan */
-$list = [];
-foreach ($rows as $r) {
-    $nama = (string)($r['nama'] ?? '');
-    $n = (string)($r['nisn'] ?? '');
-    if ($q !== '' && stripos($nama, $q) === false && stripos($n, $q) === false) continue;
-    $list[] = $r;
-}
-usort($list, static fn($a, $b) => strcasecmp((string)($a['nama'] ?? ''), (string)($b['nama'] ?? '')));
+$list = tabungan_daftar_siswa($pdo, [
+    'q' => $q,
+    'hanya_aktif' => true,
+]);
 $list = array_slice($list, 0, 40);
 
 include '../templates/header.php';
@@ -172,7 +160,7 @@ include_once '../templates/sidebar.php';
                 <?php if (!$api_ok): ?>
                     <div class="alert alert-warning" style="border-radius:12px;">
                         <strong>Data siswa belum tersedia.</strong>
-                        <div class="small"><?= htmlspecialchars($summary['message'] ?? '') ?></div>
+                        <div class="small">Data siswa diambil dari data induk SIMAD.</div>
                     </div>
                 <?php endif; ?>
 
@@ -189,16 +177,19 @@ include_once '../templates/sidebar.php';
                     </div></div>
                 <?php else: ?>
                     <?php foreach ($list as $r):
-                        $nama = (string)($r['nama'] ?? '-');
+                        $nama = (string)($r['nama_siswa'] ?? '-');
                         $n = (string)($r['nisn'] ?? '');
+                        $saldo_siswa = (int)($r['saldo'] ?? 0);
                     ?>
                         <a class="bdh-pick" href="tabungan_siswa.php?nisn=<?= urlencode($n) ?>">
                             <span class="bdh-pick-ava"><?= htmlspecialchars(strtoupper(mb_substr($nama, 0, 1))) ?></span>
                             <span style="min-width:0;">
                                 <span class="bdh-pick-nama d-block text-truncate"><?= htmlspecialchars($nama) ?></span>
-                                <span class="bdh-pick-meta"><?= htmlspecialchars(bendahara_kelas_label((string)($r['kelas'] ?? ''))) ?> &bull; <?= htmlspecialchars($n) ?></span>
+                                <span class="bdh-pick-meta"><?= htmlspecialchars((string)($r['nama_kelas'] ?? '-')) ?> &bull; <?= htmlspecialchars($n) ?></span>
                             </span>
-                            <span class="bdh-pick-nom"><i class="fas fa-piggy-bank" style="color:#0d9488;"></i></span>
+                            <span class="bdh-pick-nom">
+                                <?= $saldo_siswa > 0 ? bendahara_rupiah($saldo_siswa) : '<i class="fas fa-piggy-bank" style="color:#cbd5e1;"></i>' ?>
+                            </span>
                         </a>
                     <?php endforeach; ?>
                 <?php endif; ?>
@@ -208,15 +199,23 @@ include_once '../templates/sidebar.php';
                     <a href="tabungan_siswa.php" class="btn btn-light" style="border-radius:12px;font-weight:800;">
                         <i class="fas fa-arrow-left mr-1"></i>Pilih Siswa Lain
                     </a>
-                    <button type="button" onclick="window.print()" class="btn btn-primary" style="border-radius:12px;font-weight:800;">
-                        <i class="fas fa-print mr-1"></i>Cetak
-                    </button>
+                    <div class="d-flex" style="gap:8px;flex-wrap:wrap;">
+                        <a href="tabungan_setor.php" class="btn btn-success" style="border-radius:12px;font-weight:800;">
+                            <i class="fas fa-plus mr-1"></i>Setoran
+                        </a>
+                        <a href="tabungan_tarik.php" class="btn btn-danger" style="border-radius:12px;font-weight:800;">
+                            <i class="fas fa-money-bill-transfer mr-1"></i>Penarikan
+                        </a>
+                        <a href="tabungan_cetak.php?jenis=siswa&nisn=<?= urlencode($nisn) ?>" target="_blank" class="btn btn-primary" style="border-radius:12px;font-weight:800;">
+                            <i class="fas fa-print mr-1"></i>Cetak
+                        </a>
+                    </div>
                 </div>
 
                 <?php if (!$tabs_ok): ?>
                     <div class="alert alert-warning" style="border-radius:12px;">
                         <strong>Data tabungan belum tersedia.</strong>
-                        <div class="small"><?= htmlspecialchars($tabs_msg !== '' ? $tabs_msg : 'Periksa koneksi ke server tabungan (eTabs).') ?></div>
+                        <div class="small"><?= htmlspecialchars($tabs_msg !== '' ? $tabs_msg : 'Periksa data tabungan siswa di database SIMAD.') ?></div>
                     </div>
                 <?php endif; ?>
 
@@ -225,7 +224,7 @@ include_once '../templates/sidebar.php';
                     <div style="min-width:0;">
                         <div class="bdh-prof-nama"><?= htmlspecialchars((string)($student_info['nama'] ?? '-')) ?></div>
                         <div class="bdh-prof-meta">
-                            <?= htmlspecialchars(bendahara_kelas_label((string)($student_info['kelas'] ?? ''))) ?>
+                            <?= htmlspecialchars((string)($student_info['kelas'] ?? '-')) ?>
                             &bull; NISN <?= htmlspecialchars((string)($student_info['nisn'] ?? $nisn)) ?>
                         </div>
                     </div>
@@ -258,11 +257,19 @@ include_once '../templates/sidebar.php';
 
                 <?php if (!empty($transaksi)): ?>
                     <?php foreach ($transaksi as $trx):
-                        $jenis = strtolower((string)($trx['jenis'] ?? ''));
-                        $masuk = ($jenis === 'setoran' || $jenis === 'setor');
-                        $nominal = (int)($trx['nominal'] ?? $trx['jumlah'] ?? 0);
-                        $ket = $masuk ? 'Setoran Tunai' : (!empty($trx['keterangan']) ? (string)$trx['keterangan'] : 'Penarikan Tunai');
-                        $tgl = (string)($trx['tanggal'] ?? '');
+                        $masuk = (string)($trx['jenis'] ?? '') === 'ST';
+                        $nominal = $masuk ? (int)$trx['setor'] : (int)$trx['tarik'];
+                        $ket = $masuk ? 'Setoran Tunai' : 'Penarikan Tunai';
+                        if (!$masuk) {
+                            $ket_extra = trim((string)($trx['jenis_bayar'] ?? ''));
+                            if ($ket_extra === '') {
+                                $ket_extra = trim((string)($trx['keterangan_tarik'] ?? ''));
+                            }
+                            if ($ket_extra !== '') {
+                                $ket = $ket_extra;
+                            }
+                        }
+                        $tgl = (string)($trx['tgl'] ?? '');
                     ?>
                         <div class="bdh-trx">
                             <div class="bdh-trx-l">

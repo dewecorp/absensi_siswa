@@ -55,7 +55,6 @@ if (!function_exists('endpoint_seeds')) {
 if (!function_exists('endpoint_inbound_seeds')) {
     function endpoint_inbound_seeds(): array {
         return [
-            ['nama_aplikasi' => 'etab', 'deskripsi' => 'Ambil endpoint/data dari aplikasi Etab.'],
         ];
     }
 }

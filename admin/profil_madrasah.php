@@ -238,6 +238,51 @@ rsort($tahun_untuk_opsi_profil, SORT_STRING);
                 $message = ['type' => 'danger', 'text' => 'Gagal mereset data pembayaran: ' . ($hasil_reset['message'] ?? 'Kesalahan tidak diketahui')];
             }
         }
+        // Handle Tabungan Siswa (Maintenance: reset data, import e-Tabs, bersihkan riwayat)
+        elseif (isset($_POST['reset_tabungan'])) {
+            if (!appVerifyCsrfToken($_POST['csrf_token'] ?? null)) {
+                $message = ['type' => 'danger', 'text' => 'Token keamanan tidak valid. Silakan muat ulang halaman.'];
+            } elseif (empty($_POST['confirm_reset_tabungan'])) {
+                $message = ['type' => 'warning', 'text' => 'Centang konfirmasi untuk menghapus seluruh data tabungan.'];
+            } else {
+                require_once __DIR__ . '/../bendahara/tabungan/config/schema.php';
+                require_once __DIR__ . '/../bendahara/tabungan/config/helpers.php';
+                tabungan_ensure_schema($pdo);
+                $hasil_reset_tabungan = tabungan_reset_semua($pdo);
+                logActivity($pdo, $_SESSION['username'] ?? 'admin', 'Reset Tabungan', $hasil_reset_tabungan['message']);
+                $message = ['type' => $hasil_reset_tabungan['ok'] ? 'success' : 'danger', 'text' => $hasil_reset_tabungan['message']];
+            }
+        }
+        elseif (isset($_POST['migrasi_tabungan_etabs'])) {
+            if (!appVerifyCsrfToken($_POST['csrf_token'] ?? null)) {
+                $message = ['type' => 'danger', 'text' => 'Token keamanan tidak valid. Silakan muat ulang halaman.'];
+            } else {
+                require_once __DIR__ . '/../bendahara/tabungan/config/schema.php';
+                require_once __DIR__ . '/../bendahara/tabungan/config/helpers.php';
+                require_once __DIR__ . '/../bendahara/tabungan/config/pembayaran_bridge.php';
+                require_once __DIR__ . '/../bendahara/tabungan/config/migrasi_data.php';
+                tabungan_ensure_schema($pdo);
+                $hasil_migrasi_tabungan = tabungan_migrasi_dari_etabs($pdo);
+                if (!empty($hasil_migrasi_tabungan['ok'])) {
+                    $hasil_rekonsiliasi = tabungan_rekonsiliasi_pembayaran_legacy($pdo);
+                    $hasil_migrasi_tabungan['message'] .= ' ' . ($hasil_rekonsiliasi['message'] ?? '');
+                }
+                logActivity($pdo, $_SESSION['username'] ?? 'admin', 'Migrasi Tabungan e-Tabs', $hasil_migrasi_tabungan['message']);
+                $message = ['type' => !empty($hasil_migrasi_tabungan['ok']) ? 'success' : 'danger', 'text' => $hasil_migrasi_tabungan['message']];
+            }
+        }
+        elseif (isset($_POST['hapus_riwayat_tabungan'])) {
+            if (!appVerifyCsrfToken($_POST['csrf_token'] ?? null)) {
+                $message = ['type' => 'danger', 'text' => 'Token keamanan tidak valid. Silakan muat ulang halaman.'];
+            } else {
+                require_once __DIR__ . '/../bendahara/tabungan/config/schema.php';
+                require_once __DIR__ . '/../bendahara/tabungan/config/helpers.php';
+                tabungan_ensure_schema($pdo);
+                $hasil_riwayat_tabungan = tabungan_hapus_riwayat_tidak_aktif($pdo);
+                logActivity($pdo, $_SESSION['username'] ?? 'admin', 'Bersihkan Riwayat Tabungan', $hasil_riwayat_tabungan['message']);
+                $message = ['type' => $hasil_riwayat_tabungan['ok'] ? 'success' : 'danger', 'text' => $hasil_riwayat_tabungan['message']];
+            }
+        }
         // Handle Reset Data Tahunan
         elseif (isset($_POST['reset_annual_data'])) {
             $tahun_ajaran = isset($_POST['tahun_ajaran']) ? $_POST['tahun_ajaran'] : $school_profile['tahun_ajaran'];
@@ -817,6 +862,63 @@ include '../templates/sidebar.php';
                                     <p class="text-muted mb-0">
                                         Tahun ajaran aktif dan batas kemunculan tagihan tahun ajaran sebelumnya diatur pada form <strong>Profil Madrasah</strong> di atas (kolom <strong>Tanggal Mulai Tahun Ajaran</strong>). Modul Pembayaran mengikuti nilai tersebut secara otomatis.
                                     </p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="row">
+                        <div class="col-12">
+                            <div class="card shadow border-left-info">
+                                <div class="card-header py-3">
+                                    <h6 class="m-0 font-weight-bold text-info">Tabungan Siswa</h6>
+                                </div>
+                                <div class="card-body">
+                                    <p class="text-muted mb-3">
+                                        Modul Tabungan Siswa (hasil integrasi e-Tabs ke SIMAD). Menu: <strong>Tabungan &rarr; Ringkasan Tabungan / Setoran / Penarikan / Info Kas / Data Tabungan / Laporan Tabungan / Riwayat Transaksi</strong>.
+                                        Penarikan dengan tujuan <strong>Pembayaran</strong> langsung dicatat di tabel <code>pembayaran</code> (modul Pembayaran Siswa) sehingga tagihan siswa menjadi lunas.
+                                    </p>
+
+                                    <h6 class="font-weight-bold text-danger">Reset Data Tabungan</h6>
+                                    <p class="text-muted">
+                                        Menghapus seluruh transaksi setoran &amp; penarikan beserta riwayat auditnya. Riwayat pembayaran yang sudah tercatat di modul Pembayaran tidak ikut terhapus.
+                                    </p>
+                                    <form method="POST" action="" onsubmit="return confirm('Seluruh data transaksi dan riwayat tabungan akan dihapus dan tidak dapat dikembalikan. Lanjutkan?');">
+                                        <input type="hidden" name="csrf_token" value="<?= htmlspecialchars(appCsrfToken()) ?>">
+                                        <input type="hidden" name="reset_tabungan" value="1">
+                                        <div class="custom-control custom-checkbox my-2">
+                                            <input type="checkbox" class="custom-control-input" id="confirmResetTabungan" name="confirm_reset_tabungan" value="1" required>
+                                            <label class="custom-control-label" for="confirmResetTabungan">Saya mengerti konsekuensinya dan ingin melanjutkan</label>
+                                        </div>
+                                        <button type="submit" class="btn btn-danger">
+                                            <i class="fas fa-trash"></i> Reset Data Tabungan
+                                        </button>
+                                    </form>
+
+                                    <hr>
+                                    <h6 class="font-weight-bold text-info">Import Data e-Tabs</h6>
+                                    <p class="text-muted">
+                                        Menarik data transaksi &amp; riwayat dari database e-Tabs (<code>db_tabsis</code>) ke tabel tabungan SIMAD, lalu menautkan penarikan pembayaran lama ke data Pembayaran.
+                                        Proses ini idempoten &mdash; data yang sudah ada tidak diduplikasi.
+                                    </p>
+                                    <form method="POST" action="" onsubmit="return confirm('Import data e-Tabs ke data tabungan SIMAD? Data yang sudah ada tidak akan diduplikasi.');">
+                                        <input type="hidden" name="csrf_token" value="<?= htmlspecialchars(appCsrfToken()) ?>">
+                                        <input type="hidden" name="migrasi_tabungan_etabs" value="1">
+                                        <button type="submit" class="btn btn-info">
+                                            <i class="fas fa-file-import"></i> Import Data e-Tabs
+                                        </button>
+                                    </form>
+
+                                    <hr>
+                                    <h6 class="font-weight-bold text-warning">Bersihkan Riwayat Tidak Aktif</h6>
+                                    <p class="text-muted">Menghapus baris riwayat transaksi yang berstatus <em>Tidak Aktif</em> (sudah dihapus sebelumnya).</p>
+                                    <form method="POST" action="" onsubmit="return confirm('Hapus seluruh riwayat transaksi tidak aktif?');">
+                                        <input type="hidden" name="csrf_token" value="<?= htmlspecialchars(appCsrfToken()) ?>">
+                                        <input type="hidden" name="hapus_riwayat_tabungan" value="1">
+                                        <button type="submit" class="btn btn-warning">
+                                            <i class="fas fa-broom"></i> Hapus Riwayat Tidak Aktif
+                                        </button>
+                                    </form>
                                 </div>
                             </div>
                         </div>

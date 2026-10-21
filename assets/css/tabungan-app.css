@@ -1,0 +1,981 @@
+/* ============================================================
+   SIMAD Mobile App Styling: Modul Tabungan Siswa
+   File: assets/css/tabungan-app.css
+   Dipakai oleh semua halaman Modul Tabungan (bendahara/tabungan/...)
+   Pola mengikuti modul Gaji/Honor (assets/css/gaji-app.css):
+   - kartu & form terasa seperti aplikasi mobile
+   - tabel berubah menjadi kartu (label + nilai) di layar kecil
+   ============================================================ */
+
+.tabungan-app {
+    --tb-radius: 16px;
+    --tb-line: #e8edf5;
+    --tb-ink: #0f172a;
+    --tb-muted: #64748b;
+    --tb-teal: #0d9488;
+}
+
+/* ---------- Judul halaman ---------- */
+.tabungan-app .section-header {
+    padding-bottom: 10px;
+}
+
+.tabungan-app .section-header h1 {
+    font-size: 1.15rem;
+    font-weight: 800;
+    color: var(--tb-ink);
+    letter-spacing: -.01em;
+}
+
+.tabungan-app .section-header-breadcrumb .breadcrumb-item,
+.tabungan-app .section-header-breadcrumb .breadcrumb-item a {
+    font-size: .8rem;
+    font-weight: 600;
+    color: var(--tb-muted);
+}
+
+/* ---------- Kartu ---------- */
+.tabungan-app .card {
+    border: 1px solid var(--tb-line);
+    border-radius: var(--tb-radius);
+    box-shadow: 0 6px 20px rgba(15, 23, 42, .06);
+    overflow: hidden;
+    background: #fff;
+}
+
+/* Header kartu: judul di kiri, tombol/ringkasan di kanan (tanpa tumpang tindih) */
+.tabungan-app .card-header {
+    background: #fff;
+    border-bottom: 1px solid var(--tb-line);
+    padding: 14px 16px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    flex-wrap: wrap;
+    min-height: 0;
+    line-height: 1.35;
+}
+
+.tabungan-app .card-header h4,
+.tabungan-app .card-header h5,
+.tabungan-app .card-header h6 {
+    font-size: 1rem;
+    font-weight: 800;
+    margin: 0;
+    color: var(--tb-ink);
+    flex: 1 1 auto;
+    min-width: 0;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.tabungan-app .card-header-action {
+    display: flex;
+    align-items: center;
+    justify-content: flex-end;
+    gap: 10px;
+    flex: 0 1 auto;
+    margin-left: auto;
+    flex-wrap: wrap;
+}
+
+.tabungan-app .card-header-action .btn {
+    margin-top: 0;
+    white-space: nowrap;
+}
+
+/* Chip ringkas (total/keterangan pada header kartu) */
+.tabungan-app .tb-chip {
+    display: inline-flex;
+    align-items: baseline;
+    gap: 8px;
+    background: #f8fafc;
+    border: 1.5px solid #e2e8f0;
+    border-radius: 999px;
+    padding: 5px 13px;
+    white-space: nowrap;
+}
+
+.tabungan-app .tb-chip .lbl {
+    font-size: .62rem;
+    font-weight: 800;
+    color: #94a3b8;
+    text-transform: uppercase;
+    letter-spacing: .04em;
+}
+
+.tabungan-app .tb-chip b {
+    font-size: .85rem;
+    font-weight: 900;
+    color: var(--tb-ink);
+}
+
+.tabungan-app .tb-chip.rose b { color: #be123c; }
+.tabungan-app .tb-chip.green b { color: #15803d; }
+.tabungan-app .tb-chip.teal b { color: #0f766e; }
+
+.tabungan-app .card-body {
+    padding: 16px;
+}
+
+.tabungan-app .card-footer {
+    background: #fbfdff;
+    border-top: 1px solid var(--tb-line);
+}
+
+/* ---------- Form ---------- */
+.tabungan-app label {
+    font-weight: 800;
+    color: #334155;
+    font-size: .78rem;
+    text-transform: uppercase;
+    letter-spacing: .03em;
+    margin-bottom: 6px;
+}
+
+.tabungan-app .form-control,
+.tabungan-app .custom-select,
+.tabungan-app .form-select {
+    border-radius: 12px;
+    border: 1.5px solid #e2e8f0;
+    min-height: 42px;
+    color: var(--tb-ink);
+    box-shadow: none;
+}
+
+.tabungan-app textarea.form-control {
+    min-height: 90px;
+}
+
+.tabungan-app .form-control:focus,
+.tabungan-app .custom-select:focus,
+.tabungan-app .form-select:focus {
+    border-color: #93c5fd;
+    box-shadow: 0 0 0 3px rgba(59, 130, 246, .12);
+}
+
+.tabungan-app .input-group-text {
+    border-radius: 12px;
+    border: 1.5px solid #e2e8f0;
+    background: #f8fafc;
+    font-weight: 700;
+}
+
+.tabungan-app .form-text {
+    font-size: .74rem;
+    color: var(--tb-muted);
+}
+
+/* ---------- Tombol ---------- */
+.tabungan-app .btn {
+    border-radius: 12px;
+    font-weight: 700;
+    padding: .5rem .9rem;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+}
+
+.tabungan-app .btn-sm {
+    border-radius: 10px;
+    padding: .35rem .7rem;
+}
+
+.tabungan-app .btn i {
+    font-size: .85em;
+}
+
+.tabungan-app .btn:active {
+    transform: scale(.98);
+}
+
+/* ---------- Badge & alert ---------- */
+.tabungan-app .badge {
+    border-radius: 999px;
+    padding: .4em .75em;
+    font-weight: 800;
+    letter-spacing: .01em;
+}
+
+.tabungan-app .alert {
+    border-radius: 14px;
+    border: 0;
+}
+
+/* ---------- DataTable ---------- */
+.tabungan-app .dataTables_wrapper .dataTables_filter input {
+    border-radius: 12px;
+    border: 1.5px solid #e2e8f0;
+    padding: 8px 12px;
+    min-height: 40px;
+    box-shadow: none;
+}
+
+.tabungan-app .dataTables_wrapper .dataTables_length select {
+    border-radius: 12px;
+    border: 1.5px solid #e2e8f0;
+    min-height: 40px;
+    padding: 0 28px 0 10px;
+}
+
+.tabungan-app .dataTables_wrapper .dataTables_info {
+    font-weight: 600;
+}
+
+/* ---------- Modal ---------- */
+.tabungan-app .modal-content,
+body.modal-open .modal .modal-content {
+    border-radius: 18px;
+    border: 0;
+    box-shadow: 0 24px 60px rgba(15, 23, 42, .25);
+}
+
+.tabungan-app .modal-header,
+body.modal-open .modal .modal-header {
+    border-bottom: 1px solid var(--tb-line);
+    padding: 16px 18px;
+}
+
+.tabungan-app .modal-footer,
+body.modal-open .modal .modal-footer {
+    border-top: 1px solid var(--tb-line);
+}
+
+/* ============================================================
+   Komponen khas Modul Tabungan
+   ============================================================ */
+
+/* Kartu statistik ringkas */
+.tb-stat-grid {
+    display: grid;
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    gap: 10px;
+    margin-bottom: 14px;
+}
+
+.tb-stat {
+    background: #fff;
+    border: 1.5px solid rgba(15, 23, 42, .07);
+    border-radius: 14px;
+    padding: 12px 13px;
+    box-shadow: 0 2px 10px rgba(15, 23, 42, .04);
+    min-width: 0;
+}
+
+.tb-stat .lbl {
+    font-size: .64rem;
+    font-weight: 800;
+    color: #94a3b8;
+    text-transform: uppercase;
+    letter-spacing: .04em;
+}
+
+.tb-stat .val {
+    font-size: .95rem;
+    font-weight: 900;
+    color: #0f172a;
+    line-height: 1.25;
+    word-break: break-word;
+}
+
+.tb-stat .val.teal { color: #0f766e; }
+.tb-stat .val.green { color: #15803d; }
+.tb-stat .val.rose { color: #be123c; }
+.tb-stat .val.amber { color: #b45309; }
+.tb-stat .sub { font-size: .68rem; font-weight: 700; color: #94a3b8; }
+
+/* Kartu profil siswa + saldo */
+.tb-hero {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    background: linear-gradient(135deg, #0f766e, #0891b2);
+    border-radius: 16px;
+    padding: 16px 18px;
+    color: #fff;
+    box-shadow: 0 8px 24px rgba(8, 145, 178, .24);
+    margin-bottom: 14px;
+    flex-wrap: wrap;
+}
+
+.tb-hero-ava {
+    flex: 0 0 auto;
+    width: 52px;
+    height: 52px;
+    border-radius: 15px;
+    background: rgba(255, 255, 255, .2);
+    border: 1px solid rgba(255, 255, 255, .3);
+    display: grid;
+    place-items: center;
+    font-weight: 900;
+    font-size: 1.2rem;
+}
+
+.tb-hero-nama { font-size: 1rem; font-weight: 900; line-height: 1.25; }
+.tb-hero-meta { font-size: .74rem; opacity: .92; font-weight: 600; }
+
+.tb-hero-saldo {
+    margin-left: auto;
+    text-align: right;
+}
+
+.tb-hero-saldo .lbl {
+    font-size: .62rem;
+    text-transform: uppercase;
+    letter-spacing: .04em;
+    opacity: .85;
+    font-weight: 800;
+}
+
+.tb-hero-saldo .val { font-size: 1.15rem; font-weight: 900; }
+
+/* Kartu kas (progress) */
+.tb-kas {
+    background: #fff;
+    border: 1.5px solid rgba(15, 23, 42, .07);
+    border-radius: 16px;
+    padding: 14px;
+    box-shadow: 0 2px 10px rgba(15, 23, 42, .04);
+    height: 100%;
+}
+
+.tb-kas-head {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin-bottom: 6px;
+}
+
+.tb-kas-ico {
+    width: 38px;
+    height: 38px;
+    border-radius: 12px;
+    display: grid;
+    place-items: center;
+    font-size: .95rem;
+    flex: 0 0 auto;
+}
+
+.tb-kas-ico.in { background: #dcfce7; color: #15803d; }
+.tb-kas-ico.out { background: #ffe4e6; color: #be123c; }
+.tb-kas-ico.saldo { background: #ccfbf1; color: #0f766e; }
+
+.tb-kas-title { font-size: .82rem; font-weight: 800; color: #0f172a; }
+.tb-kas-val { font-size: 1.05rem; font-weight: 900; color: #0f172a; line-height: 1.2; }
+.tb-kas-bar { height: 8px; border-radius: 999px; background: #eef2f7; overflow: hidden; margin: 8px 0 6px; }
+.tb-kas-bar span { display: block; height: 100%; border-radius: 999px; }
+.tb-kas-bar span.emerald { background: #10b981; }
+.tb-kas-bar span.amber { background: #f59e0b; }
+.tb-kas-bar span.rose { background: #f43f5e; }
+.tb-kas-bar span.teal { background: #14b8a6; }
+.tb-kas-meta { font-size: .7rem; font-weight: 700; color: #94a3b8; }
+
+/* Baris transaksi ringkas (mobile) */
+.tb-trx {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 10px;
+    background: #fff;
+    border: 1.5px solid rgba(15, 23, 42, .07);
+    border-radius: 12px;
+    padding: 10px 12px;
+    margin-bottom: 8px;
+}
+
+.tb-trx-l { display: flex; align-items: center; gap: 10px; min-width: 0; }
+
+.tb-trx-ico {
+    flex: 0 0 auto;
+    width: 34px;
+    height: 34px;
+    border-radius: 10px;
+    display: grid;
+    place-items: center;
+    font-size: .78rem;
+}
+
+.tb-trx-ico.in { background: #dcfce7; color: #15803d; }
+.tb-trx-ico.out { background: #ffe4e6; color: #be123c; }
+.tb-trx-t { font-size: .8rem; font-weight: 800; color: #0f172a; line-height: 1.25; }
+.tb-trx-s { font-size: .68rem; font-weight: 600; color: #94a3b8; }
+.tb-trx-amt { font-size: .82rem; font-weight: 900; white-space: nowrap; }
+.tb-trx-amt.in { color: #15803d; }
+.tb-trx-amt.out { color: #be123c; }
+
+/* Baris pilihan siswa */
+.tb-pick {
+    display: flex;
+    align-items: center;
+    gap: 11px;
+    background: #fff;
+    border: 1.5px solid rgba(15, 23, 42, .07);
+    border-radius: 13px;
+    padding: 11px 13px;
+    margin-bottom: 8px;
+    text-decoration: none !important;
+    transition: box-shadow .16s, transform .16s, border-color .16s;
+}
+
+.tb-pick:hover { transform: translateY(-1px); box-shadow: 0 6px 18px rgba(15, 23, 42, .08); border-color: #bfdbfe; }
+
+.tb-pick-ava {
+    flex: 0 0 auto;
+    width: 36px;
+    height: 36px;
+    border-radius: 11px;
+    display: grid;
+    place-items: center;
+    background: #eff6ff;
+    color: #2563eb;
+    font-weight: 900;
+    font-size: .8rem;
+}
+
+.tb-pick-nama { font-size: .82rem; font-weight: 800; color: #0f172a; line-height: 1.25; }
+.tb-pick-meta { font-size: .68rem; font-weight: 600; color: #94a3b8; }
+.tb-pick-nom { font-size: .8rem; font-weight: 900; color: #0f172a; white-space: nowrap; margin-left: auto; }
+
+/* Kotak pencarian */
+.tb-search {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    background: #fff;
+    border: 1.5px solid #e2e8f0;
+    border-radius: 14px;
+    padding: 9px 13px;
+    box-shadow: 0 2px 8px rgba(15, 23, 42, .04);
+    margin-bottom: 14px;
+}
+
+.tb-search i { color: #94a3b8; }
+.tb-search input { border: 0; outline: 0; width: 100%; font-size: .88rem; background: transparent; }
+
+/* ============================================================
+   Kartu item tagihan (ala e-Tabs: klik kartu untuk pilih)
+   ============================================================ */
+.tabungan-app .tb-tagihan { display: flex; flex-direction: column; gap: 8px; }
+
+.tabungan-app .tb-item-card {
+    display: block;
+    border: 1.5px solid #e2e8f0;
+    border-radius: 13px;
+    background: #fff;
+    overflow: hidden;
+    cursor: pointer;
+    transition: border-color .15s, box-shadow .15s, background .15s;
+}
+
+.tabungan-app .tb-item-card:hover { border-color: #99f6e4; box-shadow: 0 3px 12px rgba(13, 148, 136, .08); }
+
+.tabungan-app .tb-item-card.aktif {
+    border-color: #0d9488;
+    background: #f0fdfa;
+    box-shadow: 0 3px 12px rgba(13, 148, 136, .12);
+}
+
+.tabungan-app .tb-item-card.lunas { background: #f8fafc; opacity: .75; cursor: not-allowed; }
+.tabungan-app .tb-item-card.lunas:hover { border-color: #e2e8f0; box-shadow: none; }
+
+.tabungan-app .tb-item-main {
+    display: flex;
+    align-items: flex-start;
+    gap: 10px;
+    padding: 11px 12px;
+    margin: 0;
+    text-transform: none;
+    letter-spacing: normal;
+    font-size: .84rem;
+    font-weight: 400;
+    color: inherit;
+    cursor: inherit;
+}
+
+.tabungan-app .tb-item-body { display: block; min-width: 0; flex: 1 1 auto; }
+.tabungan-app .tb-item-nama { display: block; font-size: .84rem; font-weight: 800; color: #0f172a; }
+.tabungan-app .tb-item-meta { display: block; font-size: .7rem; font-weight: 600; color: #94a3b8; }
+.tabungan-app .tb-item-sisa { margin-left: auto; font-size: .84rem; font-weight: 900; white-space: nowrap; color: #0f172a; align-self: center; }
+
+/* Kotak centang ala e-Tabs */
+.tabungan-app .tb-item-check {
+    flex: 0 0 auto;
+    width: 20px;
+    height: 20px;
+    margin-top: 1px;
+    border: 1.5px solid #cbd5e1;
+    border-radius: 6px;
+    background: #fff;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    color: transparent;
+    font-size: .68rem;
+    transition: background .15s, border-color .15s, color .15s;
+}
+
+.tabungan-app .tb-item-check.on { background: #0d9488; border-color: #0d9488; color: #fff; }
+
+/* Badge status tagihan */
+.tabungan-app .tb-badge {
+    display: inline-block;
+    border-radius: 999px;
+    padding: .08rem .45rem;
+    font-size: .58rem;
+    font-weight: 800;
+    text-transform: uppercase;
+    letter-spacing: .03em;
+    vertical-align: middle;
+}
+
+.tabungan-app .tb-badge.aktif { background: #ccfbf1; color: #0f766e; }
+.tabungan-app .tb-badge.lunas { background: #dcfce7; color: #15803d; }
+.tabungan-app .tb-badge.tunggakan { background: #fee2e2; color: #b91c1c; }
+
+/* Checkbox native (baris rincian) */
+.tabungan-app .tb-check {
+    width: 18px;
+    height: 18px;
+    margin: 1px 0 0;
+    flex: 0 0 auto;
+    accent-color: #0d9488;
+    cursor: pointer;
+}
+
+/* ============================================================
+   Panel "Rincian Tagihan Dipilih" (ala e-Tabs)
+   ============================================================ */
+.tabungan-app .tb-rincian-panel {
+    border: 1.5px solid #0d9488;
+    border-radius: 14px;
+    background: #f0fdfa;
+    padding: 12px;
+    margin-top: 12px;
+}
+
+.tabungan-app .tb-rincian-panel-head {
+    display: flex;
+    align-items: flex-start;
+    gap: 10px;
+    padding-bottom: 9px;
+    margin-bottom: 10px;
+    border-bottom: 1px dashed #99f6e4;
+}
+
+.tabungan-app .tb-rincian-panel-title {
+    font-size: .78rem;
+    font-weight: 900;
+    color: #0f766e;
+    text-transform: uppercase;
+    letter-spacing: .03em;
+}
+
+.tabungan-app .tb-rincian-panel-sub { font-size: .68rem; font-weight: 700; color: #64748b; }
+.tabungan-app .tb-rincian-panel-total {
+    margin-left: auto;
+    font-size: .95rem;
+    font-weight: 900;
+    color: #0f766e;
+    white-space: nowrap;
+}
+
+.tabungan-app .tb-rincian-item {
+    background: #fff;
+    border: 1.5px solid #e2e8f0;
+    border-radius: 12px;
+    padding: 10px 11px;
+    margin-bottom: 9px;
+}
+
+.tabungan-app .tb-rincian-item:last-child { margin-bottom: 0; }
+
+.tabungan-app .tb-rincian-item-head {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.tabungan-app .tb-rincian-item-nama { font-size: .82rem; font-weight: 900; color: #0f172a; }
+
+.tabungan-app .tb-rincian-item-total {
+    margin-left: auto;
+    font-size: .84rem;
+    font-weight: 900;
+    color: #0d9488;
+    white-space: nowrap;
+}
+
+.tabungan-app .tb-rincian-meta {
+    font-size: .66rem;
+    font-weight: 700;
+    color: #94a3b8;
+    margin-bottom: 8px;
+}
+
+/* Baris rincian (klik untuk bayar sebagian) */
+.tabungan-app .tb-rincian-row {
+    display: flex;
+    align-items: center;
+    gap: 9px;
+    background: #fff;
+    border: 1.5px solid #e2e8f0;
+    border-radius: 11px;
+    padding: 7px 10px;
+    margin-bottom: 6px;
+    cursor: pointer;
+    text-transform: none;
+    letter-spacing: normal;
+    font-size: .78rem;
+    font-weight: 600;
+    color: #334155;
+    transition: border-color .15s, background .15s;
+}
+
+.tabungan-app .tb-rincian-row:last-of-type { margin-bottom: 0; }
+.tabungan-app .tb-rincian-row.on { border-color: #0d9488; background: #f0fdfa; }
+.tabungan-app .tb-rincian-row-nama { font-weight: 700; color: #0f172a; }
+.tabungan-app .tb-rincian-row-nom { margin-left: auto; font-weight: 800; color: #0f172a; white-space: nowrap; }
+
+.tabungan-app .tb-rincian-aksi { display: flex; gap: 6px; flex-wrap: wrap; margin-top: 8px; }
+
+.tabungan-app .tb-link-btn {
+    background: #fff;
+    border: 1px solid #e2e8f0;
+    color: #475569;
+    border-radius: 999px;
+    font-size: .66rem;
+    font-weight: 800;
+    padding: .22rem .65rem;
+    cursor: pointer;
+    transition: background .15s, border-color .15s, color .15s;
+}
+
+.tabungan-app .tb-link-btn:hover {
+    background: #eef2ff;
+    border-color: #c7d2fe;
+    color: #4338ca;
+}
+
+.tabungan-app .tb-jumlah-row { display: flex; flex-direction: column; gap: 7px; }
+.tabungan-app .tb-jumlah-row .input-group { max-width: 280px; }
+.tabungan-app .tb-jumlah-aksi { display: flex; gap: 6px; flex-wrap: wrap; }
+.tabungan-app .tb-jumlah-info { font-size: .68rem; font-weight: 700; color: #94a3b8; }
+
+/* ============================================================
+   Aksi tabel (gaya Stisla: chip ikon + label)
+   ============================================================ */
+.tabungan-app .tb-actions {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    flex-wrap: wrap;
+}
+
+.tabungan-app .tb-act {
+    --tb-act-bg: #eef2ff;
+    --tb-act-fg: #3730a3;
+    --tb-act-line: #dfe5ff;
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 6px 10px;
+    border-radius: 10px;
+    background: var(--tb-act-bg);
+    color: var(--tb-act-fg);
+    border: 1px solid var(--tb-act-line);
+    font-size: .72rem;
+    font-weight: 800;
+    line-height: 1;
+    text-decoration: none;
+    white-space: nowrap;
+    cursor: pointer;
+    font-family: inherit;
+    -webkit-appearance: none;
+    appearance: none;
+    transition: transform .12s ease, box-shadow .12s ease;
+}
+
+.tabungan-app .tb-act:hover,
+.tabungan-app .tb-act:focus {
+    color: var(--tb-act-fg);
+    text-decoration: none;
+    transform: translateY(-1px);
+    box-shadow: 0 6px 14px rgba(15, 23, 42, .12);
+}
+
+.tabungan-app .tb-act:active { transform: scale(.97); box-shadow: none; }
+.tabungan-app .tb-act i { font-size: .72rem; }
+
+.tabungan-app .tb-act-info {
+    --tb-act-bg: #e0f2fe;
+    --tb-act-fg: #075985;
+    --tb-act-line: #bae6fd;
+}
+
+.tabungan-app .tb-act-warning {
+    --tb-act-bg: #fef3c7;
+    --tb-act-fg: #92400e;
+    --tb-act-line: #fde68a;
+}
+
+.tabungan-app .tb-act-success {
+    --tb-act-bg: #dcfce7;
+    --tb-act-fg: #166534;
+    --tb-act-line: #bbf7d0;
+}
+
+.tabungan-app .tb-act-primary {
+    --tb-act-bg: #e0e7ff;
+    --tb-act-fg: #3730a3;
+    --tb-act-line: #c7d2fe;
+}
+
+.tabungan-app .tb-act-danger {
+    --tb-act-bg: #fee2e2;
+    --tb-act-fg: #991b1b;
+    --tb-act-line: #fecaca;
+}
+
+.tabungan-app .tb-act-muted {
+    --tb-act-bg: #f1f5f9;
+    --tb-act-fg: #475569;
+    --tb-act-line: #e2e8f0;
+}
+
+/* Badge sinkronisasi */
+.tb-sync { font-size: .68rem; font-weight: 800; padding: .35em .6em; border-radius: 999px; white-space: nowrap; }
+.tb-sync.success { background: #dcfce7; color: #15803d; }
+.tb-sync.failed { background: #ffe4e6; color: #be123c; }
+.tb-sync.mock { background: #fef3c7; color: #b45309; }
+.tb-sync.none { background: #f1f5f9; color: #64748b; }
+
+/* ============================================================
+   Mobile: tampilan seperti aplikasi
+   ============================================================ */
+@media (max-width: 991.98px) {
+    .tabungan-app .section-header h1 {
+        font-size: 1.05rem;
+    }
+
+    .tabungan-app .card-body {
+        padding: 14px;
+    }
+
+    .tb-stat-grid {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        gap: 8px;
+    }
+
+    /* Tombol pada header kartu jadi penuh (ramah jari) */
+    .tabungan-app .card-header-action {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 8px;
+        width: 100%;
+        margin-top: 10px;
+    }
+
+    .tabungan-app .card-header-action > .btn,
+    .tabungan-app .card-header-action > a.btn {
+        flex: 1 1 100%;
+        width: 100%;
+    }
+
+    .tabungan-app .card-header-action .tb-chip {
+        flex: 1 1 100%;
+        justify-content: space-between;
+    }
+
+    /* Aksi tabel jadi chip penuh (ramah jari) */
+    .tabungan-app .tb-actions {
+        width: 100%;
+        flex-wrap: wrap;
+    }
+
+    .tabungan-app .tb-actions > .tb-act {
+        flex: 1 1 auto;
+        justify-content: center;
+        padding: 9px 12px;
+        font-size: .8rem;
+    }
+
+    .tabungan-app .tb-actions > form {
+        display: contents;
+    }
+
+    /* Input & tombol comfortable untuk jari */
+    .tabungan-app .form-control,
+    .tabungan-app .custom-select,
+    .tabungan-app .form-select {
+        min-height: 44px;
+        font-size: .95rem;
+    }
+
+    .tabungan-app .btn {
+        min-height: 44px;
+        font-size: .9rem;
+    }
+
+    .tabungan-app .btn.btn-sm {
+        min-height: 38px;
+    }
+
+    /* Kontrol DataTable menumpuk */
+    .tabungan-app .dataTables_wrapper > .dt-buttons,
+    .tabungan-app .dataTables_wrapper > .dataTables_filter,
+    .tabungan-app .dataTables_wrapper > .dataTables_length {
+        float: none !important;
+        width: 100%;
+        margin: 0 0 10px !important;
+    }
+
+    .tabungan-app .dataTables_wrapper > .dataTables_filter input {
+        width: 100%;
+        min-width: 0;
+    }
+
+    .tabungan-app .dataTables_wrapper .dt-buttons {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 8px;
+    }
+
+    .tabungan-app .dataTables_wrapper .dt-buttons .dt-button {
+        flex: 1 1 auto;
+        border-radius: 12px !important;
+        margin: 0 !important;
+        min-height: 40px;
+        font-weight: 700;
+    }
+
+    .tabungan-app .dataTables_wrapper .dataTables_info,
+    .tabungan-app .dataTables_wrapper .dataTables_paginate {
+        float: none !important;
+        text-align: center;
+    }
+
+    /* Tabel -> kartu */
+    .tabungan-app .table-responsive {
+        overflow-x: visible !important;
+        border-radius: var(--tb-radius);
+        -webkit-overflow-scrolling: touch;
+    }
+
+    .tabungan-app .dataTables_scrollHead {
+        display: none !important;
+    }
+
+    .tabungan-app .dataTables_scroll,
+    .tabungan-app .dataTables_scrollBody {
+        overflow: visible !important;
+        width: 100% !important;
+        max-width: 100% !important;
+    }
+
+    .tabungan-app .dataTables_scrollBody > table.tabungan-table {
+        width: 100% !important;
+        min-width: 0 !important;
+        max-width: 100% !important;
+    }
+
+    .tabungan-app table.tabungan-table,
+    .tabungan-app table.tabungan-table tbody,
+    .tabungan-app table.tabungan-table tr,
+    .tabungan-app table.tabungan-table td {
+        display: block;
+        width: 100% !important;
+        min-width: 0 !important;
+        max-width: 100% !important;
+    }
+
+    .tabungan-app table.tabungan-table thead {
+        display: none;
+    }
+
+    .tabungan-app table.tabungan-table tr {
+        background: #fff;
+        border: 1px solid var(--tb-line);
+        border-radius: 14px;
+        padding: 6px 12px;
+        margin-bottom: 10px;
+        box-shadow: 0 2px 10px rgba(15, 23, 42, .04);
+    }
+
+    .tabungan-app table.tabungan-table tbody td {
+        border: 0 !important;
+        border-bottom: 1px dashed #eef2f7 !important;
+        padding: 8px 0;
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 12px;
+        text-align: right;
+        white-space: normal !important;
+        word-break: break-word;
+    }
+
+    .tabungan-app table.tabungan-table tbody tr td:last-child {
+        border-bottom: 0 !important;
+    }
+
+    .tabungan-app table.tabungan-table tbody td[data-label]::before {
+        content: attr(data-label);
+        color: var(--tb-muted);
+        font-size: .7rem;
+        font-weight: 800;
+        text-transform: uppercase;
+        letter-spacing: .04em;
+        text-align: left;
+        flex: 0 0 auto;
+    }
+
+    .tabungan-app table.tabungan-table tbody td[data-label="Aksi"] {
+        justify-content: flex-start;
+        padding-top: 10px;
+        flex-wrap: wrap;
+    }
+
+    .tabungan-app table.tabungan-table tbody td[data-label="Aksi"]::before {
+        display: none;
+    }
+
+    .tabungan-app table.tabungan-table tbody td[data-label="Aksi"] .btn {
+        width: auto;
+        min-height: 38px;
+    }
+
+    /* Modal jadi sheet mengambang penuh */
+    .tabungan-app .modal-dialog {
+        margin: .75rem;
+    }
+
+    .tabungan-app .modal-content {
+        border-radius: 18px;
+    }
+}
+
+@media (max-width: 575.98px) {
+    .tabungan-app .card-header {
+        padding: 12px 14px;
+    }
+
+    .tabungan-app .card-body {
+        padding: 12px;
+    }
+
+    .tabungan-app .section {
+        padding: 10px 12px 18px;
+    }
+
+    .tb-hero {
+        padding: 13px 14px;
+        gap: 11px;
+    }
+
+    .tb-hero-ava { width: 44px; height: 44px; border-radius: 13px; font-size: 1rem; }
+    .tb-hero-nama { font-size: .9rem; }
+    .tb-hero-saldo { margin-left: 0; text-align: left; width: 100%; }
+}

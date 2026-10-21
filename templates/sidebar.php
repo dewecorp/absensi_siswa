@@ -539,9 +539,15 @@ switch ($user_level) {
                 'title' => 'Tabungan',
                 'icon' => 'fas fa-piggy-bank',
                 'submenu' => [
-                    ['title' => 'Tabungan Siswa', 'url' => '../bendahara/tabungan_siswa.php?session_type=admin', 'active' => $current_page === 'tabungan_siswa.php' && $current_dir === 'bendahara'],
+                    ['title' => 'Ringkasan Tabungan', 'url' => '../bendahara/tabungan_ringkasan.php?session_type=admin', 'active' => $current_page === 'tabungan_ringkasan.php' && $current_dir === 'bendahara'],
+                    ['title' => 'Setoran', 'url' => '../bendahara/tabungan_setor.php?session_type=admin', 'active' => $current_page === 'tabungan_setor.php' && $current_dir === 'bendahara'],
+                    ['title' => 'Penarikan', 'url' => '../bendahara/tabungan_tarik.php?session_type=admin', 'active' => $current_page === 'tabungan_tarik.php' && $current_dir === 'bendahara'],
+                    ['title' => 'Info Kas', 'url' => '../bendahara/tabungan_kas.php?session_type=admin', 'active' => $current_page === 'tabungan_kas.php' && $current_dir === 'bendahara'],
+                    ['title' => 'Data Tabungan', 'url' => '../bendahara/tabungan_data.php?session_type=admin', 'active' => $current_page === 'tabungan_data.php' && $current_dir === 'bendahara'],
+                    ['title' => 'Laporan Tabungan', 'url' => '../bendahara/tabungan_laporan.php?session_type=admin', 'active' => $current_page === 'tabungan_laporan.php' && $current_dir === 'bendahara'],
+                    ['title' => 'Riwayat Transaksi', 'url' => '../bendahara/tabungan_riwayat.php?session_type=admin', 'active' => $current_page === 'tabungan_riwayat.php' && $current_dir === 'bendahara'],
                 ],
-                'active' => $current_page === 'tabungan_siswa.php' && $current_dir === 'bendahara'
+                'active' => $current_dir === 'bendahara' && in_array($current_page, ['tabungan_ringkasan.php', 'tabungan_setor.php', 'tabungan_tarik.php', 'tabungan_kas.php', 'tabungan_data.php', 'tabungan_laporan.php', 'tabungan_riwayat.php'], true)
             ],
             [
                 'title' => 'Gaji Guru',
@@ -1068,9 +1074,15 @@ switch ($user_level) {
                 'title' => 'Tabungan',
                 'icon' => 'fas fa-piggy-bank',
                 'submenu' => [
-                    ['title' => 'Tabungan Siswa', 'url' => '../bendahara/tabungan_siswa.php', 'active' => $current_page === 'tabungan_siswa.php'],
+                    ['title' => 'Ringkasan Tabungan', 'url' => '../bendahara/tabungan_ringkasan.php', 'active' => $current_page === 'tabungan_ringkasan.php'],
+                    ['title' => 'Setoran', 'url' => '../bendahara/tabungan_setor.php', 'active' => $current_page === 'tabungan_setor.php'],
+                    ['title' => 'Penarikan', 'url' => '../bendahara/tabungan_tarik.php', 'active' => $current_page === 'tabungan_tarik.php'],
+                    ['title' => 'Info Kas', 'url' => '../bendahara/tabungan_kas.php', 'active' => $current_page === 'tabungan_kas.php'],
+                    ['title' => 'Data Tabungan', 'url' => '../bendahara/tabungan_data.php', 'active' => $current_page === 'tabungan_data.php'],
+                    ['title' => 'Laporan Tabungan', 'url' => '../bendahara/tabungan_laporan.php', 'active' => $current_page === 'tabungan_laporan.php'],
+                    ['title' => 'Riwayat Transaksi', 'url' => '../bendahara/tabungan_riwayat.php', 'active' => $current_page === 'tabungan_riwayat.php'],
                 ],
-                'active' => $current_page === 'tabungan_siswa.php'
+                'active' => in_array($current_page, ['tabungan_ringkasan.php', 'tabungan_setor.php', 'tabungan_tarik.php', 'tabungan_kas.php', 'tabungan_data.php', 'tabungan_laporan.php', 'tabungan_riwayat.php'], true)
             ],
             [
                 'title' => 'Gaji Guru',

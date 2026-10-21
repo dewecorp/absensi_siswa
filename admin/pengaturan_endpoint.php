@@ -308,7 +308,7 @@ include '../templates/sidebar.php';
                     </div>
                 </div>
                 <div class="card-body">
-                    <p class="text-muted">Salin URL lalu tempel di web lain (etab). Base URL terdeteksi otomatis: <code><?= htmlspecialchars(endpoint_base_url()) ?></code></p>
+                    <p class="text-muted">Salin URL lalu tempel di web lain. Base URL terdeteksi otomatis: <code><?= htmlspecialchars(endpoint_base_url()) ?></code></p>
                     <div class="table-responsive">
                         <table class="table table-striped">
                             <thead><tr><th>No</th><th>Nama</th><th>Metode</th><th>URL Siap Salin</th><th>Status</th><th width="15%">Aksi</th></tr></thead>
@@ -362,7 +362,7 @@ include '../templates/sidebar.php';
                     </div>
                 </div>
                 <div class="card-body">
-                    <p class="text-muted">Isi base URL + API key tiap aplikasi (pembayaran, etab). SIMAD memakai ini saat menarik data — ganti domain cukup edit di sini.</p>
+                    <p class="text-muted">Isi base URL + API key tiap aplikasi. SIMAD memakai ini saat menarik data — ganti domain cukup edit di sini.</p>
                     <form method="POST" id="formSimpanMasuk">
                         <input type="hidden" name="save_masuk" value="1">
                         <div class="table-responsive">
@@ -372,7 +372,7 @@ include '../templates/sidebar.php';
                                 <?php foreach ($masuk_rows as $r): ?>
                                 <tr>
                                     <td><strong><?= htmlspecialchars($r['nama_aplikasi']) ?></strong><br><small class="text-muted"><?= htmlspecialchars($r['deskripsi'] ?? '') ?></small></td>
-                                    <td><input type="text" name="masuk[<?= (int)$r['id'] ?>][base_url]" class="form-control form-control-sm" style="min-width:220px;" value="<?= htmlspecialchars($r['base_url'] ?? '') ?>" placeholder="https://etab.example.com"></td>
+                                    <td><input type="text" name="masuk[<?= (int)$r['id'] ?>][base_url]" class="form-control form-control-sm" style="min-width:220px;" value="<?= htmlspecialchars($r['base_url'] ?? '') ?>" placeholder="https://contoh-aplikasi.com"></td>
                                     <td><input type="text" name="masuk[<?= (int)$r['id'] ?>][api_key]" class="form-control form-control-sm" style="min-width:160px;" value="<?= htmlspecialchars($r['api_key'] ?? '') ?>" placeholder="API key" autocomplete="off"></td>
                                     <td class="text-center"><input type="checkbox" name="masuk[<?= (int)$r['id'] ?>][aktif]" value="1" <?= ((int)($r['aktif'] ?? 1) === 1) ? 'checked' : '' ?>></td>
                                     <td>

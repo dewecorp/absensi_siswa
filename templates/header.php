@@ -312,6 +312,15 @@ if (getUserLevel() === 'siswa' && isset($_SESSION['user_id'])) {
     $_gaji_css_v = is_readable($_gaji_css_path) ? (string) filemtime($_gaji_css_path) : '1';
     ?>
     <link rel="stylesheet" href="../assets/css/gaji-app.css?v=<?php echo htmlspecialchars($_gaji_css_v, ENT_QUOTES, 'UTF-8'); ?>">
+    <!-- Tabungan Mobile App CSS -->
+    <?php if (!empty($tabungan_module_page)): ?>
+    <?php
+    $_tb_css_path = __DIR__ . '/../assets/css/tabungan-app.css';
+    $_tb_css_v = is_readable($_tb_css_path) ? (string) filemtime($_tb_css_path) : '1';
+    ?>
+    <link rel="stylesheet" href="../assets/css/tabungan-app.css?v=<?php echo htmlspecialchars($_tb_css_v, ENT_QUOTES, 'UTF-8'); ?>">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/select2/4.0.13/css/select2.min.css">
+    <?php endif; ?>
     <!-- RAB Mobile App CSS -->
     <?php
     $_rab_css_path = __DIR__ . '/../assets/css/rab-app.css';
@@ -867,9 +876,18 @@ if (getUserLevel() === 'siswa' && isset($_SESSION['user_id'])) {
     ?>
     <script defer src="<?php echo htmlspecialchars(app_base_path() . '/assets/js/gaji-app.js?v=' . $_gj_js_v, ENT_QUOTES, 'UTF-8'); ?>"></script>
     <?php endif; ?>
+
+    <?php if (!empty($tabungan_module_page)): ?>
+    <!-- Modul Tabungan: helper tampilan mobile app (tabel jadi kartu di layar kecil) -->
+    <?php
+    $_tb_js_path = __DIR__ . '/../assets/js/tabungan-app.js';
+    $_tb_js_v = is_readable($_tb_js_path) ? (string) filemtime($_tb_js_path) : '1';
+    ?>
+    <script defer src="<?php echo htmlspecialchars(app_base_path() . '/assets/js/tabungan-app.js?v=' . $_tb_js_v, ENT_QUOTES, 'UTF-8'); ?>"></script>
+    <?php endif; ?>
 </head>
 
-        <body class="<?php echo (in_array(basename($_SERVER['PHP_SELF']), ['dashboard.php', 'simple_dashboard.php']) || !empty($pembayaran_dashboard_home)) ? 'mobile-no-app-header' : 'mobile-has-app-header'; ?><?php echo !empty($gaji_module_page) ? ' gaji-app' : ''; ?>">
+        <body class="<?php echo (in_array(basename($_SERVER['PHP_SELF']), ['dashboard.php', 'simple_dashboard.php']) || !empty($pembayaran_dashboard_home)) ? 'mobile-no-app-header' : 'mobile-has-app-header'; ?><?php echo !empty($gaji_module_page) ? ' gaji-app' : ''; ?><?php echo !empty($tabungan_module_page) ? ' tabungan-app' : ''; ?>">
 <?php
 // Notifikasi aksi (flash): pesan sukses/error dari penyimpanan data (modul gaji, dsb)
 $__flash_success = isset($_SESSION['success']) ? trim((string)$_SESSION['success']) : '';

@@ -50,6 +50,13 @@ $sisa_anggaran = $total_sumber - $total_pengeluaran;
 /* ── Ringkasan pembayaran siswa ───────────────────────────── */
 $pembayaran_summary = bendahara_pembayaran_summary($koneksi);
 
+/* ── Ringkasan tabungan siswa (modul Tabungan) ────────────── */
+require_once __DIR__ . '/tabungan/config/schema.php';
+require_once __DIR__ . '/tabungan/config/helpers.php';
+tabungan_ensure_schema($pdo);
+$tabungan_summary = tabungan_total($pdo);
+$tabungan_siswa_aktif = tabungan_siswa_aktif($pdo);
+
 /* ── Aktivitas Pembayaran (CRUD, login, logout) ───────────── */
 if (!isset($_SESSION['last_log_cleanup']) || (time() - (int) $_SESSION['last_log_cleanup']) > 3600) {
     mysqli_query($koneksi, "DELETE FROM log_aktivitas WHERE created_at < NOW() - INTERVAL 24 HOUR");
@@ -66,6 +73,60 @@ $q_aktivitas = mysqli_query($koneksi, "
     ORDER BY l.created_at DESC
     LIMIT 200
 ");
+
+/* ── Aktivitas CRUD SIMAD (Tabungan, Gaji, dsb) dari tb_activity_log ── */
+$aktivitas_simad = [];
+try {
+    $st_aktivitas_simad = $pdo->prepare("
+        SELECT username, action, description, created_at
+        FROM tb_activity_log
+        WHERE created_at >= NOW() - INTERVAL 24 HOUR
+          AND action NOT IN ('Login', 'Logout')
+        ORDER BY created_at DESC
+        LIMIT 200
+    ");
+    $st_aktivitas_simad->execute();
+    $aktivitas_simad = $st_aktivitas_simad->fetchAll(PDO::FETCH_ASSOC) ?: [];
+} catch (Throwable $e) {
+    $aktivitas_simad = [];
+}
+
+/* ── Gabungkan kedua sumber menjadi satu daftar aktivitas (terbaru di atas) ── */
+$aktivitas_gabung = [];
+if ($q_aktivitas) {
+    while ($row_aktivitas = mysqli_fetch_assoc($q_aktivitas)) {
+        $aktivitas_gabung[] = [
+            'created_at' => (string) ($row_aktivitas['created_at'] ?? ''),
+            'jenis' => (string) ($row_aktivitas['jenis_aktivitas'] ?? ''),
+            'deskripsi' => (string) ($row_aktivitas['deskripsi'] ?? ''),
+            'nama' => (string) ($row_aktivitas['nama_lengkap'] ?? 'Sistem'),
+        ];
+    }
+}
+foreach ($aktivitas_simad as $row_aktivitas) {
+    $aktivitas_gabung[] = [
+        'created_at' => (string) ($row_aktivitas['created_at'] ?? ''),
+        'jenis' => (string) ($row_aktivitas['action'] ?? ''),
+        'deskripsi' => (string) ($row_aktivitas['description'] ?? ''),
+        'nama' => (string) ($row_aktivitas['username'] ?? 'Sistem'),
+    ];
+}
+usort($aktivitas_gabung, function ($a, $b) {
+    $sa = strtotime((string) $a['created_at']);
+    $sb = strtotime((string) $b['created_at']);
+    if ($sa === $sb) {
+        return 0;
+    }
+    if ($sa === false) {
+        return 1;
+    }
+    if ($sb === false) {
+        return -1;
+    }
+    return $sb <=> $sa;
+});
+$aktivitas_gabung = array_slice($aktivitas_gabung, 0, 200);
+$jml_aktivitas = count($aktivitas_gabung);
 
 include '../templates/header.php';
 include_once '../templates/sidebar.php';
@@ -490,6 +551,57 @@ include_once '../templates/sidebar.php';
                 </div>
             <?php endif; ?>
 
+            <!-- Tabungan Siswa -->
+            <div class="dash-section-head" style="margin-top:28px;">
+                <div class="dsh-title">
+                    <span class="dsh-dot" style="background:#0d9488;"></span>
+                    Tabungan Siswa
+                </div>
+                <a href="<?= htmlspecialchars(app_base_path() . '/bendahara/tabungan_ringkasan.php', ENT_QUOTES, 'UTF-8') ?>" class="small font-weight-bold" style="color:#2563eb;">Lihat detail</a>
+            </div>
+            <div class="row dash-stat-row stack-mobile">
+                <div class="col-6 col-lg-3 col-md-6 col-sm-6">
+                    <div class="dash-stat-card tint-teal">
+                        <div class="dash-stat-ico dsi-teal"><i class="fas fa-piggy-bank"></i></div>
+                        <div class="dash-stat-body">
+                            <div class="dash-stat-label">Saldo Kas Tabungan</div>
+                            <div class="dash-stat-value dash-stat-value-sm" title="<?= htmlspecialchars(bendahara_rupiah($tabungan_summary['saldo']), ENT_QUOTES, 'UTF-8') ?>"><?= bendahara_rupiah($tabungan_summary['saldo']) ?></div>
+                            <div class="dash-stat-sub"><span style="color:#0f766e;">Setoran &minus; penarikan</span></div>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-6 col-lg-3 col-md-6 col-sm-6">
+                    <div class="dash-stat-card tint-green">
+                        <div class="dash-stat-ico dsi-green"><i class="fas fa-arrow-down"></i></div>
+                        <div class="dash-stat-body">
+                            <div class="dash-stat-label">Total Setoran</div>
+                            <div class="dash-stat-value dash-stat-value-sm" title="<?= htmlspecialchars(bendahara_rupiah($tabungan_summary['total_setor']), ENT_QUOTES, 'UTF-8') ?>"><?= bendahara_rupiah($tabungan_summary['total_setor']) ?></div>
+                            <div class="dash-stat-sub"><span style="color:#15803d;"><?= number_format((int) $tabungan_summary['total_transaksi'], 0, ',', '.') ?> transaksi</span></div>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-6 col-lg-3 col-md-6 col-sm-6">
+                    <div class="dash-stat-card tint-rose">
+                        <div class="dash-stat-ico dsi-rose"><i class="fas fa-arrow-up"></i></div>
+                        <div class="dash-stat-body">
+                            <div class="dash-stat-label">Total Penarikan</div>
+                            <div class="dash-stat-value dash-stat-value-sm" title="<?= htmlspecialchars(bendahara_rupiah($tabungan_summary['total_tarik']), ENT_QUOTES, 'UTF-8') ?>"><?= bendahara_rupiah($tabungan_summary['total_tarik']) ?></div>
+                            <div class="dash-stat-sub"><span style="color:#be123c;">Potongan &amp; penarikan lain</span></div>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-6 col-lg-3 col-md-6 col-sm-6">
+                    <div class="dash-stat-card tint-blue">
+                        <div class="dash-stat-ico dsi-blue"><i class="fas fa-users"></i></div>
+                        <div class="dash-stat-body">
+                            <div class="dash-stat-label">Siswa Menabung</div>
+                            <div class="dash-stat-value dash-stat-value-sm"><?= number_format((int) $tabungan_summary['siswa_menabung'], 0, ',', '.') ?></div>
+                            <div class="dash-stat-sub"><span style="color:#2563eb;">Dari <?= number_format((int) $tabungan_siswa_aktif, 0, ',', '.') ?> siswa aktif</span></div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
             <!-- Aktivitas Pembayaran -->
             <?php
             /* ── colour map Bootstrap class → token modern (sama dengan Dashboard Admin) ── */
@@ -517,6 +629,15 @@ include_once '../templates/sidebar.php';
                 'bg-secondary' => '#f8fafc',
                 'bg-primary'   => '#eff6ff',
             ];
+            /* Warna & ikon khusus untuk aktivitas Tabungan */
+            $act_jenis_map = [
+                'Setoran Tabungan'    => 'bg-success',
+                'Penarikan Tabungan'  => 'bg-danger',
+            ];
+            $act_icon_map = [
+                'Setoran Tabungan'   => 'fas fa-plus-circle',
+                'Penarikan Tabungan' => 'fas fa-money-bill-transfer',
+            ];
             ?>
             <div class="dash-section-head" style="margin-top:28px;">
                 <div class="dsh-title">
@@ -529,16 +650,17 @@ include_once '../templates/sidebar.php';
             <div class="card mb-0">
                 <div class="card-body" style="padding:16px 20px;">
                     <div class="act-feed act-scroll" style="max-height:620px;overflow-y:auto;padding-right:4px;">
-                        <?php if ($jml_aktivitas > 0 && $q_aktivitas) : ?>
-                            <?php while ($activity_row = mysqli_fetch_assoc($q_aktivitas)) :
-                                $activity_jenis = (string) ($activity_row['jenis_aktivitas'] ?? '');
-                                $actClass  = function_exists('getActivityColor') ? getActivityColor($activity_jenis) : 'bg-primary';
-                                $actIcon   = function_exists('getActivityIcon')  ? getActivityIcon($activity_jenis)  : 'fas fa-info-circle';
+                        <?php if ($jml_aktivitas > 0) : ?>
+                            <?php foreach ($aktivitas_gabung as $activity_row) :
+                                $activity_jenis = (string) ($activity_row['jenis'] ?? '');
+                                $actClass  = $act_jenis_map[$activity_jenis] ?? (function_exists('getActivityColor') ? getActivityColor($activity_jenis) : 'bg-primary');
+                                $actIcon   = $act_icon_map[$activity_jenis] ?? (function_exists('getActivityIcon') ? getActivityIcon($activity_jenis) : 'fas fa-info-circle');
                                 $actToken  = $act_color_map[$actClass]   ?? $act_color_map['bg-primary'];
                                 $actBorder = $act_border_map[$actClass] ?? '#bfdbfe';
                                 $actCardBg = $act_bg_map[$actClass]      ?? '#eff6ff';
-                                $activity_nama = (string) ($activity_row['nama_lengkap'] ?? 'Sistem');
+                                $activity_nama = (string) ($activity_row['nama'] ?? 'Sistem');
                                 $actTs     = strtotime((string) $activity_row['created_at']);
+                                $actTs     = $actTs ? $actTs : time();
                             ?>
                                 <div class="act-item" style="
                                     --act-bg: <?= $actToken['bg'] ?>;
@@ -568,14 +690,14 @@ include_once '../templates/sidebar.php';
                                         </div>
                                     </div>
                                 </div>
-                            <?php endwhile; ?>
+                            <?php endforeach; ?>
                         <?php else : ?>
                             <div class="text-center py-5">
                                 <div style="width:56px;height:56px;border-radius:16px;background:#eff6ff;display:grid;place-items:center;margin:0 auto 12px;">
                                     <i class="fas fa-bolt" style="color:#2563eb;font-size:1.4rem;"></i>
                                 </div>
                                 <div style="font-weight:700;color:#334155;font-size:.9rem;">Belum ada aktivitas</div>
-                                <div style="font-size:.8rem;color:#94a3b8;margin-top:4px;">Aktivitas pembayaran, gaji dan honor akan muncul di sini</div>
+                                <div style="font-size:.8rem;color:#94a3b8;margin-top:4px;">Aktivitas pembayaran, tabungan, gaji dan honor akan muncul di sini</div>
                             </div>
                         <?php endif; ?>
                     </div>

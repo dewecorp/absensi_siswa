@@ -60,20 +60,27 @@ $tagihan_tahun_lama = $tagihan_summary['tahun_ajaran_tunggakan'] ?? [];
 $tagihan_tahun_lama = is_array($tagihan_tahun_lama) ? $tagihan_tahun_lama : [];
 $tagihan_status_ok = ($tagihan_summary_response['status'] ?? 'error') === 'success';
 
-// Ringkasan tabungan eTabs untuk box dashboard
-$tab_nis = trim((string)($student['nis'] ?? $student['nisn'] ?? ''));
-$tab_summary = ['success' => false, 'data' => []];
-if ($tab_nis !== '' && function_exists('fetchEtabsData')) {
+// Ringkasan tabungan siswa (modul Tabungan SIMAD)
+require_once __DIR__ . '/../bendahara/tabungan/config/schema.php';
+require_once __DIR__ . '/../bendahara/tabungan/config/helpers.php';
+$tab_nis = trim((string)($student['nisn'] ?? $student['nis'] ?? ''));
+$tab_ok = true;
+$tab_saldo = 0;
+$tab_setor = 0;
+$tab_tarik = 0;
+if ($tab_nis !== '') {
     try {
-        $tab_res = fetchEtabsData($tab_nis, 'summary');
-        if (is_array($tab_res)) $tab_summary = $tab_res;
-    } catch (Throwable $e) { $tab_summary = ['success' => false, 'data' => []]; }
+        tabungan_ensure_schema($pdo);
+        $st = $pdo->prepare("SELECT COALESCE(SUM(setor),0) AS s, COALESCE(SUM(tarik),0) AS t FROM tb_tabungan WHERE nisn = ?");
+        $st->execute([$tab_nis]);
+        $row = $st->fetch(PDO::FETCH_ASSOC);
+        $tab_setor = (int)($row['s'] ?? 0);
+        $tab_tarik = (int)($row['t'] ?? 0);
+        $tab_saldo = $tab_setor - $tab_tarik;
+    } catch (Throwable $e) {
+        $tab_ok = false;
+    }
 }
-$tab_data = (isset($tab_summary['data']) && is_array($tab_summary['data'])) ? $tab_summary['data'] : [];
-$tab_ok = !empty($tab_summary['success']);
-$tab_saldo = (int)($tab_data['saldo'] ?? 0);
-$tab_setor = (int)($tab_data['total_setor'] ?? 0);
-$tab_tarik = (int)($tab_data['total_tarik'] ?? 0);
 
 // Get today's attendance status
 $today = date('Y-m-d');
