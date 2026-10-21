@@ -3979,6 +3979,7 @@ body:not(.sidebar-mini) .sidebar-style-2 .sidebar-menu li.active ul.dropdown-men
 .dash-stat-value {
   font-size: 1.55rem; font-weight: 900; color: #0f172a; line-height: 1.1;
 }
+.dash-stat-value-sm { font-size: 1.15rem; }
 .dash-stat-sub {
   display: flex; align-items: center; gap: 8px; flex-wrap: wrap;
   margin-top: 4px;
@@ -4012,6 +4013,13 @@ body:not(.sidebar-mini) .sidebar-style-2 .sidebar-menu li.active ul.dropdown-men
   .dash-stat-value { font-size: 1.3rem; }
   .dash-stat-ico { width: 40px; height: 40px; font-size: .95rem; border-radius: 12px; }
   .dash-stat-card { padding: 11px 13px; gap: 11px; }
+}
+/* Kartu ringkasan bertumpuk di layar kecil: ikon di atas, nominal tetap 1 baris */
+@media (max-width: 575.98px) {
+  .dash-stat-row.stack-mobile .dash-stat-card { flex-direction: column; align-items: flex-start; gap: 8px; }
+  .dash-stat-row.stack-mobile .dash-stat-value { white-space: nowrap; font-size: 1.05rem; }
+  .dash-stat-row.stack-mobile .dash-stat-label { white-space: normal; }
+  .dash-stat-row.stack-mobile .dash-stat-sub span { font-size: .64rem; }
 }
 
 /* ══════════════════════════════════════════════════════════════

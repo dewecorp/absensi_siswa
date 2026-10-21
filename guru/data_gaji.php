@@ -29,132 +29,122 @@ if (!isset($_SESSION['nama_guru']) || empty($_SESSION['nama_guru'])) {
 $guru_id = $teacher['id_guru'];
 $page_title = 'Data Gaji Guru';
 
-// URL + key sigaji 100% dari Pengaturan Endpoint (tanpa hardcode domain).
-$api_url = '';
-try {
-    $sig_ep = $pdo->prepare("SELECT base_url, api_key FROM tb_endpoint_masuk WHERE nama_aplikasi = 'sigaji' AND aktif = 1 LIMIT 1");
-    $sig_ep->execute();
-    $sig_row = $sig_ep->fetch(PDO::FETCH_ASSOC);
-    $sig_base = trim((string)($sig_row['base_url'] ?? ''));
-    $sig_key = trim((string)($sig_row['api_key'] ?? ''));
-    if ($sig_base !== '') {
-        $api_url = rtrim($sig_base, '/');
-        if ($sig_key !== '') {
-            $api_url .= (strpos($api_url, '?') === false ? '?' : '&') . 'api_key=' . urlencode($sig_key);
-        }
-    }
-} catch (Exception $e) { /* biarkan kosong, ditangani di bawah */ }
-
+// Data penggajian lokal (modul gaji SIMAD) - tanpa API/cache terpisah.
 $salary_data = null;
 $api_error = null;
 $is_dev_data = false;
 
-$cache_dir = __DIR__ . '/../cache';
-$cache_file = $cache_dir . '/sigaji_gaji.json';
+try {
+    $settings = $pdo->query("SELECT * FROM settings WHERE id = 1 LIMIT 1")->fetch(PDO::FETCH_ASSOC) ?: [];
+    $periode_aktif = trim((string)($settings['periode_aktif'] ?? '')) ?: date('Y-m');
+    $jumlah_periode = max(1, (int)($settings['jumlah_periode'] ?? 1));
+    $periode_mulai = trim((string)($settings['periode_mulai'] ?? ''));
+    $periode_akhir = trim((string)($settings['periode_akhir'] ?? ''));
 
-if (!is_dir($cache_dir)) {
-    @mkdir($cache_dir, 0755, true);
-}
-
-// Seed cache with sample data for development
-if (isset($_GET['seed']) && $_GET['seed'] === '1') {
-    $stmt = $pdo->query("SELECT id_guru, nama_guru FROM tb_guru ORDER BY nama_guru ASC");
-    $all_guru = $stmt->fetchAll(PDO::FETCH_ASSOC);
-    $guru_sample = [];
-    foreach ($all_guru as $g) {
-        $gp = rand(1500000, 5000000);
-        $tunj = rand(200000, 1000000);
-        $pot = rand(50000, 300000);
-        $bersih = $gp + $tunj - $pot;
-        $guru_sample[] = [
-            'simad_id_guru' => (int)$g['id_guru'],
-            'total_gaji_pokok' => $gp,
-            'total_tunjangan' => $tunj,
-            'total_potongan' => $pot,
-            'gaji_bersih' => $bersih,
-            'gaji_pokok' => ['jumlah_bulanan' => $gp],
-            'tunjangan' => [['nama_tunjangan' => 'Tunjangan Sertifikasi', 'jumlah_bulanan' => $tunj]],
-            'potongan' => [['nama_potongan' => 'Potongan BPJS', 'jumlah_bulanan' => $pot]]
-        ];
-    }
-    $sample = [
-        'status' => 'success',
-        'period_info' => [
-            'jumlah_periode' => 1,
-            'periode_mulai' => date('Y-m'),
-            'periode_akhir' => date('Y-m'),
-            'periode_aktif' => date('Y-m')
-        ],
-        'guru' => $guru_sample
-    ];
-    @file_put_contents($cache_file, json_encode($sample));
-    $redirect = strtok($_SERVER['REQUEST_URI'], '?');
-    header('Location: ' . $redirect);
-    exit;
-}
-
-if ($api_url === '') {
-    $api_error = 'Endpoint Sigaji belum dikonfigurasi. Isi base URL + API key di menu Integrasi > Pengaturan Endpoint.';
-} elseif (function_exists('curl_init')) {
-    require_once __DIR__ . '/../config/endpoint_registry.php';
-    $gheaders = ['Accept: application/json', 'Content-Type: application/json'];
-    if (isset($sig_key) && $sig_key !== '') $gheaders[] = 'X-API-KEY: ' . $sig_key;
-    [$response, $http_code, $curl_error] = endpoint_fetch_url($api_url, $gheaders);
-
-    if ($response === false) {
-        $api_error = 'Gagal terhubung ke server penggajian: ' . $curl_error;
-    } elseif ($http_code !== 200) {
-        $api_error = 'Server penggajian merespon dengan kode: ' . $http_code . ' — ' . substr((string)$response, 0, 120);
-    } else {
-        $decoded = json_decode($response, true);
-        if (json_last_error() !== JSON_ERROR_NONE) {
-            $api_error = 'Gagal memproses data penggajian: ' . json_last_error_msg();
-        } elseif (!isset($decoded['status']) || $decoded['status'] !== 'success') {
-            $msg = $decoded['message'] ?? 'Server penggajian mengembalikan status gagal.';
-            $api_error = $msg;
-        } else {
-            $salary_data = $decoded;
-            @file_put_contents($cache_file, json_encode($decoded));
+    $periods = [];
+    if ($jumlah_periode > 1 && $periode_mulai !== '' && $periode_akhir !== '') {
+        $start = new DateTime($periode_mulai . '-01');
+        $end = new DateTime($periode_akhir . '-01');
+        while ($start <= $end) {
+            $periods[] = $start->format('Y-m');
+            $start->modify('+1 month');
         }
     }
-}
-
-// Fallback to cache if API failed
-if ($salary_data === null && is_file($cache_file)) {
-    $cached = @json_decode(@file_get_contents($cache_file), true);
-    if ($cached && isset($cached['status']) && $cached['status'] === 'success') {
-        $salary_data = $cached;
-        $api_error = null;
+    if (!$periods) {
+        $periods[] = $periode_aktif;
     }
-}
 
-// Dev fallback: generate sample data for current teacher so page renders
-if ($salary_data === null) {
-    $dev_data = [
+    $guruRowStmt = $pdo->prepare("SELECT * FROM guru WHERE simad_id_guru = ? LIMIT 1");
+    $guruRowStmt->execute([(int)$guru_id]);
+    $gaji_guru = $guruRowStmt->fetch(PDO::FETCH_ASSOC);
+    if (!$gaji_guru) {
+        $guruRowStmt = $pdo->prepare("SELECT * FROM guru WHERE nip = ? LIMIT 1");
+        $guruRowStmt->execute([(string)($teacher['nuptk'] ?? '')]);
+        $gaji_guru = $guruRowStmt->fetch(PDO::FETCH_ASSOC);
+    }
+
+    $entry = [
+        'guru_id' => $gaji_guru ? (int)$gaji_guru['id'] : 0,
+        'simad_id_guru' => (int)$guru_id,
+        'nama_lengkap' => (string)($teacher['nama_guru'] ?? ''),
+        'nip' => (string)($teacher['nuptk'] ?? ''),
+        'total_gaji_pokok' => 0.0,
+        'total_tunjangan' => 0.0,
+        'total_potongan' => 0.0,
+        'gaji_bersih' => 0.0,
+        'gaji_pokok' => ['jumlah_bulanan' => 0.0],
+        'tunjangan' => [],
+        'potongan' => [],
+    ];
+
+    if ($gaji_guru) {
+        $placeholders = implode(',', array_fill(0, count($periods), '?'));
+        $params = array_merge([(int)$gaji_guru['id']], $periods);
+        $stmt = $pdo->prepare("SELECT * FROM legger_gaji WHERE guru_id = ? AND periode IN ($placeholders) ORDER BY periode ASC");
+        $stmt->execute($params);
+        $leggers = $stmt->fetchAll(PDO::FETCH_ASSOC);
+
+        if ($leggers) {
+            $detailStmt = $pdo->prepare("SELECT jenis, nama_item, jumlah FROM legger_detail WHERE legger_id = ? ORDER BY id ASC");
+            foreach ($leggers as $lg) {
+                $entry['total_gaji_pokok'] += (float)($lg['gaji_pokok'] ?? 0);
+                $entry['total_tunjangan'] += (float)($lg['total_tunjangan'] ?? 0);
+                $entry['total_potongan'] += (float)($lg['total_potongan'] ?? 0);
+                $entry['gaji_bersih'] += (float)($lg['gaji_bersih'] ?? 0);
+                $detailStmt->execute([(int)$lg['id']]);
+                foreach ($detailStmt->fetchAll(PDO::FETCH_ASSOC) as $d) {
+                    $nominal = (float)($d['jumlah'] ?? 0);
+                    if (($d['jenis'] ?? '') === 'tunjangan') {
+                        $entry['tunjangan'][] = ['nama_tunjangan' => (string)($d['nama_item'] ?? ''), 'jumlah_bulanan' => $nominal];
+                    } elseif (($d['jenis'] ?? '') === 'potongan') {
+                        $entry['potongan'][] = ['nama_potongan' => (string)($d['nama_item'] ?? ''), 'jumlah_bulanan' => $nominal];
+                    }
+                }
+            }
+            $entry['gaji_pokok']['jumlah_bulanan'] = $jumlah_periode > 0 ? $entry['total_gaji_pokok'] / $jumlah_periode : $entry['total_gaji_pokok'];
+        } else {
+            // Belum ada legger: hitung dari data master periode aktif.
+            $periode = $periods[0];
+            $stmt = $pdo->prepare("SELECT jumlah FROM gaji_pokok WHERE guru_id = ? LIMIT 1");
+            $stmt->execute([(int)$gaji_guru['id']]);
+            $pokok = (float)($stmt->fetchColumn() ?: 0);
+
+            $stmt = $pdo->prepare("SELECT t.nama_tunjangan, td.jumlah FROM tunjangan_detail td JOIN tunjangan t ON t.id = td.tunjangan_id WHERE td.guru_id = ? AND td.periode = ? AND t.aktif = 1");
+            $stmt->execute([(int)$gaji_guru['id'], $periode]);
+            $tunjDetails = $stmt->fetchAll(PDO::FETCH_ASSOC);
+
+            $stmt = $pdo->prepare("SELECT p.nama_potongan, pd.jumlah FROM potongan_detail pd JOIN potongan p ON p.id = pd.potongan_id WHERE pd.guru_id = ? AND pd.periode = ? AND p.aktif = 1");
+            $stmt->execute([(int)$gaji_guru['id'], $periode]);
+            $potDetails = $stmt->fetchAll(PDO::FETCH_ASSOC);
+
+            $entry['total_gaji_pokok'] = $pokok;
+            $entry['gaji_pokok']['jumlah_bulanan'] = $pokok;
+            foreach ($tunjDetails as $t) {
+                $entry['total_tunjangan'] += (float)($t['jumlah'] ?? 0);
+                $entry['tunjangan'][] = ['nama_tunjangan' => (string)($t['nama_tunjangan'] ?? ''), 'jumlah_bulanan' => (float)($t['jumlah'] ?? 0)];
+            }
+            foreach ($potDetails as $pt) {
+                $entry['total_potongan'] += (float)($pt['jumlah'] ?? 0);
+                $entry['potongan'][] = ['nama_potongan' => (string)($pt['nama_potongan'] ?? ''), 'jumlah_bulanan' => (float)($pt['jumlah'] ?? 0)];
+            }
+            $entry['gaji_bersih'] = $entry['total_gaji_pokok'] + $entry['total_tunjangan'] - $entry['total_potongan'];
+        }
+    }
+
+    $salary_data = [
         'status' => 'success',
         'period_info' => [
-            'jumlah_periode' => 1,
-            'periode_mulai' => date('Y-m'),
-            'periode_akhir' => date('Y-m'),
-            'periode_aktif' => date('Y-m')
+            'periode_aktif' => $periode_aktif,
+            'jumlah_periode' => $jumlah_periode,
+            'periode_mulai' => $jumlah_periode > 1 ? $periode_mulai : $periode_aktif,
+            'periode_akhir' => $jumlah_periode > 1 ? $periode_akhir : $periode_aktif,
         ],
-        'guru' => [
-            [
-                'simad_id_guru' => (int)$guru_id,
-                'total_gaji_pokok' => 0,
-                'total_tunjangan' => 0,
-                'total_potongan' => 0,
-                'gaji_bersih' => 0,
-                'gaji_pokok' => ['jumlah_bulanan' => 0],
-                'tunjangan' => [],
-                'potongan' => []
-            ]
-        ]
+        'guru' => [$entry],
     ];
-    $salary_data = $dev_data;
-    $api_error = null;
-    $is_dev_data = true;
+} catch (Throwable $e) {
+    $api_error = 'Gagal memuat data penggajian: ' . $e->getMessage();
 }
+
 
 $period_info = $salary_data['period_info'] ?? null;
 $guru_list = $salary_data['guru'] ?? [];

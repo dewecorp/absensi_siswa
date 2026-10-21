@@ -55,7 +55,6 @@ if (!function_exists('endpoint_seeds')) {
 if (!function_exists('endpoint_inbound_seeds')) {
     function endpoint_inbound_seeds(): array {
         return [
-            ['nama_aplikasi' => 'sigaji', 'deskripsi' => 'Ambil endpoint/data dari aplikasi Sigaji.'],
             ['nama_aplikasi' => 'etab', 'deskripsi' => 'Ambil endpoint/data dari aplikasi Etab.'],
         ];
     }
@@ -122,7 +121,7 @@ if (!function_exists('endpoint_full_url')) {
 
 if (!function_exists('endpoint_fetch_url')) {
     // Fetch dengan redirect manual agar header (X-API-KEY) tetap terkirim,
-    // sekaligus memperbaiki redirect rusak berisi path Windows (D:/...) dari htaccess sigaji.
+    // sekaligus memperbaiki redirect rusak berisi path Windows (D:/...) dari .htaccess aplikasi lain.
     // Kembalikan [body|false, http_code(int), err(string), final_url(string)]
     function endpoint_fetch_url(string $url, array $headers = []) {
         $tries = 0;

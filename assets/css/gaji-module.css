@@ -1,0 +1,166 @@
+/* ============================================================
+   SIMAD - Modul Gaji
+   ------------------------------------------------------------
+   Hanya komponen yang BELUM ada di assets/css/style.css SIMAD.
+
+   PENTING: layout global (html, body, .main-wrapper, .main-sidebar,
+   .main-content, .section, .card, .btn, .table, .modal, .badge)
+   SENGAJA tidak di-override supaya halaman modul Gaji tampil
+   serasi dengan halaman SIMAD lainnya.
+   ============================================================ */
+
+/* ------------------------------------------------------------
+   1. Judul dashboard + badge periode
+   ------------------------------------------------------------ */
+.dashboard-heading {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 18px;
+    width: 100%;
+}
+
+.dashboard-heading h1 {
+    margin: 0 0 4px;
+    font-weight: 700;
+    color: #34395e;
+}
+
+.dashboard-heading p {
+    margin: 0;
+    font-size: .85rem;
+    font-weight: 600;
+    color: #64748b;
+}
+
+.dashboard-period-badge {
+    flex-shrink: 0;
+    min-width: 165px;
+    padding: 10px 14px;
+    border-radius: 12px;
+    background: linear-gradient(135deg, rgba(37, 99, 235, .08), rgba(16, 185, 129, .11));
+    border: 1px solid rgba(14, 165, 233, .16);
+    text-align: right;
+}
+
+.dashboard-period-badge span,
+.dashboard-period-badge small {
+    display: block;
+    font-size: .7rem;
+    font-weight: 700;
+    line-height: 1.2;
+    color: #64748b;
+}
+
+.dashboard-period-badge strong {
+    display: block;
+    margin: 2px 0;
+    font-size: .95rem;
+    font-weight: 800;
+    line-height: 1.25;
+    color: #0f766e;
+}
+
+/* ------------------------------------------------------------
+   2. DataTable (gaji & honor): kontrol & footer rapi
+   ------------------------------------------------------------ */
+
+/* Jaga agar elemen float di dalam wrapper ikut terhitung */
+.dataTables_wrapper::after {
+    content: '';
+    display: block;
+    clear: both;
+}
+
+/* Baris kontrol: tombol export kiri, kotak pencarian kanan */
+.dataTables_wrapper > .dt-buttons {
+    float: left;
+    margin: 0 0 12px;
+}
+
+.dataTables_wrapper > .dataTables_filter {
+    float: right;
+    margin: 0 0 12px 12px;
+}
+
+.dataTables_wrapper > .dataTables_filter input {
+    min-width: 220px;
+}
+
+/* Footer: jumlah entri kiri, pagination kanan */
+.dataTables_wrapper > .dataTables_info {
+    float: left;
+    padding-top: 10px;
+    font-size: .82rem;
+    color: #64748b;
+}
+
+.dataTables_wrapper > .dataTables_paginate {
+    float: right;
+    padding-top: 10px;
+}
+
+.dataTables_wrapper > .dataTables_paginate ul.pagination {
+    margin: 0;
+}
+
+/* Panah pengurut kolom */
+.dataTables_wrapper table.dataTable thead th.sorting,
+.dataTables_wrapper table.dataTable thead th.sorting_asc,
+.dataTables_wrapper table.dataTable thead th.sorting_desc {
+    padding-right: 26px;
+}
+
+.dataTables_wrapper table.dataTable thead th.sorting:before,
+.dataTables_wrapper table.dataTable thead th.sorting:after {
+    font-size: .68rem;
+    color: #94a3b8;
+}
+
+.dataTables_wrapper table.dataTable thead th.sorting_asc:before,
+.dataTables_wrapper table.dataTable thead th.sorting_desc:after {
+    color: #6777ef;
+}
+
+/* ------------------------------------------------------------
+   3. Penyesuaian kecil
+   ------------------------------------------------------------ */
+
+/* Tombol aksi pada tabel tidak menumpuk */
+.table td:last-child,
+.table th:last-child {
+    white-space: nowrap;
+}
+
+.table td:last-child .btn {
+    margin: 1px 2px;
+}
+
+/* ------------------------------------------------------------
+   4. Responsif
+   ------------------------------------------------------------ */
+@media (max-width: 991.98px) {
+    .dashboard-heading {
+        align-items: flex-start;
+        flex-direction: column;
+        gap: 12px;
+    }
+
+    .dashboard-period-badge {
+        width: 100%;
+        min-width: 0;
+        text-align: left;
+    }
+}
+
+@media (max-width: 767.98px) {
+    .dataTables_wrapper > .dt-buttons {
+        float: none !important;
+        margin-bottom: 10px !important;
+    }
+
+    .dataTables_wrapper > .dataTables_filter input {
+        min-width: 0;
+    }
+}
+

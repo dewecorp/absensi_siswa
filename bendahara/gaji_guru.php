@@ -25,10 +25,12 @@ $list = [];
 foreach ($guru_rows as $g) {
     $sid = (int)($g['simad_id_guru'] ?? 0);
     $info = $guru_map[$sid] ?? null;
-    $nama = $info['nama_guru'] ?? ('Guru #' . $sid);
-    $nip = $info['nip'] ?? '';
+    $nama = trim((string)($g['nama_lengkap'] ?? ''));
+    if ($nama === '') $nama = $info['nama_guru'] ?? ('Guru #' . $sid);
+    $nip = trim((string)($g['nip'] ?? ''));
+    if ($nip === '') $nip = $info['nip'] ?? '';
     if ($q !== '' && stripos($nama, $q) === false && stripos($nip, $q) === false) continue;
-    $g['_id'] = $sid;
+    $g['_id'] = (int)($g['guru_id'] ?? $sid);
     $g['_nama'] = $nama;
     $g['_nip'] = $nip;
     $g['_pokok'] = (float)($g['total_gaji_pokok'] ?? 0);

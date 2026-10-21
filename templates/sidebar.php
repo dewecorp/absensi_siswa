@@ -547,17 +547,26 @@ switch ($user_level) {
                 'title' => 'Gaji Guru',
                 'icon' => 'fas fa-money-bill-wave',
                 'submenu' => [
-                    ['title' => 'Data Gaji Guru', 'url' => '../bendahara/gaji_guru.php?session_type=admin', 'active' => $current_page === 'gaji_guru.php' && $current_dir === 'bendahara'],
+                    ['title' => 'Ringkasan Gaji', 'url' => '../bendahara/gaji_ringkasan.php?session_type=admin', 'active' => $current_page === 'gaji_ringkasan.php'],
+                    ['title' => 'Gaji Pokok', 'url' => '../bendahara/gaji_pokok.php?session_type=admin', 'active' => $current_page === 'gaji_pokok.php'],
+                    ['title' => 'Tunjangan', 'url' => '../bendahara/gaji_tunjangan.php?session_type=admin', 'active' => in_array($current_page, ['gaji_tunjangan.php', 'gaji_tunjangan_detail.php'], true)],
+                    ['title' => 'Potongan', 'url' => '../bendahara/gaji_potongan.php?session_type=admin', 'active' => in_array($current_page, ['gaji_potongan.php', 'gaji_potongan_detail.php'], true)],
+                    ['title' => 'Legger Gaji', 'url' => '../bendahara/gaji_legger.php?session_type=admin', 'active' => $current_page === 'gaji_legger.php'],
+                    ['title' => 'Pengaturan Gaji', 'url' => '../bendahara/gaji_pengaturan.php?session_type=admin', 'active' => $current_page === 'gaji_pengaturan.php'],
                 ],
-                'active' => $current_page === 'gaji_guru.php' && $current_dir === 'bendahara'
+                'active' => in_array($current_page, ['gaji_ringkasan.php', 'gaji_pokok.php', 'gaji_tunjangan.php', 'gaji_tunjangan_detail.php', 'gaji_potongan.php', 'gaji_potongan_detail.php', 'gaji_legger.php', 'gaji_pengaturan.php'], true)
             ],
             [
                 'title' => 'Honor & Insentif',
                 'icon' => 'fas fa-award',
                 'submenu' => [
-                    ['title' => 'Data Honor & Insentif', 'url' => '../bendahara/honor_insentif.php?session_type=admin', 'active' => $current_page === 'honor_insentif.php' && $current_dir === 'bendahara'],
+                    ['title' => 'Data Ekstrakurikuler', 'url' => '../bendahara/gaji_ekstrakurikuler.php?session_type=admin', 'active' => $current_page === 'gaji_ekstrakurikuler.php'],
+                    ['title' => 'Data Pembina', 'url' => '../bendahara/gaji_pembina.php?session_type=admin', 'active' => $current_page === 'gaji_pembina.php'],
+                    ['title' => 'Honor', 'url' => '../bendahara/gaji_honor.php?session_type=admin', 'active' => $current_page === 'gaji_honor.php'],
+                    ['title' => 'Legger Honor', 'url' => '../bendahara/gaji_legger_honor.php?session_type=admin', 'active' => $current_page === 'gaji_legger_honor.php'],
+                    ['title' => 'Insentif', 'url' => '../bendahara/gaji_insentif.php?session_type=admin', 'active' => $current_page === 'gaji_insentif.php'],
                 ],
-                'active' => $current_page === 'honor_insentif.php' && $current_dir === 'bendahara'
+                'active' => ($current_page === 'honor_insentif.php' && $current_dir === 'bendahara') || in_array($current_page, ['gaji_insentif.php', 'gaji_ekstrakurikuler.php', 'gaji_pembina.php', 'gaji_honor.php', 'gaji_legger_honor.php'], true)
             ],
             [
                 'title' => 'Nilai Siswa',
@@ -1067,17 +1076,26 @@ switch ($user_level) {
                 'title' => 'Gaji Guru',
                 'icon' => 'fas fa-money-bill-wave',
                 'submenu' => [
-                    ['title' => 'Data Gaji Guru', 'url' => '../bendahara/gaji_guru.php', 'active' => $current_page === 'gaji_guru.php'],
+                    ['title' => 'Ringkasan Gaji', 'url' => '../bendahara/gaji_ringkasan.php', 'active' => $current_page === 'gaji_ringkasan.php'],
+                    ['title' => 'Gaji Pokok', 'url' => '../bendahara/gaji_pokok.php', 'active' => $current_page === 'gaji_pokok.php'],
+                    ['title' => 'Tunjangan', 'url' => '../bendahara/gaji_tunjangan.php', 'active' => in_array($current_page, ['gaji_tunjangan.php', 'gaji_tunjangan_detail.php'], true)],
+                    ['title' => 'Potongan', 'url' => '../bendahara/gaji_potongan.php', 'active' => in_array($current_page, ['gaji_potongan.php', 'gaji_potongan_detail.php'], true)],
+                    ['title' => 'Legger Gaji', 'url' => '../bendahara/gaji_legger.php', 'active' => $current_page === 'gaji_legger.php'],
+                    ['title' => 'Pengaturan Gaji', 'url' => '../bendahara/gaji_pengaturan.php', 'active' => $current_page === 'gaji_pengaturan.php'],
                 ],
-                'active' => $current_page === 'gaji_guru.php'
+                'active' => in_array($current_page, ['gaji_ringkasan.php', 'gaji_pokok.php', 'gaji_tunjangan.php', 'gaji_tunjangan_detail.php', 'gaji_potongan.php', 'gaji_potongan_detail.php', 'gaji_legger.php', 'gaji_pengaturan.php'], true)
             ],
             [
                 'title' => 'Honor & Insentif',
                 'icon' => 'fas fa-award',
                 'submenu' => [
-                    ['title' => 'Data Honor & Insentif', 'url' => '../bendahara/honor_insentif.php', 'active' => $current_page === 'honor_insentif.php'],
+                    ['title' => 'Data Ekstrakurikuler', 'url' => '../bendahara/gaji_ekstrakurikuler.php', 'active' => $current_page === 'gaji_ekstrakurikuler.php'],
+                    ['title' => 'Data Pembina', 'url' => '../bendahara/gaji_pembina.php', 'active' => $current_page === 'gaji_pembina.php'],
+                    ['title' => 'Honor', 'url' => '../bendahara/gaji_honor.php', 'active' => $current_page === 'gaji_honor.php'],
+                    ['title' => 'Legger Honor', 'url' => '../bendahara/gaji_legger_honor.php', 'active' => $current_page === 'gaji_legger_honor.php'],
+                    ['title' => 'Insentif', 'url' => '../bendahara/gaji_insentif.php', 'active' => $current_page === 'gaji_insentif.php'],
                 ],
-                'active' => $current_page === 'honor_insentif.php'
+                'active' => $current_page === 'honor_insentif.php' || in_array($current_page, ['gaji_insentif.php', 'gaji_ekstrakurikuler.php', 'gaji_pembina.php', 'gaji_honor.php', 'gaji_legger_honor.php'], true)
             ],
             [
                 'title' => 'Anggaran',

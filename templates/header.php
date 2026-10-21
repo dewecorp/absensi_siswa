@@ -1225,7 +1225,7 @@ if (getUserLevel() === 'siswa' && isset($_SESSION['user_id'])) {
                 <?php if (getUserLevel() === 'admin'): ?>
                 (function checkUpdate() {
                     if (location.hostname === 'localhost' || location.hostname === '127.0.0.1' || location.hostname.endsWith('.test')) return;
-                    var lastSha = localStorage.getItem('sigaji_last_sha') || '';
+                    var lastSha = localStorage.getItem('simad_last_sha') || '';
                     $.ajax({
                         url: 'update_github.php',
                         type: 'POST',
@@ -1234,7 +1234,7 @@ if (getUserLevel() === 'siswa' && isset($_SESSION['user_id'])) {
                         timeout: 15000,
                         success: function(res) {
                             if (!res.sha || res.sha === lastSha) return;
-                            localStorage.setItem('sigaji_last_sha', res.sha);
+                            localStorage.setItem('simad_last_sha', res.sha);
                             Swal.fire({
                                 title: 'Pembaruan Tersedia!',
                                 html: 'Versi baru tersedia. Update sekarang?',

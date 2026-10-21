@@ -9,6 +9,17 @@ if (!isAuthorized(['bendahara', 'admin'])) {
 
 require_once __DIR__ . '/_pembayaran_summary.php';
 
+/* ── Ringkasan gaji & honor (modul Gaji) ───────────────────── */
+require_once __DIR__ . '/gaji/config/helpers.php';
+require_once __DIR__ . '/gaji/config/summary.php';
+try {
+    $gaji_ringkasan = gaji_ringkasan_data($koneksi);
+} catch (Throwable $e) {
+    $gaji_ringkasan = ['stats' => [], 'periode_aktif_label' => ''];
+}
+$gaji_stats = $gaji_ringkasan['stats'] ?? [];
+$gaji_periode_label = $gaji_ringkasan['periode_aktif_label'] ?? '';
+
 $page_title = 'Dashboard Bendahara';
 $school_profile = getSchoolProfile($pdo);
 $display_name = $_SESSION['nama'] ?? $_SESSION['username'] ?? 'Bendahara';
@@ -59,6 +70,7 @@ $q_aktivitas = mysqli_query($koneksi, "
 include '../templates/header.php';
 include_once '../templates/sidebar.php';
 ?>
+<link rel="stylesheet" href="<?php echo htmlspecialchars(app_base_path() . '/assets/css/gaji-module.css?v=' . (is_readable(__DIR__ . '/../assets/css/gaji-module.css') ? (string) filemtime(__DIR__ . '/../assets/css/gaji-module.css') : '1'), ENT_QUOTES, 'UTF-8'); ?>">
 <style>
 .bdh-hero {
     background: linear-gradient(135deg, #0f766e, #0891b2 55%, #2563eb);
@@ -101,9 +113,9 @@ include_once '../templates/sidebar.php';
 @media (max-width: 575.98px) {
     .bdh-hero { padding: 16px 16px; border-radius: 16px; }
     .bdh-payment-grid { gap: 10px; }
-    .bdh-payment-grid .dash-stat-card { padding: 11px 12px; gap: 10px; }
+    .bdh-payment-grid .dash-stat-card { padding: 11px 12px; gap: 10px; flex-direction: column; align-items: flex-start; }
     .bdh-payment-grid .dash-stat-ico { width: 40px; height: 40px; border-radius: 12px; font-size: .95rem; }
-    .bdh-payment-grid .dash-stat-value { font-size: 1.15rem; }
+    .bdh-payment-grid .dash-stat-value { font-size: 1.05rem; white-space: nowrap; }
 }
 
 /* ── Kartu jenis bayar (gaya mobile app) ───────────────────── */
@@ -310,13 +322,13 @@ include_once '../templates/sidebar.php';
                 </div>
                 <a href="../admin/rab_madrasah.php?session_type=bendahara" class="small font-weight-bold" style="color:#2563eb;">Kelola RAB</a>
             </div>
-            <div class="row dash-stat-row">
+            <div class="row dash-stat-row stack-mobile">
                 <div class="col-12 col-sm-4 col-lg-4">
                     <div class="dash-stat-card tint-indigo">
                         <div class="dash-stat-ico dsi-indigo"><i class="fas fa-wallet"></i></div>
                         <div class="dash-stat-body">
                             <div class="dash-stat-label">Sumber Dana</div>
-                            <div class="dash-stat-value" style="font-size:1.15rem;" title="<?= htmlspecialchars(implode(', ', $nama_sumber)) ?>"><?= bendahara_rupiah($total_sumber) ?></div>
+                            <div class="dash-stat-value dash-stat-value-sm" title="<?= htmlspecialchars(implode(', ', $nama_sumber)) ?>"><?= bendahara_rupiah($total_sumber) ?></div>
                             <div class="dash-stat-sub"><span style="color:#4338ca;"><?= $jumlah_sumber ?> sumber dana</span></div>
                         </div>
                     </div>
@@ -326,7 +338,7 @@ include_once '../templates/sidebar.php';
                         <div class="dash-stat-ico dsi-amber"><i class="fas fa-exchange-alt"></i></div>
                         <div class="dash-stat-body">
                             <div class="dash-stat-label">Pengeluaran</div>
-                            <div class="dash-stat-value" style="font-size:1.15rem;" title="<?= htmlspecialchars(bendahara_rupiah($total_pengeluaran)) ?>"><?= bendahara_rupiah($total_pengeluaran) ?></div>
+                            <div class="dash-stat-value dash-stat-value-sm" title="<?= htmlspecialchars(bendahara_rupiah($total_pengeluaran)) ?>"><?= bendahara_rupiah($total_pengeluaran) ?></div>
                             <div class="dash-stat-sub"><span style="color:#b45309;"><?= $jumlah_rencana ?> rencana pengeluaran</span></div>
                         </div>
                     </div>
@@ -336,11 +348,37 @@ include_once '../templates/sidebar.php';
                         <div class="dash-stat-ico <?= $sisa_anggaran >= 0 ? 'dsi-green' : 'dsi-rose' ?>"><i class="fas fa-balance-scale"></i></div>
                         <div class="dash-stat-body">
                             <div class="dash-stat-label">Sisa Anggaran</div>
-                            <div class="dash-stat-value" style="font-size:1.15rem;" title="<?= htmlspecialchars(bendahara_rupiah($sisa_anggaran)) ?>"><?= bendahara_rupiah($sisa_anggaran) ?></div>
+                            <div class="dash-stat-value dash-stat-value-sm" title="<?= htmlspecialchars(bendahara_rupiah($sisa_anggaran)) ?>"><?= bendahara_rupiah($sisa_anggaran) ?></div>
                             <div class="dash-stat-sub"><span style="color:<?= $sisa_anggaran >= 0 ? '#15803d' : '#be123c' ?>;"><?= $sisa_anggaran >= 0 ? 'Surplus' : 'Defisit' ?></span></div>
                         </div>
                     </div>
                 </div>
+            </div>
+
+            <!-- Ringkasan Gaji -->
+            <div class="dash-section-head" style="margin-top:28px;">
+                <div class="dsh-title">
+                    <span class="dsh-dot" style="background:#2563eb;"></span>
+                    Ringkasan Gaji
+                    <span style="display:inline-flex;align-items:center;justify-content:center;background:#2563eb;color:#fff;font-size:.72rem;font-weight:900;border-radius:999px;padding:2px 10px;"><?= htmlspecialchars($gaji_periode_label, ENT_QUOTES, 'UTF-8') ?></span>
+                </div>
+                <a href="<?= htmlspecialchars(app_base_path() . '/bendahara/gaji_ringkasan.php', ENT_QUOTES, 'UTF-8') ?>" class="small font-weight-bold" style="color:#2563eb;">Lihat detail</a>
+            </div>
+            <div class="row dash-stat-row stack-mobile">
+                <?php foreach (gaji_ringkasan_cards($gaji_stats) as $gaji_card) : ?>
+                    <div class="col-lg-3 col-md-6 col-sm-6 col-6">
+                        <div class="dash-stat-card tint-<?= htmlspecialchars($gaji_card['tone'], ENT_QUOTES, 'UTF-8') ?>">
+                            <div class="dash-stat-ico dsi-<?= htmlspecialchars($gaji_card['tone'], ENT_QUOTES, 'UTF-8') ?>">
+                                <i class="fas <?= htmlspecialchars($gaji_card['icon'], ENT_QUOTES, 'UTF-8') ?>"></i>
+                            </div>
+                            <div class="dash-stat-body">
+                                <div class="dash-stat-label"><?= htmlspecialchars($gaji_card['label'], ENT_QUOTES, 'UTF-8') ?></div>
+                                <div class="dash-stat-value dash-stat-value-sm" title="<?= htmlspecialchars($gaji_card['value'], ENT_QUOTES, 'UTF-8') ?>"><?= htmlspecialchars($gaji_card['value'], ENT_QUOTES, 'UTF-8') ?></div>
+                                <div class="dash-stat-sub"><span><?= htmlspecialchars($gaji_card['sub'], ENT_QUOTES, 'UTF-8') ?></span></div>
+                            </div>
+                        </div>
+                    </div>
+                <?php endforeach; ?>
             </div>
 
             <!-- Pembayaran -->
@@ -396,7 +434,7 @@ include_once '../templates/sidebar.php';
                         </div>
                         <div class="dash-stat-body">
                             <div class="dash-stat-label"><?= htmlspecialchars($payment_card['label'], ENT_QUOTES, 'UTF-8') ?></div>
-                            <div class="dash-stat-value"<?= $payment_card['compact'] ? ' style="font-size:1.15rem;"' : '' ?>><?= htmlspecialchars($payment_card['value'], ENT_QUOTES, 'UTF-8') ?></div>
+                            <div class="dash-stat-value<?= $payment_card['compact'] ? ' dash-stat-value-sm' : '' ?>"<?= $payment_card['compact'] ? ' title="' . htmlspecialchars($payment_card['value'], ENT_QUOTES, 'UTF-8') . '"' : '' ?>><?= htmlspecialchars($payment_card['value'], ENT_QUOTES, 'UTF-8') ?></div>
                             <div class="dash-stat-sub"><span><?= htmlspecialchars($payment_card['sub'], ENT_QUOTES, 'UTF-8') ?></span></div>
                         </div>
                     </div>
@@ -483,7 +521,7 @@ include_once '../templates/sidebar.php';
             <div class="dash-section-head" style="margin-top:28px;">
                 <div class="dsh-title">
                     <span class="dsh-dot" style="background:#6366f1;"></span>
-                    Aktivitas Pembayaran
+                    Aktivitas
                     <span style="display:inline-flex;align-items:center;justify-content:center;background:#2563eb;color:#fff;font-size:.72rem;font-weight:900;border-radius:999px;padding:2px 10px;"><?= number_format($jml_aktivitas, 0, ',', '.') ?></span>
                 </div>
                 <span class="badge badge-primary">24 jam terakhir</span>
@@ -537,7 +575,7 @@ include_once '../templates/sidebar.php';
                                     <i class="fas fa-bolt" style="color:#2563eb;font-size:1.4rem;"></i>
                                 </div>
                                 <div style="font-weight:700;color:#334155;font-size:.9rem;">Belum ada aktivitas</div>
-                                <div style="font-size:.8rem;color:#94a3b8;margin-top:4px;">Aktivitas pembayaran akan muncul di sini</div>
+                                <div style="font-size:.8rem;color:#94a3b8;margin-top:4px;">Aktivitas pembayaran, gaji dan honor akan muncul di sini</div>
                             </div>
                         <?php endif; ?>
                     </div>
