@@ -43,14 +43,8 @@ if ($savedTahunAjaran !== '' && !in_array($savedTahunAjaran, $tahunAjaranOptions
     $tahunAjaranOptions[] = $savedTahunAjaran;
 }
 
-// Get all guru for dropdown
-$guru_list = [];
-$guru_result = $conn->query("SELECT id, nama_lengkap, nip FROM guru ORDER BY nama_lengkap ASC");
-if ($guru_result) {
-    while ($row = $guru_result->fetch_assoc()) {
-        $guru_list[] = $row;
-    }
-}
+// Identitas madrasah & pejabat diambil dari Pengaturan Admin (tb_profil_madrasah).
+// Lihat helper gajiProfilMadrasah() di bendahara/gaji/config/helpers.php
 ?>
 
             <div class="main-content">
@@ -69,88 +63,8 @@ if ($guru_result) {
                                 <h4>Pengaturan Sistem</h4>
                             </div>
                             <div class="card-body">
-                                <form method="POST" action="<?php echo $gaji_page_base; ?>save" enctype="multipart/form-data">
+                                <form method="POST" action="<?php echo $gaji_page_base; ?>save">
                                     <?php echo csrfField(); ?>
-                                    
-                                    <!-- Informasi Madrasah -->
-                                    <h6 class="section-title mb-3" style="color: #667eea; font-weight: 600; border-bottom: 2px solid #667eea; padding-bottom: 8px;">
-                                        <i class="fas fa-school"></i> Informasi Madrasah
-                                    </h6>
-                                    <div class="row mb-4">
-                                        <div class="col-md-6">
-                                            <div class="form-group">
-                                                <label><strong>Nama Madrasah</strong></label>
-                                                <input type="text" class="form-control" name="nama_madrasah" value="<?php echo htmlspecialchars($settings['nama_madrasah']); ?>" required>
-                                            </div>
-                                        </div>
-                                        <div class="col-md-6">
-                                            <div class="form-group">
-                                                <label><strong>Logo Madrasah</strong></label>
-                                                <input type="file" class="form-control" id="logoInput" name="logo" accept="image/jpeg,image/jpg,image/png,image/gif">
-                                                <small class="text-muted">Format: JPG, PNG, GIF. Max: 2MB</small>
-                                        
-                                        <!-- Preview for new logo -->
-                                        <div id="logoPreview" class="mt-3" style="display: none;">
-                                            <p class="mb-2"><strong>Preview Logo Baru:</strong></p>
-                                            <img id="previewImage" src="" alt="Preview Logo" class="img-thumbnail" style="max-width: 200px; max-height: 200px; object-fit: contain;">
-                                        </div>
-                                        
-                                        <!-- Current logo display -->
-                                        <?php 
-                                        $logo_file = __DIR__ . '/../../assets/img/' . ($settings['logo'] ?? '');
-                                        $logo_exists = !empty($settings['logo']) && file_exists($logo_file);
-                                        $logo_path = '';
-                                        if ($logo_exists) {
-                                            $logo_path = BASE_URL . 'assets/img/' . $settings['logo'];
-                                        }
-                                        ?>
-                                        <?php if ($logo_exists): ?>
-                                            <div class="mt-3" id="currentLogo">
-                                                <p class="mb-2"><strong>Logo Saat Ini:</strong></p>
-                                                <img src="<?php echo $logo_path; ?>?v=<?php echo time(); ?>" alt="Logo Madrasah" class="img-thumbnail" style="max-width: 200px; max-height: 200px; object-fit: contain; border: 2px solid #28a745;">
-                                                <p class="text-muted mt-2 small"><?php echo htmlspecialchars($settings['logo']); ?></p>
-                                            </div>
-                                        <?php elseif (!empty($settings['logo'])): ?>
-                                            <div class="alert alert-warning mt-2">
-                                                <i class="fas fa-exclamation-triangle"></i> File logo tidak ditemukan di server: <?php echo htmlspecialchars($settings['logo']); ?>
-                                            </div>
-                                        <?php endif; ?>
-                                            </div>
-                                        </div>
-                                    </div>
-                                    
-                                    <!-- Pejabat -->
-                                    <h6 class="section-title mb-3 mt-4" style="color: #667eea; font-weight: 600; border-bottom: 2px solid #667eea; padding-bottom: 8px;">
-                                        <i class="fas fa-user-tie"></i> Pejabat
-                                    </h6>
-                                    <div class="row mb-4">
-                                        <div class="col-md-6">
-                                            <div class="form-group">
-                                                <label><strong>Nama Kepala Madrasah</strong></label>
-                                                <select class="form-control" name="nama_kepala">
-                                                    <option value="">-- Pilih Kepala Madrasah --</option>
-                                                    <?php foreach ($guru_list as $guru): ?>
-                                                        <option value="<?php echo htmlspecialchars($guru['nama_lengkap']); ?>" <?php echo (($settings['nama_kepala'] ?? '') === $guru['nama_lengkap']) ? 'selected' : ''; ?>>
-                                                            <?php echo htmlspecialchars($guru['nama_lengkap']); ?> <?php echo $guru['nip'] ? '(' . htmlspecialchars($guru['nip']) . ')' : ''; ?>
-                                                        </option>
-                                                    <?php endforeach; ?>
-                                                </select>
-                                            </div>
-                                        </div>
-                                        <div class="col-md-6">
-                                            <div class="form-group">
-                                                <label><strong>Nama Bendahara</strong></label>
-                                                <select class="form-control" name="nama_bendahara">
-                                                    <option value="">-- Pilih Bendahara --</option>
-                                                    <?php foreach ($guru_list as $guru): ?>
-                                                        <option value="<?php echo htmlspecialchars($guru['nama_lengkap']); ?>" <?php echo (($settings['nama_bendahara'] ?? '') === $guru['nama_lengkap']) ? 'selected' : ''; ?>>
-                                                            <?php echo htmlspecialchars($guru['nama_lengkap']); ?> <?php echo $guru['nip'] ? '(' . htmlspecialchars($guru['nip']) . ')' : ''; ?>
-                                                        </option>
-                                                    <?php endforeach; ?>
-                                                </select>
-                                            </div>
-                                        </div>
-                                    </div>
                                     
                                     <!-- Periode & Tahun Ajaran -->
                                     <h6 class="section-title mb-3 mt-4" style="color: #667eea; font-weight: 600; border-bottom: 2px solid #667eea; padding-bottom: 8px;">
@@ -384,39 +298,6 @@ if ($guru_result) {
             $('#honor_per_jam').val(honorFormatted);
             $('#honor_per_jam_hidden').val(honorValue);
             $('input[name="honor_per_jam"]').val(honorValue);
-            
-            // Preview logo when file is selected
-            $('#logoInput').on('change', function(e) {
-                var file = e.target.files[0];
-                if (file) {
-                    // Validate file size (2MB)
-                    if (file.size > 2 * 1024 * 1024) {
-                        alert('Ukuran file terlalu besar. Maksimal 2MB');
-                        $(this).val('');
-                        return;
-                    }
-                    
-                    // Validate file type
-                    var allowedTypes = ['image/jpeg', 'image/jpg', 'image/png', 'image/gif'];
-                    if (!allowedTypes.includes(file.type)) {
-                        alert('Format file tidak didukung. Gunakan JPG, PNG, atau GIF');
-                        $(this).val('');
-                        return;
-                    }
-                    
-                    // Show preview
-                    var reader = new FileReader();
-                    reader.onload = function(e) {
-                        $('#previewImage').attr('src', e.target.result);
-                        $('#logoPreview').show();
-                        $('#currentLogo').hide();
-                    };
-                    reader.readAsDataURL(file);
-                } else {
-                    $('#logoPreview').hide();
-                    $('#currentLogo').show();
-                }
-            });
             
             // Format on input - update hidden input immediately
             $('.currency-input').on('input', function() {

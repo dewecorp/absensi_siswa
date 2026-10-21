@@ -5,23 +5,16 @@ requireLogin();
 // Get settings first to get periode_aktif
 $sql = "SELECT * FROM settings LIMIT 1";
 $settings = $conn->query($sql)->fetch_assoc();
+// Identitas madrasah & pejabat mengikuti Pengaturan Admin SIMAD
+$settings = array_merge($settings ?: [], gajiProfilMadrasah($conn));
 $bulan_aktif = date('Y-m'); // Bulan aktif (current month)
 $periode = $_GET['periode'] ?? $bulan_aktif;
 $jumlah_periode = isset($settings['jumlah_periode']) ? intval($settings['jumlah_periode']) : 1;
 $periode_mulai = $settings['periode_mulai'] ?? '';
 $periode_akhir = $settings['periode_akhir'] ?? '';
 
-// Get logo path - use base64 for better print compatibility
-$logo_file = __DIR__ . '/../../assets/img/' . ($settings['logo'] ?? '');
-$logo_exists = !empty($settings['logo']) && file_exists($logo_file);
-$logo_base64 = '';
-$logo_path = '';
-if ($logo_exists) {
-    $logo_path = BASE_URL . 'assets/img/' . $settings['logo'];
-    // Convert to base64 for better print compatibility
-    $image_data = file_get_contents($logo_file);
-    $logo_base64 = 'data:' . mime_content_type($logo_file) . ';base64,' . base64_encode($image_data);
-}
+// Logo madrasah untuk cetak: pakai URL file (gambar utuh, halaman ringan).
+$logo_src = gajiLogoPrintSrc($settings);
 
 // Get legger_honor data
 $sql = "SELECT lh.*, p.nama_pembina, e.jenis_ekstrakurikuler, h.jabatan, h.jumlah_honor as honor_per_pertemuan
@@ -408,8 +401,8 @@ $legger = $stmt->get_result()->fetch_all(MYSQLI_ASSOC);
 </head>
 <body>
     <div class="header">
-        <?php if ($logo_exists): ?>
-        <img src="<?php echo $logo_base64; ?>" alt="Logo Madrasah" class="header-logo" onerror="this.src='<?php echo $logo_path; ?>'">
+        <?php if ($logo_src !== ''): ?>
+        <img src="<?php echo $logo_src; ?>" alt="Logo Madrasah" class="header-logo">
         <?php endif; ?>
         <div class="header-content">
             <h2><?php echo strtoupper(htmlspecialchars($settings['nama_madrasah'] ?? 'MADRASAH IBTIDAIYAH')); ?></h2>
@@ -418,7 +411,7 @@ $legger = $stmt->get_result()->fetch_all(MYSQLI_ASSOC);
     </div>
     
     <div class="period-info">
-        Bulan Penerimaan: <?php echo getPeriodLabel($bulan_aktif); ?>
+        Bulan Penerimaan: <?php echo getPeriodLabel($periode); ?>
     </div>
     
     <?php

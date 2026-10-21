@@ -8,12 +8,11 @@ $page_title = 'Data Tunjangan';
 $settings_sql = "SELECT nama_madrasah, tahun_ajaran, logo FROM settings LIMIT 1";
 $settings_result = $conn->query($settings_sql);
 $print_settings = $settings_result ? $settings_result->fetch_assoc() : [];
-$print_nama_madrasah = $print_settings['nama_madrasah'] ?? 'Madrasah Ibtidaiyah Sultan Fattah Sukosono';
+// Identitas madrasah & pejabat mengikuti Pengaturan Admin SIMAD
+$profil = gajiProfilMadrasah($conn);
+$print_nama_madrasah = $profil['nama_madrasah'] ?: ($print_settings['nama_madrasah'] ?? 'Madrasah Ibtidaiyah Sultan Fattah Sukosono');
 $print_tahun_ajaran = $print_settings['tahun_ajaran'] ?? ($tahun_ajaran ?? '');
-$print_logo_url = '';
-if (!empty($print_settings['logo'])) {
-    $print_logo_url = BASE_URL . 'assets/img/' . $print_settings['logo'];
-}
+$print_logo_url = $profil['logo_url'];
 
 // Periode pada tunjangan tidak untuk filter data, hanya metadata jika dibutuhkan
 $periode = date('Y-m');

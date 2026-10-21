@@ -7,12 +7,14 @@ $periode = $_GET['periode'] ?? date('Y-m');
 // Get settings
 $sql = "SELECT * FROM settings LIMIT 1";
 $settings = $conn->query($sql)->fetch_assoc();
+// Identitas madrasah & pejabat mengikuti Pengaturan Admin SIMAD
+$settings = array_merge($settings ?: [], gajiProfilMadrasah($conn));
 $jumlah_periode = isset($settings['jumlah_periode']) ? intval($settings['jumlah_periode']) : 1;
 $periode_mulai = $settings['periode_mulai'] ?? '';
 $periode_akhir = $settings['periode_akhir'] ?? '';
 
 // Function to get list of months from periode_mulai to periode_akhir
-function getMonthList($periode_mulai, $periode_akhir, $jumlah_periode) {
+function getMonthList($periode_mulai, $periode_akhir, $jumlah_periode, $periode_default = '') {
     $months = [];
     if (!empty($periode_mulai) && !empty($periode_akhir) && $jumlah_periode > 1) {
         $start = new DateTime($periode_mulai . '-01');
@@ -25,25 +27,16 @@ function getMonthList($periode_mulai, $periode_akhir, $jumlah_periode) {
         }
     } else {
         // If jumlah_periode = 1, use periode_aktif
-        $months[] = $periode_mulai ?: date('Y-m');
+        $months[] = $periode_mulai ?: ($periode_default ?: date('Y-m'));
     }
     return $months;
 }
 
 // Get list of months
-$month_list = getMonthList($periode_mulai, $periode_akhir, $jumlah_periode);
+$month_list = getMonthList($periode_mulai, $periode_akhir, $jumlah_periode, $periode);
 
-// Get logo path - use base64 for better print compatibility
-$logo_file = __DIR__ . '/../../assets/img/' . ($settings['logo'] ?? '');
-$logo_exists = !empty($settings['logo']) && file_exists($logo_file);
-$logo_base64 = '';
-$logo_path = '';
-if ($logo_exists) {
-    $logo_path = BASE_URL . 'assets/img/' . $settings['logo'];
-    // Convert to base64 for better print compatibility
-    $image_data = file_get_contents($logo_file);
-    $logo_base64 = 'data:' . mime_content_type($logo_file) . ';base64,' . base64_encode($image_data);
-}
+// Logo madrasah untuk cetak: pakai URL file (gambar utuh, halaman ringan).
+$logo_src = gajiLogoPrintSrc($settings);
 
 // Get legger data first to get legger IDs
 $sql = "SELECT lg.*, g.nama_lengkap 
@@ -548,8 +541,8 @@ $stmt->close();
 <body>
     <div class="content-wrapper">
     <div class="header">
-        <?php if ($logo_exists): ?>
-        <img src="<?php echo $logo_base64; ?>" alt="Logo Madrasah" class="header-logo" onerror="this.src='<?php echo $logo_path; ?>'">
+        <?php if ($logo_src !== ''): ?>
+        <img src="<?php echo $logo_src; ?>" alt="Logo Madrasah" class="header-logo">
         <?php endif; ?>
         <div class="header-content">
             <h2><?php echo strtoupper(htmlspecialchars($settings['nama_madrasah'] ?? 'MADRASAH IBTIDAIYAH')); ?></h2>

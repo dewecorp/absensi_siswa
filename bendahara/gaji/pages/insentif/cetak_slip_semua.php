@@ -5,16 +5,11 @@ requireLogin();
 $sql = "SELECT * FROM settings WHERE id = 1 LIMIT 1";
 $qr_settings = $conn->query($sql);
 $settings = ($qr_settings && $qr_settings->num_rows > 0) ? $qr_settings->fetch_assoc() : [];
+// Identitas madrasah & pejabat mengikuti Pengaturan Admin SIMAD
+$settings = array_merge($settings ?: [], gajiProfilMadrasah($conn));
 
-$logo_file = __DIR__ . '/../../assets/img/' . ($settings['logo'] ?? '');
-$logo_exists = !empty($settings['logo']) && file_exists($logo_file);
-$logo_base64 = '';
-$logo_path = '';
-if ($logo_exists) {
-    $logo_path = BASE_URL . 'assets/img/' . $settings['logo'];
-    $image_data = file_get_contents($logo_file);
-    $logo_base64 = 'data:' . mime_content_type($logo_file) . ';base64,' . base64_encode($image_data);
-}
+// Logo madrasah untuk cetak: pakai URL file (gambar utuh, halaman ringan).
+$logo_src = gajiLogoPrintSrc($settings);
 
 $conn->query("CREATE TABLE IF NOT EXISTS insentif (
     id INT AUTO_INCREMENT PRIMARY KEY,
@@ -274,8 +269,8 @@ foreach ($rows as $row) {
                     ?>
                     <div class="slip">
                         <div class="header">
-                            <?php if ($logo_exists): ?>
-                                <img src="<?php echo $logo_base64; ?>" alt="Logo" class="header-logo" onerror="this.src='<?php echo $logo_path; ?>'">
+                            <?php if ($logo_src !== ''): ?>
+                                <img src="<?php echo $logo_src; ?>" alt="Logo" class="header-logo">
                             <?php endif; ?>
                             <div class="header-content">
                                 <h3><?php echo strtoupper(htmlspecialchars($settings['nama_madrasah'] ?? 'MADRASAH')); ?></h3>

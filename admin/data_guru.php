@@ -1,6 +1,7 @@
 <?php
 require_once '../config/database.php';
 require_once '../config/functions.php';
+require_once '../config/gaji_sync.php';
 
 // Start session if not already started
 if (session_status() == PHP_SESSION_NONE) {
@@ -17,6 +18,10 @@ ensureTbGuruTmtColumn($pdo);
 ensureTbJabatanMaster($pdo);
 ensureTbGuruJabatanColumn($pdo);
 ensureGuruDefaultPasswords($pdo);
+
+// Sinkronkan data guru ke modul gaji (tabel `guru`) supaya data gaji guru/wali
+// di akun SIMAD selalu mengikuti modul gaji.
+gaji_sync_guru_modul($pdo);
 
 // Set page title
 $page_title = 'Data Guru';
@@ -177,6 +182,9 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['update_guru']) && isse
         if (!$log_result) {
             error_log("Failed to log activity for Update Guru: $nama_guru");
         }
+        
+        // Sinkronkan ke modul gaji (nama/NUPTK bisa berubah)
+        gaji_sync_guru_modul($pdo);
         
         echo json_encode(['success' => true, 'message' => 'Data guru berhasil diperbarui!']);
     } else {
@@ -499,6 +507,9 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['add_guru'])) {
                 $stmt = $pdo->prepare("INSERT INTO tb_guru (nama_guru, kode_guru, nuptk, tempat_lahir, tanggal_lahir, jenis_kelamin, pendidikan, tmt, mengajar, jabatan, password, password_plain, foto) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)");
                 if ($stmt->execute([$nama_guru, $kode_guru, $nuptk, $tempat_lahir, $tanggal_lahir, $jenis_kelamin, $pendidikan, $tmt, $mengajar, $jabatan, $hashed_password, $password_plain, $foto])) {
                     $message = ['type' => 'success', 'text' => 'Data guru berhasil ditambahkan!'];
+                    
+                    // Daftarkan langsung ke modul gaji (tabel `guru`)
+                    gaji_sync_guru_modul($pdo);
                     
                     // Log activity - ensure session is available
                     $username = isset($_SESSION['username']) ? $_SESSION['username'] : 'system';

@@ -14,8 +14,10 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
         $stmt->bind_param("idi", $guru_id, $jumlah, $id);
         $action = 'mengubah';
     } else {
-        // Check if record already exists for this guru
-        $check_sql = "SELECT id FROM gaji_pokok WHERE guru_id = ? LIMIT 1";
+        // Check if record already exists for this guru.
+        // Hanya baris "berjalan" (periode kosong) yang boleh diubah;
+        // riwayat gaji pokok per-periode tidak ditimpa.
+        $check_sql = "SELECT id FROM gaji_pokok WHERE guru_id = ? AND (periode = '' OR periode IS NULL) ORDER BY id DESC LIMIT 1";
         $check_stmt = $conn->prepare($check_sql);
         $check_stmt->bind_param("i", $guru_id);
         $check_stmt->execute();

@@ -22,17 +22,27 @@ $chart_data_json = json_encode($chart_totals);
                         <div class="dashboard-heading">
                             <div>
                                 <h1>Ringkasan Gaji</h1>
-                                <p>Ringkasan gaji periode <?php echo htmlspecialchars($periode_aktif_label); ?></p>
-                            </div>
-                            <div class="dashboard-period-badge">
-                                <span>Periode Aktif</span>
-                                <strong><?php echo htmlspecialchars($periode_aktif_label); ?></strong>
-                                <small><?php echo (int) $jumlah_periode; ?> periode</small>
+                                <p>Rekap gaji guru, honor dan insentif madrasah</p>
                             </div>
                         </div>
                     </div>
 
                     <div class="section-body">
+                        <!-- Info periode aktif (dipindah dari header ke atas kartu) -->
+                        <div class="dash-context-strip">
+                            <div class="dcs-main">
+                                <span class="dcs-ico"><i class="fas fa-calendar-alt"></i></span>
+                                <span class="dcs-text">
+                                    <span class="dcs-label">Periode Aktif</span>
+                                    <strong class="dcs-value"><?php echo htmlspecialchars($periode_aktif_label); ?></strong>
+                                </span>
+                            </div>
+                            <div class="dcs-meta">
+                                <span class="dcs-chip dcs-chip-teal"><i class="fas fa-layer-group"></i> <?php echo (int) $jumlah_periode; ?> periode</span>
+                                <span class="dcs-chip dcs-chip-indigo"><i class="fas fa-user-friends"></i> <?php echo number_format((int) ($stats['total_guru'] ?? 0), 0, ',', '.'); ?> guru</span>
+                            </div>
+                        </div>
+
                         <!-- Ringkasan Gaji & Honor -->
                         <div class="row dash-stat-row stack-mobile">
                             <?php foreach (gaji_ringkasan_cards($stats) as $gaji_card) : ?>

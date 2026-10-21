@@ -21,12 +21,14 @@ foreach ($guru as &$g) {
     $jumlah_jam = intval($g['jumlah_jam_mengajar'] ?? 0);
     $total_gaji = $jumlah_jam * $honor_per_jam;
     
-    // Check if gaji_pokok record exists for this teacher (gaji pokok tidak tergantung periode)
-    $check_sql = "SELECT id, jumlah FROM gaji_pokok WHERE guru_id = ? LIMIT 1";
+    // Baris "berjalan" (periode kosong) yang dipakai modul gaji.
+    // Riwayat gaji pokok per-periode tidak boleh ditimpa.
+    $check_sql = "SELECT id, jumlah FROM gaji_pokok WHERE guru_id = ? AND (periode = '' OR periode IS NULL) ORDER BY id DESC LIMIT 1";
     $check_stmt = $conn->prepare($check_sql);
     $check_stmt->bind_param("i", $g['id']);
     $check_stmt->execute();
     $existing = $check_stmt->get_result()->fetch_assoc();
+    $check_stmt->close();
     
     if ($existing) {
         // Update if total changed
@@ -35,6 +37,7 @@ foreach ($guru as &$g) {
             $update_stmt = $conn->prepare($update_sql);
             $update_stmt->bind_param("di", $total_gaji, $existing['id']);
             $update_stmt->execute();
+            $update_stmt->close();
         }
         $g['total_gaji_pokok'] = floatval($existing['jumlah']);
     } else {
@@ -43,6 +46,7 @@ foreach ($guru as &$g) {
         $insert_stmt = $conn->prepare($insert_sql);
         $insert_stmt->bind_param("id", $g['id'], $total_gaji);
         $insert_stmt->execute();
+        $insert_stmt->close();
         $g['total_gaji_pokok'] = $total_gaji;
     }
     

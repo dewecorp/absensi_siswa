@@ -199,6 +199,208 @@ if (!function_exists('formatRupiahTanpaRp')) {
     }
 }
 
+if (!function_exists('gaji_ambil_gaji_pokok_modul')) {
+    /**
+     * Gaji pokok bulanan guru dari tabel gaji_pokok modul gaji.
+     * Urutan: baris berjalan (periode kosong) -> baris periode target -> baris periode terakhir.
+     * Baris riwayat per-periode tidak pernah ditimpa.
+     */
+    function gaji_ambil_gaji_pokok_modul($conn, int $guru_id, string $periode = ''): float
+    {
+        if (!($conn instanceof mysqli) || $guru_id <= 0) {
+            return 0.0;
+        }
+
+        $coba = function (string $sql, array $params) use ($conn) {
+            $stmt = @$conn->prepare($sql);
+            if (!$stmt) {
+                return null;
+            }
+            $stmt->bind_param($params[0], ...array_slice($params, 1));
+            $stmt->execute();
+            $result = $stmt->get_result();
+            $row = $result ? $result->fetch_assoc() : null;
+            $stmt->close();
+            return $row;
+        };
+
+        $row = $coba("SELECT jumlah FROM gaji_pokok WHERE guru_id = ? AND (periode = '' OR periode IS NULL) ORDER BY id DESC LIMIT 1", ['i', $guru_id]);
+        if ($row) {
+            return (float)($row['jumlah'] ?? 0);
+        }
+
+        if ($periode !== '') {
+            $row = $coba("SELECT jumlah FROM gaji_pokok WHERE guru_id = ? AND periode = ? ORDER BY id DESC LIMIT 1", ['is', $guru_id, $periode]);
+            if ($row) {
+                return (float)($row['jumlah'] ?? 0);
+            }
+        }
+
+        $row = $coba("SELECT jumlah FROM gaji_pokok WHERE guru_id = ? ORDER BY periode DESC, id DESC LIMIT 1", ['i', $guru_id]);
+        if ($row) {
+            return (float)($row['jumlah'] ?? 0);
+        }
+
+        return 0.0;
+    }
+}
+
+if (!function_exists('gajiLogoPrintSrc')) {
+    /**
+     * Sumber gambar logo untuk halaman cetak (slip/legger gaji, honor, insentif).
+     *
+     * Memakai URL file, bukan base64:
+     * - base64 bikin HTML jadi ratusan KB dan fragile (gambar bisa terpotong
+     *   bila response HTTP rusak/terpotong),
+     * - URL file dijamin utuh oleh web server & lebih ringan.
+     * Base64 hanya dipakai sebagai cadangan bila file tidak bisa diakses.
+     */
+    function gajiLogoPrintSrc(array $settings): string
+    {
+        $url = trim((string)($settings['logo_url'] ?? ''));
+        if ($url !== '') {
+            return $url;
+        }
+
+        $file = trim((string)($settings['logo_file'] ?? ''));
+        if ($file !== '' && is_file($file) && is_readable($file)) {
+            $mime = function_exists('mime_content_type') ? (string)mime_content_type($file) : '';
+            $mime = $mime !== '' ? $mime : 'image/png';
+            $data = @file_get_contents($file);
+            if ($data !== false && $data !== '') {
+                return 'data:' . $mime . ';base64,' . base64_encode($data);
+            }
+        }
+
+        return '';
+    }
+}
+
+if (!function_exists('gajiLogoFile')) {
+    /**
+     * Path absolut file logo madrasah.
+     * Logo resmi (Pengaturan Admin) ada di assets/img root,
+     * fallback ke folder logo modul (bendahara/gaji/assets/img).
+     */
+    function gajiLogoFile($logo) {
+        $logo = trim((string)$logo);
+        if ($logo === '') {
+            return '';
+        }
+        if (is_file(__DIR__ . '/../../../assets/img/' . $logo)) {
+            return __DIR__ . '/../../../assets/img/' . $logo;
+        }
+        if (is_file(__DIR__ . '/../assets/img/' . $logo)) {
+            return __DIR__ . '/../assets/img/' . $logo;
+        }
+        return '';
+    }
+}
+
+if (!function_exists('gajiLogoUrl')) {
+    /**
+     * URL logo madrasah.
+     * Logo resmi disimpan di assets/img (Pengaturan Admin SIMAD).
+     * Fallback: folder logo modul (bendahara/gaji/assets/img).
+     */
+    function gajiLogoUrl($logo) {
+        $logo = trim((string)$logo);
+        if ($logo === '') {
+            return '';
+        }
+
+        $base = function_exists('app_base_path') ? app_base_path() : (defined('SIMAD_BASE_URL') ? SIMAD_BASE_URL : '');
+
+        // Logo dari Pengaturan Admin (root assets/img)
+        if (is_file(__DIR__ . '/../../../assets/img/' . $logo)) {
+            return $base . '/assets/img/' . $logo;
+        }
+
+        // Logo bawaan modul gaji
+        if (is_file(__DIR__ . '/../assets/img/' . $logo)) {
+            $moduleBase = defined('BASE_URL') ? BASE_URL : $base . '/bendahara/gaji/';
+            return $moduleBase . 'assets/img/' . $logo;
+        }
+
+        return $base . '/assets/img/' . $logo;
+    }
+}
+
+if (!function_exists('gajiProfilMadrasah')) {
+    /**
+     * Identitas madrasah & pejabat yang dipakai slip/legger gaji, honor, dan insentif.
+     * Sumber utama: Pengaturan Admin SIMAD (tb_profil_madrasah).
+     * Fallback: tabel settings modul gaji.
+     *
+     * @return array{nama_madrasah:string,nama_kepala:string,nama_bendahara:string,logo:string,logo_url:string}
+     */
+    function gajiProfilMadrasah($conn = null) {
+        $profil = [
+            'nama_madrasah' => '',
+            'nama_kepala' => '',
+            'nama_bendahara' => '',
+            'logo' => '',
+            'logo_file' => '',
+            'logo_url' => '',
+        ];
+
+        if (!($conn instanceof mysqli)) {
+            return $profil;
+        }
+
+        // Fallback: pengaturan modul gaji
+        $res = @$conn->query("SELECT nama_madrasah, nama_kepala, nama_bendahara, logo FROM settings WHERE id = 1 LIMIT 1");
+        if ($res && $res->num_rows > 0) {
+            $row = $res->fetch_assoc() ?: [];
+            $profil['nama_madrasah'] = trim((string)($row['nama_madrasah'] ?? ''));
+            $profil['nama_kepala'] = trim((string)($row['nama_kepala'] ?? ''));
+            $profil['nama_bendahara'] = trim((string)($row['nama_bendahara'] ?? ''));
+            $profil['logo'] = trim((string)($row['logo'] ?? ''));
+        }
+
+        // Sumber utama: Pengaturan Admin SIMAD
+        $res = @$conn->query("SELECT nama_madrasah, kepala_madrasah, id_bendahara, logo FROM tb_profil_madrasah WHERE id = 1 LIMIT 1");
+        if ($res && $res->num_rows > 0) {
+            $row = $res->fetch_assoc() ?: [];
+
+            $nama = trim((string)($row['nama_madrasah'] ?? ''));
+            if ($nama !== '') {
+                $profil['nama_madrasah'] = $nama;
+            }
+
+            $kepala = trim((string)($row['kepala_madrasah'] ?? ''));
+            if ($kepala !== '') {
+                $profil['nama_kepala'] = $kepala;
+            }
+
+            $logo = trim((string)($row['logo'] ?? ''));
+            if ($logo !== '') {
+                $profil['logo'] = $logo;
+            }
+
+            $id_bendahara = (int)($row['id_bendahara'] ?? 0);
+            if ($id_bendahara > 0) {
+                $stmt = @$conn->prepare("SELECT nama_guru FROM tb_guru WHERE id_guru = ? LIMIT 1");
+                if ($stmt) {
+                    $stmt->bind_param('i', $id_bendahara);
+                    $stmt->execute();
+                    $result = $stmt->get_result();
+                    $guru = $result ? $result->fetch_assoc() : null;
+                    if ($guru && trim((string)($guru['nama_guru'] ?? '')) !== '') {
+                        $profil['nama_bendahara'] = trim((string)$guru['nama_guru']);
+                    }
+                    $stmt->close();
+                }
+            }
+        }
+
+        $profil['logo_file'] = gajiLogoFile($profil['logo']);
+        $profil['logo_url'] = gajiLogoUrl($profil['logo']);
+
+        return $profil;
+    }
+}
+
 if (!function_exists('timeAgo')) {
     function timeAgo($datetime) {
         $timestamp = strtotime($datetime);

@@ -74,7 +74,9 @@ if (!function_exists('gaji_ringkasan_cards')) {
             [
                 'label' => 'Total Gaji Bersih',
                 'value' => $rp($stats['total_gaji_bersih'] ?? 0),
-                'icon' => 'fa-bank',
+                // Catatan: "fa-bank" hanya ada di Font Awesome Pro,
+                // sedangkan SIMAD memakai Font Awesome 5.7.2 (free) -> ikon kosong.
+                'icon' => 'fa-hand-holding-usd',
                 'tone' => 'green',
                 'sub' => 'pokok + tunjangan - potongan',
             ],
@@ -167,8 +169,16 @@ if (!function_exists('gaji_ringkasan_data')) {
         } else {
             $stmt->close();
 
-            $result = $conn->query("SELECT COALESCE(SUM(jumlah), 0) as total FROM gaji_pokok");
-            $stats['total_gaji_pokok'] = ((float) ($result ? $result->fetch_assoc()['total'] : 0)) * $jumlah_periode;
+            // Gaji pokok: jumlahkan baris "berjalan" tiap guru (tanpa menghitung riwayat per-periode)
+            $total_pokok = 0;
+            $guru_pokok = $conn->query("SELECT id FROM guru ORDER BY id");
+            if ($guru_pokok) {
+                while ($g_row = $guru_pokok->fetch_assoc()) {
+                    $total_pokok += gaji_ambil_gaji_pokok_modul($conn, (int) $g_row['id'], $periode_aktif ?? '');
+                }
+                $guru_pokok->free();
+            }
+            $stats['total_gaji_pokok'] = $total_pokok * $jumlah_periode;
 
             $sql = "SELECT COALESCE(SUM(td.jumlah), 0) as total
                     FROM tunjangan_detail td

@@ -62,6 +62,93 @@
 }
 
 /* ------------------------------------------------------------
+   1b. Strip info periode (di atas baris kartu ringkasan)
+   ------------------------------------------------------------ */
+.dash-context-strip {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    flex-wrap: wrap;
+    margin-bottom: 14px;
+    padding: 12px 16px;
+    background: #fff;
+    border: 1.5px solid rgba(15, 23, 42, .07);
+    border-radius: 16px;
+    box-shadow: 0 4px 14px rgba(15, 23, 42, .05);
+}
+
+.dash-context-strip .dcs-main {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    min-width: 0;
+}
+
+.dash-context-strip .dcs-ico {
+    flex: 0 0 auto;
+    width: 42px;
+    height: 42px;
+    border-radius: 12px;
+    display: grid;
+    place-items: center;
+    font-size: 1rem;
+    background: rgba(37, 99, 235, .13);
+    color: #2563eb;
+}
+
+.dash-context-strip .dcs-text {
+    min-width: 0;
+}
+
+.dash-context-strip .dcs-label {
+    display: block;
+    font-size: .68rem;
+    font-weight: 700;
+    letter-spacing: .06em;
+    text-transform: uppercase;
+    color: #64748b;
+    line-height: 1.2;
+}
+
+.dash-context-strip .dcs-value {
+    display: block;
+    margin-top: 2px;
+    font-size: 1.05rem;
+    font-weight: 800;
+    color: #0f172a;
+    line-height: 1.25;
+}
+
+.dash-context-strip .dcs-meta {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    flex-wrap: wrap;
+}
+
+.dash-context-strip .dcs-chip {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 6px 12px;
+    border-radius: 999px;
+    font-size: .72rem;
+    font-weight: 700;
+    white-space: nowrap;
+}
+
+.dash-context-strip .dcs-chip-teal {
+    background: rgba(16, 185, 129, .13);
+    color: #0f766e;
+}
+
+.dash-context-strip .dcs-chip-indigo {
+    background: rgba(99, 102, 241, .14);
+    color: #4338ca;
+}
+
+/* ------------------------------------------------------------
    2. DataTable (gaji & honor): kontrol & footer rapi
    ------------------------------------------------------------ */
 
@@ -150,6 +237,24 @@
         width: 100%;
         min-width: 0;
         text-align: left;
+    }
+}
+
+@media (max-width: 575.98px) {
+    .dash-context-strip {
+        align-items: flex-start;
+        flex-direction: column;
+        gap: 10px;
+        padding: 11px 13px;
+    }
+
+    .dash-context-strip .dcs-meta {
+        width: 100%;
+    }
+
+    .dash-context-strip .dcs-chip {
+        flex: 1 1 auto;
+        justify-content: center;
     }
 }
 

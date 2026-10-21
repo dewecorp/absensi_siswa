@@ -7,18 +7,11 @@ $periode = $_GET['periode'] ?? date('Y-m');
 // Get settings
 $sql = "SELECT * FROM settings LIMIT 1";
 $settings = $conn->query($sql)->fetch_assoc();
+// Identitas madrasah & pejabat mengikuti Pengaturan Admin SIMAD
+$settings = array_merge($settings ?: [], gajiProfilMadrasah($conn));
 
-// Get logo path - use base64 for better print compatibility
-$logo_file = __DIR__ . '/../../assets/img/' . ($settings['logo'] ?? '');
-$logo_exists = !empty($settings['logo']) && file_exists($logo_file);
-$logo_base64 = '';
-$logo_path = '';
-if ($logo_exists) {
-    $logo_path = BASE_URL . 'assets/img/' . $settings['logo'];
-    // Convert to base64 for better print compatibility
-    $image_data = file_get_contents($logo_file);
-    $logo_base64 = 'data:' . mime_content_type($logo_file) . ';base64,' . base64_encode($image_data);
-}
+// Logo madrasah untuk cetak: pakai URL file (gambar utuh, halaman ringan).
+$logo_src = gajiLogoPrintSrc($settings);
 
 // Get all legger data for the period
 $sql = "SELECT lg.*, g.nama_lengkap 
@@ -543,8 +536,8 @@ foreach ($legger_list as $l) {
     ?>
         <div class="slip">
             <div class="header">
-                <?php if ($logo_exists): ?>
-                <img src="<?php echo $logo_base64; ?>" alt="Logo Madrasah" class="header-logo" onerror="this.src='<?php echo $logo_path; ?>'">
+                <?php if ($logo_src !== ''): ?>
+                <img src="<?php echo $logo_src; ?>" alt="Logo Madrasah" class="header-logo">
                 <?php endif; ?>
                 <div class="header-content">
                     <h3><?php echo strtoupper(htmlspecialchars($settings['nama_madrasah'])); ?></h3>

@@ -566,7 +566,7 @@ switch ($user_level) {
                     ['title' => 'Legger Honor', 'url' => '../bendahara/gaji_legger_honor.php?session_type=admin', 'active' => $current_page === 'gaji_legger_honor.php'],
                     ['title' => 'Insentif', 'url' => '../bendahara/gaji_insentif.php?session_type=admin', 'active' => $current_page === 'gaji_insentif.php'],
                 ],
-                'active' => ($current_page === 'honor_insentif.php' && $current_dir === 'bendahara') || in_array($current_page, ['gaji_insentif.php', 'gaji_ekstrakurikuler.php', 'gaji_pembina.php', 'gaji_honor.php', 'gaji_legger_honor.php'], true)
+                'active' => in_array($current_page, ['gaji_insentif.php', 'gaji_ekstrakurikuler.php', 'gaji_pembina.php', 'gaji_honor.php', 'gaji_legger_honor.php'], true)
             ],
             [
                 'title' => 'Nilai Siswa',
@@ -1095,7 +1095,7 @@ switch ($user_level) {
                     ['title' => 'Legger Honor', 'url' => '../bendahara/gaji_legger_honor.php', 'active' => $current_page === 'gaji_legger_honor.php'],
                     ['title' => 'Insentif', 'url' => '../bendahara/gaji_insentif.php', 'active' => $current_page === 'gaji_insentif.php'],
                 ],
-                'active' => $current_page === 'honor_insentif.php' || in_array($current_page, ['gaji_insentif.php', 'gaji_ekstrakurikuler.php', 'gaji_pembina.php', 'gaji_honor.php', 'gaji_legger_honor.php'], true)
+                'active' => in_array($current_page, ['gaji_insentif.php', 'gaji_ekstrakurikuler.php', 'gaji_pembina.php', 'gaji_honor.php', 'gaji_legger_honor.php'], true)
             ],
             [
                 'title' => 'Anggaran',

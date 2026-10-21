@@ -89,6 +89,8 @@ try {
     // Get settings
     $sql_settings = "SELECT * FROM settings LIMIT 1";
     $settings = $conn->query($sql_settings)->fetch_assoc();
+    // Identitas madrasah & pejabat mengikuti Pengaturan Admin SIMAD
+    $settings = array_merge($settings ?: [], gajiProfilMadrasah($conn));
     
     // Create new Spreadsheet object
     $spreadsheet = new Spreadsheet();

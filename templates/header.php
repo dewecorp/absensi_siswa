@@ -858,9 +858,57 @@ if (getUserLevel() === 'siswa' && isset($_SESSION['user_id'])) {
     ?>
     <link rel="stylesheet" href="../assets/css/pembayaran-app.css?v=<?php echo htmlspecialchars($_pb_css_v, ENT_QUOTES, 'UTF-8'); ?>">
     <?php endif; ?>
+
+    <?php if (!empty($gaji_module_page)): ?>
+    <!-- Modul Gaji & Honor: helper tampilan mobile app (tabel jadi kartu di layar kecil) -->
+    <?php
+    $_gj_js_path = __DIR__ . '/../assets/js/gaji-app.js';
+    $_gj_js_v = is_readable($_gj_js_path) ? (string) filemtime($_gj_js_path) : '1';
+    ?>
+    <script defer src="<?php echo htmlspecialchars(app_base_path() . '/assets/js/gaji-app.js?v=' . $_gj_js_v, ENT_QUOTES, 'UTF-8'); ?>"></script>
+    <?php endif; ?>
 </head>
 
-        <body class="<?php echo (in_array(basename($_SERVER['PHP_SELF']), ['dashboard.php', 'simple_dashboard.php']) || !empty($pembayaran_dashboard_home)) ? 'mobile-no-app-header' : 'mobile-has-app-header'; ?>">
+        <body class="<?php echo (in_array(basename($_SERVER['PHP_SELF']), ['dashboard.php', 'simple_dashboard.php']) || !empty($pembayaran_dashboard_home)) ? 'mobile-no-app-header' : 'mobile-has-app-header'; ?><?php echo !empty($gaji_module_page) ? ' gaji-app' : ''; ?>">
+<?php
+// Notifikasi aksi (flash): pesan sukses/error dari penyimpanan data (modul gaji, dsb)
+$__flash_success = isset($_SESSION['success']) ? trim((string)$_SESSION['success']) : '';
+$__flash_error   = isset($_SESSION['error']) ? trim((string)$_SESSION['error']) : '';
+unset($_SESSION['success'], $_SESSION['error']);
+if ($__flash_success !== '' || $__flash_error !== ''):
+    $__flash_msg = $__flash_error !== '' ? $__flash_error : $__flash_success;
+    $__flash_err = $__flash_error !== '' ? 'true' : 'false';
+?>
+    <script>
+    (function () {
+        var msg = <?php echo json_encode($__flash_msg, JSON_UNESCAPED_UNICODE); ?>;
+        var isErr = <?php echo $__flash_err; ?>;
+        function showFlash() {
+            if (typeof Swal !== 'undefined') {
+                Swal.fire({
+                    icon: isErr ? 'error' : 'success',
+                    title: isErr ? 'Gagal' : 'Berhasil',
+                    text: msg,
+                    timer: 3500,
+                    showConfirmButton: false
+                });
+                return;
+            }
+            var box = document.createElement('div');
+            box.className = 'alert alert-' + (isErr ? 'danger' : 'success') + ' alert-dismissible fade show m-3';
+            box.setAttribute('role', 'alert');
+            box.textContent = msg;
+            var target = document.querySelector('.main-content') || document.body;
+            target.insertBefore(box, target.firstChild);
+        }
+        if (document.readyState === 'loading') {
+            document.addEventListener('DOMContentLoaded', showFlash);
+        } else {
+            showFlash();
+        }
+    })();
+    </script>
+<?php endif; ?>
     <div id="app">
         <div class="main-wrapper">
 

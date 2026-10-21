@@ -35,12 +35,11 @@ $conn->query("CREATE TABLE IF NOT EXISTS insentif_detail (
 $settings_sql = "SELECT nama_madrasah, tahun_ajaran, logo FROM settings LIMIT 1";
 $settings_result = $conn->query($settings_sql);
 $print_settings = $settings_result ? $settings_result->fetch_assoc() : [];
-$print_nama_madrasah = $print_settings['nama_madrasah'] ?? 'Madrasah Ibtidaiyah';
+// Identitas madrasah & pejabat mengikuti Pengaturan Admin SIMAD
+$profil = gajiProfilMadrasah($conn);
+$print_nama_madrasah = $profil['nama_madrasah'] ?: ($print_settings['nama_madrasah'] ?? 'Madrasah Ibtidaiyah');
 $print_tahun_ajaran = $print_settings['tahun_ajaran'] ?? ($tahun_ajaran ?? '');
-$print_logo_url = '';
-if (!empty($print_settings['logo'])) {
-    $print_logo_url = BASE_URL . 'assets/img/' . $print_settings['logo'];
-}
+$print_logo_url = $profil['logo_url'];
 
 $sql = "SELECT i.*,
         (SELECT GROUP_CONCAT(DISTINCT g.nama_lengkap ORDER BY g.nama_lengkap SEPARATOR ', ')
@@ -419,7 +418,9 @@ foreach ($legger_detail_rows as $row) {
     height: auto !important;
 }
 
-/* Sticky columns for Legger Insentif */
+/* Sticky columns for Legger Insentif (hanya layar lebar).
+   Di layar kecil tabel menjadi kartu oleh assets/css/gaji-app.css */
+@media screen and (min-width: 992px) {
 #tableLeggerInsentif {
     border-collapse: separate;
     border-spacing: 0;
@@ -464,6 +465,7 @@ foreach ($legger_detail_rows as $row) {
     overflow-x: auto;
     overflow-y: visible;
 }
+} /* akhir media query min-width 992px */
             </style>
 
             <div id="print-config-insentif"

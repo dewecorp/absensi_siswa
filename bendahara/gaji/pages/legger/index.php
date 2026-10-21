@@ -171,11 +171,11 @@ $legger = $stmt->get_result()->fetch_all(MYSQLI_ASSOC);
                                                     <td><?php echo htmlspecialchars($l['nama_lengkap']); ?></td>
                                                     <td style="text-align: right;"><?php echo formatRupiahTanpaRp($gaji_pokok_display); ?></td>
                                                     <?php foreach ($tunjangan as $t): ?>
-                                                        <td style="text-align: right; width: 160px !important; min-width: 160px !important; white-space: nowrap !important;"><?php echo formatRupiahTanpaRp($tunjangan_data[$t['id']] ?? 0); ?></td>
+                                                        <td style="text-align: right;"><?php echo formatRupiahTanpaRp($tunjangan_data[$t['id']] ?? 0); ?></td>
                                                     <?php endforeach; ?>
                                                     <td style="text-align: right; font-weight: bold;"><?php echo formatRupiahTanpaRp($total_tunjangan_display); ?></td>
                                                     <?php foreach ($potongan as $p): ?>
-                                                        <td style="text-align: right; width: 160px !important; min-width: 160px !important; white-space: nowrap !important;"><?php echo formatRupiahTanpaRp($potongan_data[$p['id']] ?? 0); ?></td>
+                                                        <td style="text-align: right;"><?php echo formatRupiahTanpaRp($potongan_data[$p['id']] ?? 0); ?></td>
                                                     <?php endforeach; ?>
                                                     <td style="text-align: right; font-weight: bold;"><?php echo formatRupiahTanpaRp($total_potongan_display); ?></td>
                                                     <td style="text-align: right; font-weight: bold;"><?php echo formatRupiahTanpaRp($gaji_bersih_display); ?></td>
@@ -229,7 +229,10 @@ $legger = $stmt->get_result()->fetch_all(MYSQLI_ASSOC);
     color: #666;
 }
 
-/* Scroll horizontal untuk tabel - tanpa scroll vertical */
+/* Scroll horizontal untuk tabel - tanpa scroll vertical.
+   Aturan lebar kolom & sticky hanya untuk layar lebar.
+   Di layar kecil tabel diubah menjadi kartu oleh assets/css/gaji-app.css */
+@media screen and (min-width: 992px) {
 #tableLegger {
     overflow-x: auto !important;
     overflow-y: hidden !important;
@@ -431,6 +434,7 @@ table.dataTable#tableLeggerData tbody td:nth-child(n+4):not(:last-child):not(:nt
 #tableLeggerData tbody tr:nth-child(even) td:nth-child(2) {
     background-color: #f9f9f9 !important;
 }
+} /* akhir media query min-width 992px */
 </style>
 
 <script>

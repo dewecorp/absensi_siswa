@@ -148,7 +148,7 @@ if (!class_exists(Spreadsheet::class)) {
 }
 
 // Function to get list of months
-function getMonthList($periode_mulai, $periode_akhir, $jumlah_periode) {
+function getMonthList($periode_mulai, $periode_akhir, $jumlah_periode, $periode_default = '') {
     $months = [];
     if (!empty($periode_mulai) && !empty($periode_akhir) && $jumlah_periode > 1) {
         $start = new DateTime($periode_mulai . '-01');
@@ -160,7 +160,7 @@ function getMonthList($periode_mulai, $periode_akhir, $jumlah_periode) {
             $current->modify('+1 month');
         }
     } else {
-        $months[] = $periode_mulai ?: date('Y-m');
+        $months[] = $periode_mulai ?: ($periode_default ?: date('Y-m'));
     }
     return $months;
 }
@@ -192,12 +192,14 @@ try {
     // Get settings
     $sql_settings = "SELECT * FROM settings LIMIT 1";
     $settings = $conn->query($sql_settings)->fetch_assoc();
+    // Identitas madrasah & pejabat mengikuti Pengaturan Admin SIMAD
+    $settings = array_merge($settings ?: [], gajiProfilMadrasah($conn));
     $jumlah_periode = isset($settings['jumlah_periode']) ? intval($settings['jumlah_periode']) : 1;
     $periode_mulai = $settings['periode_mulai'] ?? '';
     $periode_akhir = $settings['periode_akhir'] ?? '';
     
     // Get list of months
-    $month_list = getMonthList($periode_mulai, $periode_akhir, $jumlah_periode);
+    $month_list = getMonthList($periode_mulai, $periode_akhir, $jumlah_periode, $periode);
     
     // Get base legger data (from periode_aktif, which contains multiplied data)
     $sql = "SELECT lg.*, g.nama_lengkap 

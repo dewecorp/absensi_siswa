@@ -38,6 +38,13 @@ if (!defined('APP_VERSION')) {
 
 date_default_timezone_set('Asia/Jakarta');
 
+// Tandai halaman ini sebagai halaman Modul Gaji/Honor.
+// Dipakai templates/header.php untuk mengaktifkan gaya mobile app
+// (assets/css/gaji-app.css + assets/js/gaji-app.js).
+if (!isset($gaji_module_page)) {
+    $gaji_module_page = true;
+}
+
 // Koneksi mysqli untuk kode halaman gaji (warisan SIGaji).
 if (!isset($conn) || !($conn instanceof mysqli)) {
     $conn = @new mysqli(DB_HOST, DB_USER, DB_PASS, DB_NAME);

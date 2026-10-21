@@ -1,452 +1,378 @@
 /* ============================================================
-   SIMAD Mobile App Styling: Data Gaji Guru
+   SIMAD Mobile App Styling: Modul Gaji & Honor
    File: assets/css/gaji-app.css
+   Dipakai oleh semua halaman Modul Gaji & Honor (bendahara/gaji_*)
+   Pola mengikuti modul Pembayaran (assets/css/pembayaran-app.css):
+   - kartu & form terasa seperti aplikasi mobile
+   - tabel berubah menjadi kartu (label + nilai) di layar kecil
    ============================================================ */
 
-/* ---------- Hero Salary Card (Ala Banking App / E-Wallet) ---------- */
-.gaji-hero-card {
-    background: linear-gradient(135deg, #0f172a 0%, #1e293b 50%, #0f766e 100%);
-    border-radius: 20px;
-    padding: 22px 20px 20px;
-    color: #ffffff;
-    box-shadow: 0 10px 28px rgba(15, 23, 42, .22);
-    position: relative;
-    overflow: hidden;
-    margin-bottom: 16px;
-    border: 1px solid rgba(255, 255, 255, .10);
+.gaji-app {
+    --gj-radius: 16px;
+    --gj-line: #e8edf5;
+    --gj-ink: #0f172a;
+    --gj-muted: #64748b;
 }
 
-.gaji-hero-card::after {
-    content: '';
-    position: absolute;
-    right: -30px;
-    bottom: -30px;
-    width: 160px;
-    height: 160px;
-    border-radius: 50%;
-    background: radial-gradient(circle, rgba(20, 184, 166, .25) 0%, rgba(20, 184, 166, 0) 70%);
-    pointer-events: none;
+/* ---------- Judul halaman ---------- */
+.gaji-app .section-header {
+    padding-bottom: 10px;
 }
 
-.gaji-hero-top {
-    display: flex;
-    justify-content: space-between;
-    align-items: flex-start;
-    gap: 12px;
-    margin-bottom: 16px;
-}
-
-.gaji-hero-user {
-    display: flex;
-    align-items: center;
-    gap: 12px;
-    min-width: 0;
-}
-
-.gaji-hero-avatar {
-    width: 44px;
-    height: 44px;
-    border-radius: 14px;
-    background: rgba(255, 255, 255, .15);
-    backdrop-filter: blur(8px);
-    border: 1px solid rgba(255, 255, 255, .25);
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    font-size: 18px;
-    color: #5eead4;
-    flex-shrink: 0;
-}
-
-.gaji-hero-name {
-    font-size: 15px;
+.gaji-app .section-header h1 {
+    font-size: 1.15rem;
     font-weight: 800;
-    line-height: 1.25;
-    margin-bottom: 2px;
-    color: #ffffff;
+    color: var(--gj-ink);
+    letter-spacing: -.01em;
 }
 
-.gaji-hero-sub {
-    font-size: 11px;
-    opacity: .75;
-    color: #cbd5e1;
-    letter-spacing: .2px;
+.gaji-app .section-header-breadcrumb .breadcrumb-item,
+.gaji-app .section-header-breadcrumb .breadcrumb-item a {
+    font-size: .8rem;
+    font-weight: 600;
+    color: var(--gj-muted);
 }
 
-.gaji-hero-badge {
+/* ---------- Kartu ---------- */
+.gaji-app .card {
+    border: 1px solid var(--gj-line);
+    border-radius: var(--gj-radius);
+    box-shadow: 0 6px 20px rgba(15, 23, 42, .06);
+    overflow: hidden;
+    background: #fff;
+}
+
+.gaji-app .card-header {
+    background: #fff;
+    border-bottom: 1px solid var(--gj-line);
+    padding: 14px 16px;
+}
+
+.gaji-app .card-header h4,
+.gaji-app .card-header h5,
+.gaji-app .card-header h6 {
+    font-size: 1rem;
+    font-weight: 800;
+    margin: 0;
+    color: var(--gj-ink);
+}
+
+.gaji-app .card-body {
+    padding: 16px;
+}
+
+.gaji-app .card-footer {
+    background: #fbfdff;
+    border-top: 1px solid var(--gj-line);
+}
+
+/* ---------- Form ---------- */
+.gaji-app label {
+    font-weight: 800;
+    color: #334155;
+    font-size: .78rem;
+    text-transform: uppercase;
+    letter-spacing: .03em;
+    margin-bottom: 6px;
+}
+
+.gaji-app .form-control,
+.gaji-app .custom-select {
+    border-radius: 12px;
+    border: 1.5px solid #e2e8f0;
+    min-height: 42px;
+    color: var(--gj-ink);
+    box-shadow: none;
+}
+
+.gaji-app textarea.form-control {
+    min-height: 90px;
+}
+
+.gaji-app .form-control:focus,
+.gaji-app .custom-select:focus {
+    border-color: #93c5fd;
+    box-shadow: 0 0 0 3px rgba(59, 130, 246, .12);
+}
+
+.gaji-app .input-group-text {
+    border-radius: 12px;
+    border: 1.5px solid #e2e8f0;
+    background: #f8fafc;
+    font-weight: 700;
+}
+
+/* ---------- Tombol ---------- */
+.gaji-app .btn {
+    border-radius: 12px;
+    font-weight: 700;
+    padding: .5rem .9rem;
     display: inline-flex;
     align-items: center;
-    gap: 5px;
-    background: rgba(255, 255, 255, .14);
-    backdrop-filter: blur(6px);
-    border: 1px solid rgba(255, 255, 255, .20);
-    padding: 4px 10px;
-    border-radius: 20px;
-    font-size: 10.5px;
-    font-weight: 700;
-    color: #e2e8f0;
-    white-space: nowrap;
+    justify-content: center;
+    gap: 6px;
 }
 
-.gaji-hero-badge i {
-    color: #5eead4;
+.gaji-app .btn-sm {
+    border-radius: 10px;
+    padding: .35rem .7rem;
 }
 
-.gaji-hero-balance-wrap {
-    text-align: left;
-    margin-bottom: 18px;
+.gaji-app .btn i {
+    font-size: .85em;
 }
 
-.gaji-hero-balance-lbl {
-    font-size: 11.5px;
-    text-transform: uppercase;
-    letter-spacing: .6px;
-    opacity: .8;
-    color: #94a3b8;
-    font-weight: 700;
-    margin-bottom: 4px;
+.gaji-app .btn:active {
+    transform: scale(.98);
 }
 
-.gaji-hero-balance {
-    font-size: 28px;
-    font-weight: 900;
-    line-height: 1.15;
-    color: #ffffff;
-    letter-spacing: -0.5px;
+/* ---------- Badge & alert ---------- */
+.gaji-app .badge {
+    border-radius: 999px;
+    padding: .4em .75em;
+    font-weight: 800;
+    letter-spacing: .01em;
 }
 
-.gaji-hero-balance-sub {
-    font-size: 11.5px;
-    opacity: .85;
-    color: #5eead4;
-    margin-top: 4px;
-    font-weight: 600;
+.gaji-app .alert {
+    border-radius: 14px;
+    border: 0;
 }
 
-/* Three mini tiles inside hero */
-.gaji-hero-stats {
-    display: grid;
-    grid-template-columns: repeat(3, 1fr);
-    gap: 8px;
-    padding-top: 14px;
-    border-top: 1px solid rgba(255, 255, 255, .12);
-}
-
-.gaji-hero-stat-pill {
-    background: rgba(255, 255, 255, .08);
-    border: 1px solid rgba(255, 255, 255, .10);
+/* ---------- DataTable ---------- */
+.gaji-app .dataTables_wrapper .dataTables_filter input {
     border-radius: 12px;
-    padding: 8px 6px;
-    text-align: center;
+    border: 1.5px solid #e2e8f0;
+    padding: 8px 12px;
+    min-height: 40px;
+    box-shadow: none;
 }
 
-.gaji-hero-stat-pill .lbl {
-    font-size: 9.5px;
-    font-weight: 700;
-    text-transform: uppercase;
-    letter-spacing: .4px;
-    opacity: .75;
-    margin-bottom: 2px;
+.gaji-app .dataTables_wrapper .dataTables_length select {
+    border-radius: 12px;
+    border: 1.5px solid #e2e8f0;
+    min-height: 40px;
+    padding: 0 28px 0 10px;
 }
 
-.gaji-hero-stat-pill .val {
-    font-size: 13px;
-    font-weight: 800;
-    line-height: 1.2;
-}
-
-.gaji-hero-stat-pill.tone-pokok .val { color: #60a5fa; }
-.gaji-hero-stat-pill.tone-tunj .val { color: #4ade80; }
-.gaji-hero-stat-pill.tone-pot .val { color: #f87171; }
-
-/* ---------- Stat Cards Grid (Mobile Card Look) ---------- */
-.gaji-stat-grid {
-    display: grid;
-    grid-template-columns: repeat(4, 1fr);
-    gap: 12px;
-    margin-bottom: 18px;
-}
-
-.gaji-stat-card {
-    background: #ffffff;
-    border-radius: 16px;
-    padding: 14px 14px 12px;
-    border: 1px solid #edf2f7;
-    box-shadow: 0 4px 14px rgba(15, 23, 42, .04);
-    display: flex;
-    flex-direction: column;
-    justify-content: space-between;
-    transition: transform .2s ease, box-shadow .2s ease;
-    position: relative;
-    overflow: hidden;
-}
-
-.gaji-stat-card:hover {
-    transform: translateY(-2px);
-    box-shadow: 0 8px 22px rgba(15, 23, 42, .08);
-    border-color: #cbd5e1;
-}
-
-.gaji-stat-header {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    margin-bottom: 8px;
-}
-
-.gaji-stat-title {
-    font-size: 12px;
-    font-weight: 800;
-    color: #64748b;
-    text-transform: uppercase;
-    letter-spacing: .3px;
-}
-
-.gaji-stat-ico {
-    width: 32px;
-    height: 32px;
-    border-radius: 10px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    font-size: 14px;
-}
-
-.gaji-stat-ico.tone-blue { background: #eff6ff; color: #2563eb; }
-.gaji-stat-ico.tone-green { background: #ecfdf5; color: #059669; }
-.gaji-stat-ico.tone-red { background: #fef2f2; color: #dc2626; }
-.gaji-stat-ico.tone-teal { background: #f0fdfa; color: #0d9488; }
-
-.gaji-stat-val {
-    font-size: 18px;
-    font-weight: 900;
-    color: #0f172a;
-    line-height: 1.2;
-    margin-bottom: 2px;
-    letter-spacing: -0.3px;
-}
-
-.gaji-stat-val.c-blue { color: #2563eb; }
-.gaji-stat-val.c-green { color: #059669; }
-.gaji-stat-val.c-red { color: #dc2626; }
-.gaji-stat-val.c-teal { color: #0d9488; }
-
-.gaji-stat-sub {
-    font-size: 10.5px;
-    color: #94a3b8;
+.gaji-app .dataTables_wrapper .dataTables_info {
     font-weight: 600;
 }
 
-/* ---------- Breakdown Section (List Groups Ala Mobile App) ---------- */
-.gaji-breakdown-card {
-    background: #ffffff;
+/* ---------- Modal ---------- */
+.gaji-app .modal-content,
+body.modal-open .modal .modal-content {
     border-radius: 18px;
-    border: 1px solid #edf2f7;
-    box-shadow: 0 4px 18px rgba(15, 23, 42, .04);
-    overflow: hidden;
-    margin-bottom: 20px;
+    border: 0;
+    box-shadow: 0 24px 60px rgba(15, 23, 42, .25);
 }
 
-.gaji-breakdown-header {
+.gaji-app .modal-header,
+body.modal-open .modal .modal-header {
+    border-bottom: 1px solid var(--gj-line);
     padding: 16px 18px;
-    border-bottom: 1px solid #f1f5f9;
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
 }
 
-.gaji-breakdown-title {
-    font-size: 14px;
-    font-weight: 800;
-    color: #0f172a;
-    margin: 0;
-    display: flex;
-    align-items: center;
-    gap: 8px;
+.gaji-app .modal-footer,
+body.modal-open .modal .modal-footer {
+    border-top: 1px solid var(--gj-line);
 }
 
-.gaji-breakdown-title i {
-    color: #0d9488;
-}
+/* ============================================================
+   Mobile: tampilan seperti aplikasi
+   ============================================================ */
+@media (max-width: 991.98px) {
+    .gaji-app .section-header h1 {
+        font-size: 1.05rem;
+    }
 
-.gaji-section-tag {
-    font-size: 11px;
-    font-weight: 800;
-    text-transform: uppercase;
-    letter-spacing: .5px;
-    padding: 8px 18px;
-    background: #f8fafc;
-    border-top: 1px solid #f1f5f9;
-    border-bottom: 1px solid #f1f5f9;
-    color: #475569;
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-}
+    .gaji-app .card-body {
+        padding: 14px;
+    }
 
-.gaji-item-row {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    gap: 12px;
-    padding: 12px 18px;
-    border-bottom: 1px solid #f8fafc;
-    transition: background-color .15s ease;
-}
+    /* Tombol pada header kartu jadi penuh (ramah jari) */
+    .gaji-app .card-header-action {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 8px;
+        width: 100%;
+        margin-top: 10px;
+    }
 
-.gaji-item-row:last-child {
-    border-bottom: none;
-}
+    .gaji-app .card-header-action > .btn,
+    .gaji-app .card-header-action > a.btn {
+        flex: 1 1 100%;
+        width: 100%;
+    }
 
-.gaji-item-row:hover {
-    background-color: #f8fafc;
-}
+    /* Input & tombol comfortable untuk jari */
+    .gaji-app .form-control,
+    .gaji-app .custom-select {
+        min-height: 44px;
+        font-size: .95rem;
+    }
 
-.gaji-item-info {
-    display: flex;
-    align-items: center;
-    gap: 12px;
-    min-width: 0;
-}
+    .gaji-app .btn {
+        min-height: 44px;
+        font-size: .9rem;
+    }
 
-.gaji-item-bullet {
-    width: 32px;
-    height: 32px;
-    border-radius: 10px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    font-size: 12px;
-    flex-shrink: 0;
-}
+    .gaji-app .btn.btn-sm {
+        min-height: 38px;
+    }
 
-.gaji-item-bullet.tone-blue { background: #eff6ff; color: #2563eb; }
-.gaji-item-bullet.tone-green { background: #ecfdf5; color: #059669; }
-.gaji-item-bullet.tone-red { background: #fef2f2; color: #dc2626; }
-.gaji-item-bullet.tone-dark { background: #f1f5f9; color: #0f172a; }
+    /* Kontrol DataTable menumpuk */
+    .gaji-app .dataTables_wrapper > .dt-buttons,
+    .gaji-app .dataTables_wrapper > .dataTables_filter,
+    .gaji-app .dataTables_wrapper > .dataTables_length {
+        float: none !important;
+        width: 100%;
+        margin: 0 0 10px !important;
+    }
 
-.gaji-item-name {
-    font-size: 13px;
-    font-weight: 700;
-    color: #1e293b;
-    line-height: 1.3;
-}
+    .gaji-app .dataTables_wrapper > .dataTables_filter input {
+        width: 100%;
+        min-width: 0;
+    }
 
-.gaji-item-sub {
-    font-size: 10.5px;
-    color: #94a3b8;
-    margin-top: 1px;
-}
+    .gaji-app .dataTables_wrapper .dt-buttons {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 8px;
+    }
 
-.gaji-item-values {
-    text-align: right;
-    flex-shrink: 0;
-}
+    .gaji-app .dataTables_wrapper .dt-buttons .dt-button {
+        flex: 1 1 auto;
+        border-radius: 12px !important;
+        margin: 0 !important;
+        min-height: 40px;
+        font-weight: 700;
+    }
 
-.gaji-item-total {
-    font-size: 14px;
-    font-weight: 800;
-    color: #0f172a;
-    line-height: 1.2;
-}
+    .gaji-app .dataTables_wrapper .dataTables_info,
+    .gaji-app .dataTables_wrapper .dataTables_paginate {
+        float: none !important;
+        text-align: center;
+    }
 
-.gaji-item-total.c-green { color: #059669; }
-.gaji-item-total.c-red { color: #dc2626; }
+    /* Tabel -> kartu */
+    .gaji-app .table-responsive {
+        overflow-x: visible !important;
+        border-radius: var(--gj-radius);
+        -webkit-overflow-scrolling: touch;
+    }
 
-.gaji-item-perbulan {
-    font-size: 10.5px;
-    color: #64748b;
-    margin-top: 2px;
-}
+    .gaji-app .dataTables_scrollHead {
+        display: none !important;
+    }
 
-/* Total Bar at the bottom */
-.gaji-total-bar {
-    background: linear-gradient(135deg, #0f172a 0%, #1e293b 100%);
-    color: #ffffff;
-    padding: 16px 18px;
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    gap: 12px;
-}
+    .gaji-app .dataTables_scroll,
+    .gaji-app .dataTables_scrollBody {
+        overflow: visible !important;
+        width: 100% !important;
+        max-width: 100% !important;
+    }
 
-.gaji-total-bar .lbl {
-    font-size: 13.5px;
-    font-weight: 800;
-    display: flex;
-    align-items: center;
-    gap: 8px;
-}
+    .gaji-app .dataTables_scrollBody > table.gaji-table {
+        width: 100% !important;
+        min-width: 0 !important;
+        max-width: 100% !important;
+    }
 
-.gaji-total-bar .lbl i {
-    color: #5eead4;
-}
+    .gaji-app table.gaji-table,
+    .gaji-app table.gaji-table tbody,
+    .gaji-app table.gaji-table tr,
+    .gaji-app table.gaji-table td {
+        display: block;
+        width: 100% !important;
+        min-width: 0 !important;
+        max-width: 100% !important;
+    }
 
-.gaji-total-bar .val-wrap {
-    text-align: right;
-}
+    .gaji-app table.gaji-table thead {
+        display: none;
+    }
 
-.gaji-total-bar .val {
-    font-size: 19px;
-    font-weight: 900;
-    color: #5eead4;
-    letter-spacing: -0.3px;
-}
+    .gaji-app table.gaji-table tr {
+        background: #fff;
+        border: 1px solid var(--gj-line);
+        border-radius: 14px;
+        padding: 6px 12px;
+        margin-bottom: 10px;
+        box-shadow: 0 2px 10px rgba(15, 23, 42, .04);
+    }
 
-.gaji-total-bar .val-sub {
-    font-size: 10px;
-    color: #cbd5e1;
-    opacity: .85;
-}
+    .gaji-app table.gaji-table tbody td {
+        border: 0 !important;
+        border-bottom: 1px dashed #eef2f7 !important;
+        padding: 8px 0;
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 12px;
+        text-align: right;
+        white-space: normal !important;
+        word-break: break-word;
+    }
 
-/* ---------- Responsive Layout (<= 767px Mobile Phone) ---------- */
-@media (max-width: 767.98px) {
-    .gaji-hero-card {
-        padding: 18px 16px 16px;
+    /* Matikan sticky kolom & nowrap dari style halaman */
+    .gaji-app table.gaji-table tbody td:nth-child(n) {
+        position: static !important;
+        left: auto !important;
+        right: auto !important;
+        white-space: normal !important;
+    }
+
+    .gaji-app table.gaji-table tbody tr td:last-child {
+        border-bottom: 0 !important;
+    }
+
+    .gaji-app table.gaji-table tbody td[data-label]::before {
+        content: attr(data-label);
+        color: var(--gj-muted);
+        font-size: .7rem;
+        font-weight: 800;
+        text-transform: uppercase;
+        letter-spacing: .04em;
+        text-align: left;
+        flex: 0 0 auto;
+    }
+
+    .gaji-app table.gaji-table tbody td[data-label="Aksi"] {
+        justify-content: flex-start;
+        padding-top: 10px;
+        flex-wrap: wrap;
+    }
+
+    .gaji-app table.gaji-table tbody td[data-label="Aksi"]::before {
+        display: none;
+    }
+
+    .gaji-app table.gaji-table tbody td[data-label="Aksi"] .btn {
+        width: auto;
+        min-height: 38px;
+    }
+
+    /* Modal jadi sheet mengambang penuh */
+    .gaji-app .modal-dialog {
+        margin: .75rem;
+    }
+
+    .gaji-app .modal-content {
         border-radius: 18px;
     }
+}
 
-    .gaji-hero-balance {
-        font-size: 24px;
+@media (max-width: 575.98px) {
+    .gaji-app .card-header {
+        padding: 12px 14px;
     }
 
-    .gaji-stat-grid {
-        grid-template-columns: repeat(2, 1fr) !important;
-        gap: 8px !important;
+    .gaji-app .card-body {
+        padding: 12px;
     }
 
-    .gaji-stat-card {
-        padding: 12px 10px;
-        border-radius: 14px;
-    }
-
-    .gaji-stat-val {
-        font-size: 15px;
-    }
-
-    .gaji-item-row {
-        padding: 10px 14px;
-    }
-
-    .gaji-item-bullet {
-        width: 28px;
-        height: 28px;
-        font-size: 11px;
-    }
-
-    .gaji-item-name {
-        font-size: 12px;
-    }
-
-    .gaji-item-total {
-        font-size: 12.5px;
-    }
-
-    .gaji-total-bar {
-        padding: 14px 14px;
-    }
-
-    .gaji-total-bar .val {
-        font-size: 16px;
+    .gaji-app .section {
+        padding: 10px 12px 18px;
     }
 }

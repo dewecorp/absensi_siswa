@@ -1,6 +1,7 @@
 <?php
 require_once '../config/database.php';
 require_once '../config/functions.php';
+require_once '../config/gaji_sync.php';
 
 if (!isAuthorized(['guru', 'wali'])) {
     redirect('../login.php');
@@ -29,6 +30,9 @@ if (!isset($_SESSION['nama_guru']) || empty($_SESSION['nama_guru'])) {
 $guru_id = $teacher['id_guru'];
 $page_title = 'Data Gaji Guru';
 
+// Aktifkan gaya mobile app modul gaji (tabel jadi kartu di layar kecil).
+$gaji_module_page = true;
+
 // Data penggajian lokal (modul gaji SIMAD) - tanpa API/cache terpisah.
 $salary_data = null;
 $api_error = null;
@@ -54,14 +58,10 @@ try {
         $periods[] = $periode_aktif;
     }
 
-    $guruRowStmt = $pdo->prepare("SELECT * FROM guru WHERE simad_id_guru = ? LIMIT 1");
-    $guruRowStmt->execute([(int)$guru_id]);
-    $gaji_guru = $guruRowStmt->fetch(PDO::FETCH_ASSOC);
-    if (!$gaji_guru) {
-        $guruRowStmt = $pdo->prepare("SELECT * FROM guru WHERE nip = ? LIMIT 1");
-        $guruRowStmt->execute([(string)($teacher['nuptk'] ?? '')]);
-        $gaji_guru = $guruRowStmt->fetch(PDO::FETCH_ASSOC);
-    }
+    // Baris guru pada modul gaji (tabel `guru`).
+    // Tautan ke tb_guru SIMAD dipakai/diperbaiki otomatis, jadi data gaji guru
+    // & wali di akun ini selalu mengikuti modul gaji (bukan data lama SIGaji).
+    $gaji_guru = gaji_modul_guru_resolve($pdo, $teacher);
 
     $entry = [
         'guru_id' => $gaji_guru ? (int)$gaji_guru['id'] : 0,
@@ -105,9 +105,7 @@ try {
         } else {
             // Belum ada legger: hitung dari data master periode aktif.
             $periode = $periods[0];
-            $stmt = $pdo->prepare("SELECT jumlah FROM gaji_pokok WHERE guru_id = ? LIMIT 1");
-            $stmt->execute([(int)$gaji_guru['id']]);
-            $pokok = (float)($stmt->fetchColumn() ?: 0);
+            $pokok = gaji_ambil_gaji_pokok($pdo, (int)$gaji_guru['id'], (string)$periode);
 
             $stmt = $pdo->prepare("SELECT t.nama_tunjangan, td.jumlah FROM tunjangan_detail td JOIN tunjangan t ON t.id = td.tunjangan_id WHERE td.guru_id = ? AND td.periode = ? AND t.aktif = 1");
             $stmt->execute([(int)$gaji_guru['id'], $periode]);

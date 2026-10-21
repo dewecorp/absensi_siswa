@@ -153,6 +153,14 @@ $notif_list_h_u = $n_notif_nav_u <= 0 ? 'height:auto;max-height:140px;overflow:h
     $_gaji_css_v_u = is_readable($_gaji_css_path_u) ? (string) filemtime($_gaji_css_path_u) : '1';
     ?>
     <link rel="stylesheet" href="../assets/css/gaji-app.css?v=<?php echo htmlspecialchars($_gaji_css_v_u, ENT_QUOTES, 'UTF-8'); ?>">
+    <?php if (!empty($gaji_module_page)): ?>
+    <!-- Modul Gaji: helper tampilan mobile app (tabel jadi kartu di layar kecil) -->
+    <?php
+    $_gaji_js_path_u = __DIR__ . '/../assets/js/gaji-app.js';
+    $_gaji_js_v_u = is_readable($_gaji_js_path_u) ? (string) filemtime($_gaji_js_path_u) : '1';
+    ?>
+    <script defer src="../assets/js/gaji-app.js?v=<?php echo htmlspecialchars($_gaji_js_v_u, ENT_QUOTES, 'UTF-8'); ?>"></script>
+    <?php endif; ?>
     <!-- RAB Mobile App CSS -->
     <?php
     $_rab_css_path_u = __DIR__ . '/../assets/css/rab-app.css';
@@ -565,7 +573,7 @@ $notif_list_h_u = $n_notif_nav_u <= 0 ? 'height:auto;max-height:140px;overflow:h
     </style>
 </head>
 
-<body class="<?php echo in_array(basename($_SERVER['PHP_SELF']), ['dashboard.php', 'simple_dashboard.php']) ? 'mobile-no-app-header' : 'mobile-has-app-header'; ?>">
+<body class="<?php echo in_array(basename($_SERVER['PHP_SELF']), ['dashboard.php', 'simple_dashboard.php']) ? 'mobile-no-app-header' : 'mobile-has-app-header'; ?><?php echo !empty($gaji_module_page) ? ' gaji-app' : ''; ?>">
     <div id="app">
         <div class="main-wrapper">
 

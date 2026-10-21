@@ -13,6 +13,8 @@ if (!headers_sent()) {
 $sql = "SELECT * FROM settings WHERE id = 1 LIMIT 1";
 $qr_settings = $conn->query($sql);
 $settings = ($qr_settings && $qr_settings->num_rows > 0) ? $qr_settings->fetch_assoc() : [];
+// Identitas madrasah & pejabat mengikuti Pengaturan Admin SIMAD
+$settings = array_merge($settings ?: [], gajiProfilMadrasah($conn));
 
 $periode_aktif = trim((string)($settings['periode_aktif'] ?? ''));
 if ($periode_aktif === '') {
@@ -37,15 +39,8 @@ $legger_td_data_style = 'height:11mm;min-height:11mm;padding:2.75pt 2pt;vertical
 $legger_th_style = 'padding:4.5pt 2pt;vertical-align:middle;box-sizing:border-box;line-height:1.2;font-size:11pt;';
 $legger_td_total_style = 'padding:4pt 2pt;vertical-align:middle;box-sizing:border-box;font-size:11pt;';
 
-$logo_file = __DIR__ . '/../../assets/img/' . ($settings['logo'] ?? '');
-$logo_exists = !empty($settings['logo']) && file_exists($logo_file);
-$logo_base64 = '';
-$logo_path = '';
-if ($logo_exists) {
-    $logo_path = BASE_URL . 'assets/img/' . $settings['logo'];
-    $image_data = file_get_contents($logo_file);
-    $logo_base64 = 'data:' . mime_content_type($logo_file) . ';base64,' . base64_encode($image_data);
-}
+// Logo madrasah untuk cetak: pakai URL file (gambar utuh, halaman ringan).
+$logo_src = gajiLogoPrintSrc($settings);
 
 $conn->query("CREATE TABLE IF NOT EXISTS insentif (
     id INT AUTO_INCREMENT PRIMARY KEY,
@@ -314,8 +309,8 @@ foreach ($detail_rows as $row) {
 <body>
     <div class="content-wrapper">
     <div class="header">
-        <?php if ($logo_exists): ?>
-            <img src="<?php echo $logo_base64; ?>" alt="Logo" class="header-logo" onerror="this.src='<?php echo $logo_path; ?>'">
+        <?php if ($logo_src !== ''): ?>
+            <img src="<?php echo $logo_src; ?>" alt="Logo" class="header-logo">
         <?php endif; ?>
         <div class="header-content">
             <h2><?php echo strtoupper(htmlspecialchars($settings['nama_madrasah'] ?? 'MADRASAH')); ?></h2>
