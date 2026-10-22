@@ -356,10 +356,19 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 $status_to_save_les = isset($_POST['attendance_status_les']) ? ucfirst($_POST['attendance_status_les']) : '';
                 $attendance_note_les = $_POST['attendance_note_les'] ?? '';
 
-                $check_stmt = $pdo->prepare("SELECT id_absensi FROM tb_absensi_les_guru WHERE id_guru = ? AND tanggal = ?");
+                $check_stmt = $pdo->prepare("SELECT id_absensi, status, keterangan FROM tb_absensi_les_guru WHERE id_guru = ? AND tanggal = ?");
                 $check_stmt->execute([$current_teacher_id, $current_date]);
                 
                 if ($check_stmt->rowCount() > 0) {
+                    $existing_les = $check_stmt->fetch(PDO::FETCH_ASSOC);
+                    $prev_status = strtolower((string)($existing_les['status'] ?? ''));
+                    $prev_ket = (string)($existing_les['keterangan'] ?? '');
+                    
+                    if ($prev_status === strtolower($status_to_save_les) && $prev_ket === (string)$attendance_note_les) {
+                        $msg_text = 'Kehadiran les sudah tercatat.';
+                        goto show_les_toast_wali;
+                    }
+
                     $update_stmt = $pdo->prepare("UPDATE tb_absensi_les_guru SET status = ?, keterangan = ?, waktu_input = ? WHERE id_guru = ? AND tanggal = ?");
                     $update_stmt->execute([$status_to_save_les, $attendance_note_les, $now_time, $current_teacher_id, $current_date]);
                     $msg_text = 'Kehadiran les berhasil diperbarui.';
@@ -372,6 +381,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 createNotification($pdo, "$nama_guru (Wali) telah mengirim kehadiran les", 'absensi_les_guru.php', 'absensi_les_guru');
                 logActivity($pdo, $nama_guru, 'Absensi Les Guru', "$nama_guru mengisi kehadiran les: $status_to_save_les");
                 
+                show_les_toast_wali:
                 echo "<script>
                     document.addEventListener('DOMContentLoaded', function() {
                         if (typeof toastr !== 'undefined') {
@@ -813,7 +823,7 @@ include_once '../templates/sidebar.php';
                         <?php endif; ?>
 
                         <div class="col-12 <?php echo (!$holiday['is_holiday']) ? 'col-md-6' : 'col-md-12'; ?> mb-4 d-flex">
-                            <div class="card w-100 h-100 mapp-jadwal-card border-0 shadow-sm">
+                            <div class="card w-100 h-100 mapp-jadwal-card">
                                 <div class="card-header d-flex justify-content-between align-items-center flex-wrap" style="gap:8px;">
                                     <h4 class="mb-0"><i class="fas fa-calendar-day text-primary mr-2"></i>Jadwal Mengajar Hari Ini</h4>
                                     <a href="jadwal_reguler.php?session_type=wali" class="btn btn-light btn-sm font-weight-bold"><i class="fas fa-table mr-1"></i> Lihat Jadwal Penuh</a>
@@ -885,7 +895,7 @@ include_once '../templates/sidebar.php';
                         if (!$holiday['is_holiday']):
                         ?>
                         <div class="<?php echo $col_class_wali; ?> mapp-col-absen">
-                            <div class="card w-100 h-100 mapp-absen-card border-0 shadow-sm">
+                            <div class="card w-100 h-100 mapp-absen-card">
                                 <div class="card-header d-flex justify-content-between align-items-center flex-wrap" style="gap:8px;">
                                     <h4 class="mb-0"><i class="fas fa-user-check text-primary mr-2"></i>Kehadiran Hari Ini</h4>
                                     <span class="badge badge-light border text-muted font-weight-bold"><?php echo date('d M Y'); ?></span>
@@ -986,7 +996,7 @@ include_once '../templates/sidebar.php';
                         </div>
                         <?php else: ?>
                         <div class="<?php echo $col_class_wali; ?> mapp-col-absen">
-                            <div class="card w-100 h-100 mapp-absen-card border-0 shadow-sm">
+                            <div class="card w-100 h-100 mapp-absen-card">
                                 <div class="card-header d-flex justify-content-between align-items-center flex-wrap" style="gap:8px;">
                                     <h4 class="mb-0"><i class="fas fa-user-check text-danger mr-2"></i>Kehadiran Hari Ini</h4>
                                 </div>
@@ -1030,7 +1040,7 @@ include_once '../templates/sidebar.php';
                             }
                         ?>
                         <div class="col-12 col-md-6 mb-4 d-flex mapp-col-absen">
-                            <div class="card w-100 h-100 mapp-absen-card border-0 shadow-sm">
+                            <div class="card w-100 h-100 mapp-absen-card">
                                 <div class="card-header d-flex justify-content-between align-items-center flex-wrap" style="gap:8px;">
                                     <h4 class="mb-0"><i class="fas fa-book-reader text-primary mr-2"></i>Kehadiran Les Guru (Kelas 6)</h4>
                                 </div>
@@ -1073,7 +1083,9 @@ include_once '../templates/sidebar.php';
                                         <input type="hidden" name="submit_attendance_les" value="1">
                                     </form>
                                     <script>
+                                    var isSubmittingLesWali = false;
                                     function lesAutoAttWali(status) {
+                                        if (isSubmittingLesWali) return;
                                         var form = document.getElementById('attendanceFormLes');
                                         var cur = '<?php echo $les_status_wali; ?>';
                                         if (cur !== '' && status === cur) { return; }
@@ -1086,6 +1098,7 @@ include_once '../templates/sidebar.php';
                                             return;
                                         }
                                         area.style.display = 'none';
+                                        isSubmittingLesWali = true;
                                         form.submit();
                                     }
                                     </script>

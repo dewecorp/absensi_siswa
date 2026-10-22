@@ -1,19 +1,10 @@
 <?php
 require_once 'config/database.php';
 require_once 'config/functions.php';
-require_once __DIR__ . '/pembayaran/include/activity_bridge.php';
 
 // Get current user info before destroying session
 $current_user = $_SESSION['username'] ?? 'Unknown';
 $user_level = $_SESSION['level'] ?? 'Unknown';
-
-// Catat logout bendahara/admin ke log aktivitas Pembayaran Siswa.
-pembayaran_bridge_log(
-    'Logout',
-    'Logout dari sesi ' . $user_level,
-    (string) $current_user,
-    (string) $user_level
-);
 
 // Unset all session variables
 $_SESSION = array();

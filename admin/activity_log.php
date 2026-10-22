@@ -20,8 +20,7 @@ $search = isset($_GET['search']) ? trim($_GET['search']) : '';
 $where_clause = '';
 $params = array();
 
-// Base UNION query: tb_activity_log + log_aktivitas modul Pembayaran
-$union_base = "
+$table_base = "
     SELECT 
         id,
         username,
@@ -30,26 +29,16 @@ $union_base = "
         ip_address,
         created_at
     FROM tb_activity_log
-    UNION ALL
-    SELECT 
-        l.id_log AS id,
-        COALESCE(p.username, 'sistem') AS username,
-        l.jenis_aktivitas AS action,
-        l.deskripsi AS description,
-        NULL AS ip_address,
-        l.created_at
-    FROM log_aktivitas l
-    LEFT JOIN pengguna p ON l.id_pengguna = p.id_pengguna
 ";
 
 if (!empty($search)) {
-    $where_clause = "WHERE u.username LIKE ? OR u.action LIKE ? OR u.description LIKE ?";
+    $where_clause = "WHERE username LIKE ? OR action LIKE ? OR description LIKE ?";
     $search_param = '%' . $search . '%';
     $params = array($search_param, $search_param, $search_param);
 }
 
 // Get total count
-$count_query = "SELECT COUNT(*) as total FROM ($union_base) AS u " . $where_clause;
+$count_query = "SELECT COUNT(*) as total FROM tb_activity_log " . $where_clause;
 $count_stmt = $pdo->prepare($count_query);
 $count_stmt->execute($params);
 $total_records = (int) ($count_stmt->fetch(PDO::FETCH_ASSOC)['total'] ?? 0);
@@ -74,14 +63,14 @@ foreach ($penggunas as $pengguna) {
 }
 
 $query = "SELECT 
-    u.id,
-    u.username, 
-    u.action, 
-    u.description, 
-    u.ip_address,
-    u.created_at
-FROM ($union_base) AS u
-" . $where_clause . " ORDER BY u.created_at DESC LIMIT ?, ?";
+    id,
+    username, 
+    action, 
+    description, 
+    ip_address,
+    created_at
+FROM tb_activity_log
+" . $where_clause . " ORDER BY created_at DESC LIMIT ?, ?";
 $stmt = $pdo->prepare($query);
 $bindIndex = 1;
 foreach ($params as $pVal) {

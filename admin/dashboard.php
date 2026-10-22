@@ -77,7 +77,7 @@ try {
     error_log("Error deleting old activities: " . $e->getMessage());
 }
 
-// Get recent activities from the activity log (tb_activity_log + log_aktivitas modul Pembayaran)
+// Get recent activities from the activity log (tb_activity_log SIMAD)
 $activities = []; // Initialize as empty array
 $total_activities = 0;
 try {
@@ -99,7 +99,7 @@ try {
         $user_map[$pengguna['username']] = $pengguna['nama'];
     }
     
-    // 1. Ambil dari tb_activity_log (24 jam terakhir)
+    // Ambil dari tb_activity_log SIMAD murni (24 jam terakhir)
     $activity_stmt = $pdo->query(
         "SELECT 
             username, 
@@ -109,7 +109,7 @@ try {
         FROM tb_activity_log 
         WHERE created_at >= NOW() - INTERVAL 24 HOUR
         ORDER BY created_at DESC 
-        LIMIT 200"
+        LIMIT 50"
     );
     $raw_simad = $activity_stmt ? $activity_stmt->fetchAll(PDO::FETCH_ASSOC) : [];
     foreach ($raw_simad as $r) {
@@ -123,42 +123,7 @@ try {
         ];
     }
 
-    // 2. Ambil dari log_aktivitas (modul Pembayaran)
-    try {
-        $pemb_stmt = $pdo->query("
-            SELECT l.jenis_aktivitas, l.deskripsi, l.created_at, COALESCE(p.nama_lengkap, p.username, 'Sistem') AS display_name, p.username
-            FROM log_aktivitas l
-            LEFT JOIN pengguna p ON l.id_pengguna = p.id_pengguna
-            WHERE l.created_at >= NOW() - INTERVAL 24 HOUR
-            ORDER BY l.created_at DESC
-            LIMIT 200
-        ");
-        $raw_pemb = $pemb_stmt ? $pemb_stmt->fetchAll(PDO::FETCH_ASSOC) : [];
-        foreach ($raw_pemb as $r) {
-            $activities[] = [
-                'username'     => (string) ($r['username'] ?? ''),
-                'action'       => (string) ($r['jenis_aktivitas'] ?? ''),
-                'description'  => (string) ($r['deskripsi'] ?? ''),
-                'created_at'   => (string) ($r['created_at'] ?? ''),
-                'display_name' => (string) ($r['display_name'] ?? 'Sistem'),
-            ];
-        }
-    } catch (Throwable $e) {
-        // Abaikan jika tabel log_aktivitas belum ada
-    }
-
-    // Urutkan gabungan aktivitas berdasarkan tanggal terbaru
-    usort($activities, function ($a, $b) {
-        $sa = strtotime((string) $a['created_at']);
-        $sb = strtotime((string) $b['created_at']);
-        if ($sa === $sb) return 0;
-        if ($sa === false) return 1;
-        if ($sb === false) return -1;
-        return $sb <=> $sa;
-    });
-
     $total_activities = count($activities);
-    $activities = array_slice($activities, 0, 50);
 } catch (Exception $e) {
     // If there's an error (e.g., table doesn't exist), keep the array empty
     $activities = [];

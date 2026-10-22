@@ -181,6 +181,21 @@ if (!function_exists('gajiLogActivity')) {
         $ok = $stmt->execute();
         $stmt->close();
 
+        // Catat juga ke tb_activity_log SIMAD sebagai sumber tunggal
+        try {
+            global $pdo;
+            if (!$pdo && file_exists(__DIR__ . '/../../../../config/database.php')) {
+                require_once __DIR__ . '/../../../../config/database.php';
+            }
+            if ($pdo) {
+                $u_act = $username !== '' ? $username : 'bendahara';
+                $action_label = 'Gaji ' . ucfirst($jenis);
+                $ip = $_SERVER['REMOTE_ADDR'] ?? '127.0.0.1';
+                $stmt_simad = $pdo->prepare("INSERT INTO tb_activity_log (username, action, description, ip_address, created_at) VALUES (?, ?, ?, ?, NOW())");
+                $stmt_simad->execute([$u_act, $action_label, $activity, $ip]);
+            }
+        } catch (Throwable $e) {}
+
         return (bool) $ok;
     }
 }
