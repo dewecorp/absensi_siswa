@@ -11,9 +11,9 @@ if (!isAuthorized(['admin', 'tata_usaha', 'kepala_madrasah', 'guru', 'wali', 'si
 
 $action = $_GET['action'] ?? '';
 
-// Restricted actions for Admin and TU only
+// Restricted actions for Admin only
 if (in_array($action, ['create', 'update', 'delete'])) {
-    if (!isAuthorized(['admin', 'tata_usaha'])) {
+    if (!isAuthorized(['admin'])) {
         echo json_encode(['status' => 'error', 'message' => 'Unauthorized for this action']);
         exit;
     }

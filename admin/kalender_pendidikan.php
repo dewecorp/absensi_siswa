@@ -8,7 +8,7 @@ if (!isAuthorized(['admin', 'tata_usaha', 'kepala_madrasah', 'guru', 'wali', 'si
 }
 
 $user_level = getUserLevel();
-$can_edit = in_array($user_level, ['admin', 'tata_usaha']);
+$can_edit = ($user_level === 'admin');
 
 $page_title = 'Kalender Pendidikan';
 
@@ -37,7 +37,11 @@ require_once '../templates/sidebar.php';
 <link rel='stylesheet' href='https://cdn.jsdelivr.net/npm/fullcalendar@5.11.3/main.min.css' />
 <style>
     .fc-event { cursor: pointer; }
+    <?php if ($can_edit): ?>
     .fc-daygrid-day { cursor: pointer; }
+    <?php else: ?>
+    .fc-daygrid-day { cursor: default !important; }
+    <?php endif; ?>
     .fc-event-title {
         white-space: normal !important;
         overflow: visible !important;
@@ -459,6 +463,7 @@ require_once '../templates/sidebar.php';
     </section>
 </div>
 
+<?php if ($can_edit): ?>
 <!-- Modal Tambah/Edit Kegiatan -->
 <div class="modal fade" id="modalKegiatan" tabindex="-1" role="dialog" aria-labelledby="modalKegiatanLabel" aria-hidden="true">
     <div class="modal-dialog" role="dialog">
@@ -542,6 +547,7 @@ require_once '../templates/sidebar.php';
         </div>
     </div>
 </div>
+<?php endif; ?>
 
 <?php require_once '../templates/footer.php'; ?>
 
@@ -590,6 +596,7 @@ $(document).ready(function() {
                 }
             });
         },
+        <?php if ($can_edit): ?>
         dateClick: function(info) {
             // Check if there's an event on this date
             var events = calendar.getEvents();
@@ -617,6 +624,7 @@ $(document).ready(function() {
                  $('#modalKegiatanLabel').text('Tambah Kegiatan');
              }
         },
+        <?php endif; ?>
         eventClick: function(info) {
             <?php if ($can_edit): ?>
             resetForm();
@@ -738,6 +746,7 @@ $(document).ready(function() {
         });
     }
 
+    <?php if ($can_edit): ?>
     // Toggle durasi logic
     $('input[name="durasi"]').on('change', function() {
         if ($(this).val() === 'more') {
@@ -860,5 +869,6 @@ $(document).ready(function() {
             }
         });
     });
+    <?php endif; ?>
 });
 </script>
