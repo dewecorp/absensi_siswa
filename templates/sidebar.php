@@ -1215,7 +1215,6 @@ switch ($user_level) {
         ];
 
         if ($is_grade_6_guru) {
-            $absensi_submenu_guru[] = ['title' => 'Kehadiran Les Guru', 'url' => '../guru/absensi_les_guru.php', 'active' => $current_page === 'absensi_les_guru.php'];
             $absensi_submenu_guru[] = ['title' => 'Kehadiran Les Siswa', 'url' => '../admin/absensi_les_siswa.php?session_type=guru', 'active' => $current_page === 'absensi_les_siswa.php'];
             $absensi_submenu_guru[] = ['title' => 'Rekap Kehadiran Les', 'url' => '../admin/rekap_absensi_les_siswa.php?session_type=guru', 'active' => $current_page === 'rekap_absensi_les_siswa.php'];
             $absensi_submenu_guru[] = ['title' => 'Rekap Kehadiran Les Guru', 'url' => '../admin/rekap_absensi_les_guru.php?session_type=guru', 'active' => $current_page === 'rekap_absensi_les_guru.php'];
@@ -1271,7 +1270,7 @@ switch ($user_level) {
                 'title' => 'Kehadiran',
                 'icon' => 'fas fa-calendar-check',
                 'submenu' => $absensi_submenu_guru,
-                'active' => in_array($current_page, ['absensi_kelas.php', 'absensi_les_guru.php', 'rekap_absensi.php', 'sholat_berjamaah.php', 'rekap_sholat.php', 'sholat_dhuha.php', 'rekap_sholat_dhuha.php', 'absensi_les_siswa.php', 'rekap_absensi_les_siswa.php', 'rekap_absensi_les_guru.php'])
+                'active' => in_array($current_page, ['absensi_kelas.php', 'rekap_absensi.php', 'sholat_berjamaah.php', 'rekap_sholat.php', 'sholat_dhuha.php', 'rekap_sholat_dhuha.php', 'absensi_les_siswa.php', 'rekap_absensi_les_siswa.php', 'rekap_absensi_les_guru.php'])
             ],
             [
                 'title' => 'Ekstrakurikuler',
@@ -1465,7 +1464,6 @@ switch ($user_level) {
         ];
 
         if ($is_grade_6) {
-            $absensi_submenu_wali[] = ['title' => 'Kehadiran Les Guru', 'url' => '../wali/absensi_les_guru.php', 'active' => $current_page === 'absensi_les_guru.php'];
             $absensi_submenu_wali[] = ['title' => 'Kehadiran Les Siswa', 'url' => '../admin/absensi_les_siswa.php?session_type=wali', 'active' => $current_page === 'absensi_les_siswa.php'];
             $absensi_submenu_wali[] = ['title' => 'Rekap Kehadiran Les', 'url' => '../admin/rekap_absensi_les_siswa.php?session_type=wali', 'active' => $current_page === 'rekap_absensi_les_siswa.php'];
             $absensi_submenu_wali[] = ['title' => 'Rekap Kehadiran Les Guru', 'url' => '../admin/rekap_absensi_les_guru.php?session_type=wali', 'active' => $current_page === 'rekap_absensi_les_guru.php'];
@@ -1573,7 +1571,7 @@ switch ($user_level) {
                 'title' => 'Kehadiran',
                 'icon' => 'fas fa-calendar-check',
                 'submenu' => $absensi_submenu_wali,
-                'active' => in_array($current_page, ['absensi_kelas.php', 'absensi_les_guru.php', 'rekap_absensi.php', 'sholat_berjamaah.php', 'rekap_sholat.php', 'sholat_dhuha.php', 'rekap_sholat_dhuha.php'])
+                'active' => in_array($current_page, ['absensi_kelas.php', 'rekap_absensi.php', 'sholat_berjamaah.php', 'rekap_sholat.php', 'sholat_dhuha.php', 'rekap_sholat_dhuha.php', 'absensi_les_siswa.php', 'rekap_absensi_les_siswa.php', 'rekap_absensi_les_guru.php'])
             ],
             [
                 'title' => 'Ekstrakurikuler',
