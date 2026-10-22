@@ -273,6 +273,49 @@ table.simad-card-view {
     margin-top: 4px !important;
 }
 
+/* Header ikon untuk card non-foto (misal ekskul / pembina) */
+.simad-card-view tbody tr td.simad-card-icon-header {
+    border: none !important;
+    padding: 10px 0 4px !important;
+    margin: 0 !important;
+    display: flex !important;
+    justify-content: center !important;
+    align-items: center !important;
+    width: 100% !important;
+    min-width: 0 !important;
+    background: transparent !important;
+    box-sizing: border-box !important;
+}
+
+.simad-card-view tbody tr td.simad-card-icon-header .card-icon-box {
+    width: 54px !important;
+    height: 54px !important;
+    border-radius: 14px !important;
+    display: inline-flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    font-size: 1.4rem !important;
+    box-shadow: 0 4px 10px rgba(15, 23, 42, .06) !important;
+}
+
+.simad-card-view tbody tr td.simad-card-icon-header .card-icon-box.icon-trophy {
+    background: #eef2ff !important;
+    color: #4f46e5 !important;
+    border: 1.5px solid #c7d2fe !important;
+}
+
+.simad-card-view tbody tr td.simad-card-icon-header .card-icon-box.icon-coach {
+    background: #f0fdf4 !important;
+    color: #16a34a !important;
+    border: 1.5px solid #bbf7d0 !important;
+}
+
+.simad-card-view tbody tr td.simad-card-icon-header .card-icon-box.icon-pramuka {
+    background: #fff7ed !important;
+    color: #c2410c !important;
+    border: 1.5px solid #fed7aa !important;
+}
+
 /* Detail baris field berpasangan key: value */
 .simad-card-view tbody tr td[data-label] {
     display: flex !important;

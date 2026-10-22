@@ -117,7 +117,7 @@ $(document).ready(function () {
     });
     t.on('draw', function () {
         var info = t.page.info();
-        $('#table-1 tbody tr').each(function (i) { $(this).find('td:first').text(info.start + i + 1); });
+        $('#table-1 tbody tr').each(function (i) { $(this).find('td:first').html('<span class="badge-card-no">#' + (info.start + i + 1) + '</span>'); });
     });
     t.draw();
     $(document).on('click', '.btn-edit', function () {
@@ -145,6 +145,7 @@ JS;
 include '../templates/header.php';
 include '../templates/sidebar.php';
 ?>
+<link rel="stylesheet" href="../assets/css/simad-card-view.css?v=<?= (int) @filemtime(__DIR__ . '/../assets/css/simad-card-view.css') ?>">
 <div class="main-content">
     <section class="section">
         <div class="section-header">
@@ -160,24 +161,29 @@ include '../templates/sidebar.php';
                     </div>
                 </div>
                 <div class="card-body">
-                    <div class="table-responsive">
-                        <table class="table table-striped" id="table-1">
-                            <thead>
-                                <tr><th width="8%">No</th><th>Nama Jabatan</th><th width="18%">Aksi</th></tr>
-                            </thead>
-                            <tbody>
-                                <?php foreach ($rows as $r): ?>
-                                    <tr>
-                                        <td class="text-center"></td>
-                                        <td><?= htmlspecialchars($r['nama_jabatan']) ?></td>
-                                        <td>
-                                            <button class="btn btn-warning btn-sm btn-edit" data-id="<?= (int)$r['id_jabatan'] ?>" data-nama="<?= htmlspecialchars($r['nama_jabatan'], ENT_QUOTES) ?>"><i class="fas fa-edit"></i></button>
-                                            <button class="btn btn-danger btn-sm btn-hapus" data-id="<?= (int)$r['id_jabatan'] ?>" data-nama="<?= htmlspecialchars($r['nama_jabatan'], ENT_QUOTES) ?>"><i class="fas fa-trash"></i></button>
-                                        </td>
-                                    </tr>
-                                <?php endforeach; ?>
-                            </tbody>
-                        </table>
+                    <div class="simad-card-view-wrapper">
+                        <div class="table-responsive">
+                            <table class="table table-striped simad-card-view" id="table-1">
+                                <thead>
+                                    <tr><th width="8%">No</th><th>Nama Jabatan</th><th width="18%">Aksi</th></tr>
+                                </thead>
+                                <tbody>
+                                    <?php foreach ($rows as $r): ?>
+                                        <tr>
+                                            <td class="simad-card-no"><span class="badge-card-no">#</span></td>
+                                            <td class="simad-card-name">
+                                                <div class="person-name"><?= htmlspecialchars($r['nama_jabatan']) ?></div>
+                                                <div class="person-sub"><i class="fas fa-briefcase mr-1 text-primary"></i>Jabatan Madrasah</div>
+                                            </td>
+                                            <td class="simad-card-actions">
+                                                <button class="btn btn-warning btn-sm btn-edit" data-id="<?= (int)$r['id_jabatan'] ?>" data-nama="<?= htmlspecialchars($r['nama_jabatan'], ENT_QUOTES) ?>"><i class="fas fa-edit"></i> Edit</button>
+                                                <button class="btn btn-danger btn-sm btn-hapus" data-id="<?= (int)$r['id_jabatan'] ?>" data-nama="<?= htmlspecialchars($r['nama_jabatan'], ENT_QUOTES) ?>"><i class="fas fa-trash"></i> Hapus</button>
+                                            </td>
+                                        </tr>
+                                    <?php endforeach; ?>
+                                </tbody>
+                            </table>
+                        </div>
                     </div>
                 </div>
             </div>

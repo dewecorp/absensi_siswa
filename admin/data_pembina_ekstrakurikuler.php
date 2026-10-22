@@ -362,7 +362,7 @@ $(document).ready(function() {
         var info = dt.page.info();
         var start = info.page * info.length;
         dt.column(0, { search: 'applied', order: 'applied' }).nodes().each(function(cell, i) {
-            $(cell).text(start + i + 1);
+            $(cell).html('<span class="badge-card-no">#' + (start + i + 1) + '</span>');
         });
     }).draw();
 });
@@ -502,6 +502,7 @@ JS_BLOCK;
 include '../templates/header.php';
 include '../templates/sidebar.php';
 ?>
+<link rel="stylesheet" href="../assets/css/simad-card-view.css?v=<?= (int) @filemtime(__DIR__ . '/../assets/css/simad-card-view.css') ?>">
 
 <div class="main-content">
     <section class="section">
@@ -550,64 +551,69 @@ include '../templates/sidebar.php';
                         </div>
                     <?php endif; ?>
 
-                    <div class="table-responsive">
-                        <table class="table table-striped" id="table-1">
-                            <thead>
-                                <tr>
-                                    <th class="text-center" width="6%">No</th>
-                                    <th>Nama Pembina</th>
-                                    <th>Pembina Ekstrakurikuler</th>
-                                    <?php if ($can_manage_pembina_ekstra): ?><th width="15%">Aksi</th><?php endif; ?>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                <?php if (!empty($mapping_rows)): ?>
-                                    <?php foreach ($mapping_rows as $i => $row): ?>
-                                        <tr>
-                                            <td class="text-center"><?= (int)($i + 1) ?></td>
-                                            <td><?= htmlspecialchars($row['nama_pembina'] ?? '') ?></td>
-                                            <td><?= htmlspecialchars($row['nama_ekstrakurikuler'] ?? '') ?></td>
-                                            <?php if ($can_manage_pembina_ekstra): ?><td>
-                                                <?php
-                                                // We need id_pembina for edit; fetch it with a small query by mapping id.
-                                                $id_map = (int)($row['id_pembina_ekstrakurikuler'] ?? 0);
-                                                $id_pembina = null;
-                                                try {
-                                                    if ($id_map > 0) {
-                                                        $st = $pdo->prepare("SELECT id_pembina FROM tb_pembina_ekstrakurikuler WHERE id_pembina_ekstrakurikuler = ?");
-                                                        $st->execute([$id_map]);
-                                                        $id_pembina = $st->fetchColumn();
-                                                    }
-                                                } catch (Exception $e) {
+                    <div class="simad-card-view-wrapper">
+                        <div class="table-responsive">
+                            <table class="table table-striped simad-card-view" id="table-1">
+                                <thead>
+                                    <tr>
+                                        <th class="text-center" width="6%">No</th>
+                                        <th>Nama Pembina</th>
+                                        <th>Pembina Ekstrakurikuler</th>
+                                        <?php if ($can_manage_pembina_ekstra): ?><th width="15%">Aksi</th><?php endif; ?>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    <?php if (!empty($mapping_rows)): ?>
+                                        <?php foreach ($mapping_rows as $i => $row): ?>
+                                            <tr>
+                                                <td class="simad-card-no"><span class="badge-card-no">#<?= (int)($i + 1) ?></span></td>
+                                                <td class="simad-card-name">
+                                                    <div class="person-name"><?= htmlspecialchars($row['nama_pembina'] ?? '') ?></div>
+                                                    <div class="person-sub"><i class="fas fa-user-check mr-1 text-success"></i>Pembina Ekstrakurikuler</div>
+                                                </td>
+                                                <td data-label="Ekstrakurikuler"><span class="badge badge-primary px-2 py-1"><i class="fas fa-medal mr-1"></i><?= htmlspecialchars($row['nama_ekstrakurikuler'] ?? '-') ?></span></td>
+                                                <?php if ($can_manage_pembina_ekstra): ?><td class="simad-card-actions">
+                                                    <?php
+                                                    // We need id_pembina for edit; fetch it with a small query by mapping id.
+                                                    $id_map = (int)($row['id_pembina_ekstrakurikuler'] ?? 0);
                                                     $id_pembina = null;
-                                                }
-                                                ?>
-                                                <button
-                                                    class="btn btn-warning btn-sm edit-btn"
-                                                    data-id-map="<?= (int)($row['id_pembina_ekstrakurikuler'] ?? 0) ?>"
-                                                    data-id-pembina="<?= (int)($id_pembina ?? 0) ?>"
-                                                    data-id-ekstra="<?= (int)($row['id_ekstrakurikuler'] ?? 0) ?>"
-                                                    data-nama-pembina="<?= htmlspecialchars($row['nama_pembina'] ?? '', ENT_QUOTES) ?>"
-                                                    data-nama-ekstra="<?= htmlspecialchars($row['nama_ekstrakurikuler'] ?? '', ENT_QUOTES) ?>"
-                                                    type="button">
-                                                    <i class="fas fa-edit"></i>
-                                                </button>
-                                                <button
-                                                    class="btn btn-danger btn-sm delete-btn"
-                                                    data-id-map="<?= (int)($row['id_pembina_ekstrakurikuler'] ?? 0) ?>"
-                                                    data-nama-pembina="<?= htmlspecialchars($row['nama_pembina'] ?? '', ENT_QUOTES) ?>"
-                                                    data-nama-ekstra="<?= htmlspecialchars($row['nama_ekstrakurikuler'] ?? '', ENT_QUOTES) ?>"
-                                                    type="button">
-                                                    <i class="fas fa-trash"></i>
-                                                </button>
-                                            </td><?php endif; ?>
-                                        </tr>
-                                    <?php endforeach; ?>
-                                <?php else: ?>
-                                    <tr><td colspan="<?= $can_manage_pembina_ekstra ? '4' : '3' ?>" class="text-center text-muted">Tidak ada data.</td></tr>
-                                <?php endif; ?>
-                            </tbody>
-                        </table>
+                                                    try {
+                                                        if ($id_map > 0) {
+                                                            $st = $pdo->prepare("SELECT id_pembina FROM tb_pembina_ekstrakurikuler WHERE id_pembina_ekstrakurikuler = ?");
+                                                            $st->execute([$id_map]);
+                                                            $id_pembina = $st->fetchColumn();
+                                                        }
+                                                    } catch (Exception $e) {
+                                                        $id_pembina = null;
+                                                    }
+                                                    ?>
+                                                    <button
+                                                        class="btn btn-warning btn-sm edit-btn"
+                                                        data-id-map="<?= (int)($row['id_pembina_ekstrakurikuler'] ?? 0) ?>"
+                                                        data-id-pembina="<?= (int)($id_pembina ?? 0) ?>"
+                                                        data-id-ekstra="<?= (int)($row['id_ekstrakurikuler'] ?? 0) ?>"
+                                                        data-nama-pembina="<?= htmlspecialchars($row['nama_pembina'] ?? '', ENT_QUOTES) ?>"
+                                                        data-nama-ekstra="<?= htmlspecialchars($row['nama_ekstrakurikuler'] ?? '', ENT_QUOTES) ?>"
+                                                        type="button">
+                                                        <i class="fas fa-edit"></i> Edit
+                                                    </button>
+                                                    <button
+                                                        class="btn btn-danger btn-sm delete-btn"
+                                                        data-id-map="<?= (int)($row['id_pembina_ekstrakurikuler'] ?? 0) ?>"
+                                                        data-nama-pembina="<?= htmlspecialchars($row['nama_pembina'] ?? '', ENT_QUOTES) ?>"
+                                                        data-nama-ekstra="<?= htmlspecialchars($row['nama_ekstrakurikuler'] ?? '', ENT_QUOTES) ?>"
+                                                        type="button">
+                                                        <i class="fas fa-trash"></i> Hapus
+                                                    </button>
+                                                </td><?php endif; ?>
+                                            </tr>
+                                        <?php endforeach; ?>
+                                    <?php else: ?>
+                                        <tr><td colspan="<?= $can_manage_pembina_ekstra ? '4' : '3' ?>" class="text-center text-muted">Tidak ada data.</td></tr>
+                                    <?php endif; ?>
+                                </tbody>
+                            </table>
+                        </div>
                     </div>
                 </div>
             </div>

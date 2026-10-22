@@ -312,6 +312,49 @@ foreach ($rows as $r) {
     }
 }
 
+// Helper render badge tingkat pramuka berdasarkan golongan (Siaga = Hijau, Penggalang = Merah)
+function renderBadgeTingkatPramuka(string $nama_tingkat_str): string {
+    $parts = array_filter(array_map('trim', explode(',', $nama_tingkat_str)));
+    if (empty($parts)) {
+        return '<span class="text-muted">-</span>';
+    }
+
+    $html = [];
+    foreach ($parts as $nama) {
+        $clean = mb_strtolower($nama);
+        // Siaga: mula, bantu, tata, pra mula
+        $is_siaga = (
+            strpos($clean, 'mula') !== false ||
+            strpos($clean, 'bantu') !== false ||
+            strpos($clean, 'tata') !== false ||
+            strpos($clean, 'siaga') !== false
+        ) && strpos($clean, 'ramu') === false;
+
+        // Penggalang: pra ramu, ramu, rakit, terap, penggalang
+        $is_penggalang = (
+            strpos($clean, 'ramu') !== false ||
+            strpos($clean, 'rakit') !== false ||
+            strpos($clean, 'terap') !== false ||
+            strpos($clean, 'penggalang') !== false
+        );
+
+        if ($is_penggalang) {
+            $badge_class = 'badge badge-danger text-white';
+            $icon = 'fas fa-shield-alt mr-1';
+        } elseif ($is_siaga) {
+            $badge_class = 'badge badge-success text-white';
+            $icon = 'fas fa-seedling mr-1';
+        } else {
+            $badge_class = 'badge badge-secondary text-white';
+            $icon = 'fas fa-award mr-1';
+        }
+
+        $html[] = '<span class="' . $badge_class . ' px-2 py-1 mr-1 mb-1 font-weight-bold" style="font-size:0.75rem;"><i class="' . $icon . '"></i>' . htmlspecialchars($nama, ENT_QUOTES, 'UTF-8') . '</span>';
+    }
+
+    return implode(' ', $html);
+}
+
 // Page-specific JS
 $js_page = [];
 if ($message) {
@@ -358,7 +401,7 @@ $(document).ready(function() {
         var info = table.page.info();
         var start = info.page * info.length;
         table.column(0, { search: 'applied', order: 'applied' }).nodes().each(function(cell, i) {
-            $(cell).text(start + i + 1);
+            $(cell).html('<span class="badge-card-no">#' + (start + i + 1) + '</span>');
         });
     }).draw();
 
@@ -456,6 +499,7 @@ JS_BLOCK;
 include '../templates/header.php';
 include '../templates/sidebar.php';
 ?>
+<link rel="stylesheet" href="../assets/css/simad-card-view.css?v=<?= (int) @filemtime(__DIR__ . '/../assets/css/simad-card-view.css') ?>">
 
 <div class="main-content">
     <section class="section">
@@ -499,54 +543,59 @@ include '../templates/sidebar.php';
                         </div>
                     <?php endif; ?>
 
-                    <div class="table-responsive">
-                        <table class="table table-striped" id="table-1">
-                            <thead>
-                                <tr>
-                                    <th class="text-center" width="6%">No</th>
-                                    <th>Nama Pembina</th>
-                                    <th>Jabatan</th>
-                                    <th>Pembina Tingkat</th>
-                                    <?php if ($can_manage_pembina_pramuka): ?><th width="15%">Aksi</th><?php endif; ?>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                <?php if (!empty($rows)): ?>
-                                    <?php foreach ($rows as $idx => $row): ?>
-                                        <?php
-                                            $nama_tampil = trim((string)($row['nama_guru'] ?? '')) !== ''
-                                                ? (string)$row['nama_guru']
-                                                : (string)($row['nama_pembina'] ?? '');
-                                        ?>
-                                        <tr>
-                                            <td class="text-center"><?= (int)($idx + 1) ?></td>
-                                            <td><?= htmlspecialchars($nama_tampil) ?></td>
-                                            <td><?= htmlspecialchars($row['jabatan'] ?? '') ?></td>
-                                            <td><?= htmlspecialchars($row['nama_tingkat'] ?? '-') ?></td>
-                                            <?php if ($can_manage_pembina_pramuka): ?><td>
-                                                <button class="btn btn-warning btn-sm edit-btn"
-                                                    data-id="<?= (int)($row['id_pembina_pramuka'] ?? 0) ?>"
-                                                    data-id-guru="<?= (int)($row['id_guru'] ?? 0) ?>"
-                                                    data-id-tingkat="<?= htmlspecialchars($row['id_tingkat_ids'] ?? '') ?>"
-                                                    data-nama="<?= htmlspecialchars($nama_tampil, ENT_QUOTES) ?>"
-                                                    data-jabatan="<?= htmlspecialchars($row['jabatan'] ?? '', ENT_QUOTES) ?>"
-                                                    type="button">
-                                                    <i class="fas fa-edit"></i>
-                                                </button>
-                                                <button class="btn btn-danger btn-sm delete-btn"
-                                                    data-id="<?= (int)($row['id_pembina_pramuka'] ?? 0) ?>"
-                                                    data-nama="<?= htmlspecialchars($nama_tampil, ENT_QUOTES) ?>"
-                                                    type="button">
-                                                    <i class="fas fa-trash"></i>
-                                                </button>
-                                            </td><?php endif; ?>
-                                        </tr>
-                                    <?php endforeach; ?>
-                                <?php else: ?>
-                                    <tr><td colspan="<?= $can_manage_pembina_pramuka ? '5' : '4' ?>" class="text-center text-muted">Tidak ada data.</td></tr>
-                                <?php endif; ?>
-                            </tbody>
-                        </table>
+                    <div class="simad-card-view-wrapper">
+                        <div class="table-responsive">
+                            <table class="table table-striped simad-card-view" id="table-1">
+                                <thead>
+                                    <tr>
+                                        <th class="text-center" width="6%">No</th>
+                                        <th>Nama Pembina</th>
+                                        <th>Jabatan</th>
+                                        <th>Pembina Tingkat</th>
+                                        <?php if ($can_manage_pembina_pramuka): ?><th width="15%">Aksi</th><?php endif; ?>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    <?php if (!empty($rows)): ?>
+                                        <?php foreach ($rows as $idx => $row): ?>
+                                            <?php
+                                                $nama_tampil = trim((string)($row['nama_guru'] ?? '')) !== ''
+                                                    ? (string)$row['nama_guru']
+                                                    : (string)($row['nama_pembina'] ?? '');
+                                            ?>
+                                            <tr>
+                                                <td class="simad-card-no"><span class="badge-card-no">#<?= (int)($idx + 1) ?></span></td>
+                                                <td class="simad-card-name">
+                                                    <div class="person-name"><?= htmlspecialchars($nama_tampil) ?></div>
+                                                    <div class="person-sub"><i class="fas fa-campground mr-1 text-warning"></i>Pembina Pramuka</div>
+                                                </td>
+                                                <td data-label="Jabatan"><?= htmlspecialchars($row['jabatan'] ?? '-') ?></td>
+                                                <td data-label="Tingkat"><?= renderBadgeTingkatPramuka((string)($row['nama_tingkat'] ?? '')) ?></td>
+                                                <?php if ($can_manage_pembina_pramuka): ?><td class="simad-card-actions">
+                                                    <button class="btn btn-warning btn-sm edit-btn"
+                                                        data-id="<?= (int)($row['id_pembina_pramuka'] ?? 0) ?>"
+                                                        data-id-guru="<?= (int)($row['id_guru'] ?? 0) ?>"
+                                                        data-id-tingkat="<?= htmlspecialchars($row['id_tingkat_ids'] ?? '') ?>"
+                                                        data-nama="<?= htmlspecialchars($nama_tampil, ENT_QUOTES) ?>"
+                                                        data-jabatan="<?= htmlspecialchars($row['jabatan'] ?? '', ENT_QUOTES) ?>"
+                                                        type="button">
+                                                        <i class="fas fa-edit"></i> Edit
+                                                    </button>
+                                                    <button class="btn btn-danger btn-sm delete-btn"
+                                                        data-id="<?= (int)($row['id_pembina_pramuka'] ?? 0) ?>"
+                                                        data-nama="<?= htmlspecialchars($nama_tampil, ENT_QUOTES) ?>"
+                                                        type="button">
+                                                        <i class="fas fa-trash"></i> Hapus
+                                                    </button>
+                                                </td><?php endif; ?>
+                                            </tr>
+                                        <?php endforeach; ?>
+                                    <?php else: ?>
+                                        <tr><td colspan="<?= $can_manage_pembina_pramuka ? '5' : '4' ?>" class="text-center text-muted">Tidak ada data.</td></tr>
+                                    <?php endif; ?>
+                                </tbody>
+                            </table>
+                        </div>
                     </div>
                 </div>
             </div>

@@ -272,7 +272,7 @@ $(document).ready(function() {
         var info = table.page.info();
         var start = info.page * info.length;
         table.column(0, { search: 'applied', order: 'applied' }).nodes().each(function(cell, i) {
-            $(cell).text(start + i + 1);
+            $(cell).html('<span class="badge-card-no">#' + (start + i + 1) + '</span>');
         });
     }).draw();
 
@@ -414,6 +414,7 @@ function exportToPDF() {
 include '../templates/header.php';
 include '../templates/sidebar.php';
 ?>
+<link rel="stylesheet" href="../assets/css/simad-card-view.css?v=<?= (int) @filemtime(__DIR__ . '/../assets/css/simad-card-view.css') ?>">
 
 <div class="main-content">
     <section class="section">
@@ -457,47 +458,53 @@ include '../templates/sidebar.php';
                         </div>
                     <?php endif; ?>
 
-                    <div class="table-responsive">
-                        <table class="table table-striped" id="table-1">
-                            <thead>
-                                <tr>
-                                    <th class="text-center" width="8%">No</th>
-                                    <th>Nama Tingkat</th>
-                                    <th>Golongan</th>
-                                    <th width="15%">Aksi</th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                <?php if (!empty($rows)): ?>
-                                    <?php foreach ($rows as $idx => $row): ?>
-                                        <?php
-                                            $golongan_tampil = tingkat_barung_golongan_otomatis($row['nama_tingkat'] ?? '', $row['golongan'] ?? '');
-                                            $golongan_badge = $golongan_tampil === 'Penggalang' ? 'badge-danger' : 'badge-success';
-                                        ?>
-                                        <tr>
-                                            <td class="text-center"><?= (int)($idx + 1) ?></td>
-                                            <td><?= htmlspecialchars($row['nama_tingkat'] ?? '') ?></td>
-                                            <td><span class="badge <?= $golongan_badge ?>"><?= htmlspecialchars($golongan_tampil) ?></span></td>
-                                            <td>
-                                                <button class="btn btn-warning btn-sm edit-btn"
-                                                    data-id="<?= (int)($row['id_tingkat_barung'] ?? 0) ?>"
-                                                    data-nama="<?= htmlspecialchars($row['nama_tingkat'] ?? '', ENT_QUOTES) ?>"
-                                                    data-golongan="<?= htmlspecialchars($golongan_tampil, ENT_QUOTES) ?>"
-                                                    type="button">
-                                                    <i class="fas fa-edit"></i>
-                                                </button>
-                                                <button class="btn btn-danger btn-sm delete-btn"
-                                                    data-id="<?= (int)($row['id_tingkat_barung'] ?? 0) ?>"
-                                                    data-nama="<?= htmlspecialchars($row['nama_tingkat'] ?? '', ENT_QUOTES) ?>"
-                                                    type="button">
-                                                    <i class="fas fa-trash"></i>
-                                                </button>
-                                            </td>
-                                        </tr>
-                                    <?php endforeach; ?>
-                                <?php endif; ?>
-                            </tbody>
-                        </table>
+                    <div class="simad-card-view-wrapper">
+                        <div class="table-responsive">
+                            <table class="table table-striped simad-card-view" id="table-1">
+                                <thead>
+                                    <tr>
+                                        <th class="text-center" width="8%">No</th>
+                                        <th>Nama Tingkat</th>
+                                        <th>Golongan</th>
+                                        <th width="15%">Aksi</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    <?php if (!empty($rows)): ?>
+                                        <?php foreach ($rows as $idx => $row): ?>
+                                            <?php
+                                                $golongan_tampil = tingkat_barung_golongan_otomatis($row['nama_tingkat'] ?? '', $row['golongan'] ?? '');
+                                                $golongan_badge = $golongan_tampil === 'Penggalang' ? 'badge-danger' : 'badge-success';
+                                                $golongan_icon = $golongan_tampil === 'Penggalang' ? 'fas fa-shield-alt' : 'fas fa-seedling';
+                                            ?>
+                                            <tr>
+                                                <td class="simad-card-no"><span class="badge-card-no">#<?= (int)($idx + 1) ?></span></td>
+                                                <td class="simad-card-name">
+                                                    <div class="person-name"><?= htmlspecialchars($row['nama_tingkat'] ?? '') ?></div>
+                                                    <div class="person-sub"><i class="<?= $golongan_icon ?> mr-1"></i>Tingkat Pramuka</div>
+                                                </td>
+                                                <td data-label="Golongan"><span class="badge <?= $golongan_badge ?> px-2 py-1"><i class="<?= $golongan_icon ?> mr-1"></i><?= htmlspecialchars($golongan_tampil) ?></span></td>
+                                                <td class="simad-card-actions">
+                                                    <button class="btn btn-warning btn-sm edit-btn"
+                                                        data-id="<?= (int)($row['id_tingkat_barung'] ?? 0) ?>"
+                                                        data-nama="<?= htmlspecialchars($row['nama_tingkat'] ?? '', ENT_QUOTES) ?>"
+                                                        data-golongan="<?= htmlspecialchars($golongan_tampil, ENT_QUOTES) ?>"
+                                                        type="button">
+                                                        <i class="fas fa-edit"></i> Edit
+                                                    </button>
+                                                    <button class="btn btn-danger btn-sm delete-btn"
+                                                        data-id="<?= (int)($row['id_tingkat_barung'] ?? 0) ?>"
+                                                        data-nama="<?= htmlspecialchars($row['nama_tingkat'] ?? '', ENT_QUOTES) ?>"
+                                                        type="button">
+                                                        <i class="fas fa-trash"></i> Hapus
+                                                    </button>
+                                                </td>
+                                            </tr>
+                                        <?php endforeach; ?>
+                                    <?php endif; ?>
+                                </tbody>
+                            </table>
+                        </div>
                     </div>
                 </div>
             </div>

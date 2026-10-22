@@ -909,24 +909,24 @@ $available_count = count($available_students);
                                 <input type="search" id="searchSiswaTersedia" placeholder="Cari nama atau NISN…" autocomplete="off">
                             </div>
                         </div>
-                        <div class="table-responsive" style="max-height:50vh;overflow:auto;">
-                            <table class="table table-sm table-bordered mb-0">
+                        <div class="table-responsive modal-siswa-tersedia-scroll" style="max-height:50vh;overflow-y:auto;overflow-x:hidden;min-width:0 !important;width:100% !important;">
+                            <table class="table table-sm table-bordered mb-0" style="min-width:0 !important;width:100% !important;table-layout:fixed;">
                                 <thead>
                                     <tr>
-                                        <th style="width: 40px;">#</th>
-                                        <th>NISN</th>
-                                        <th>Nama Siswa</th>
+                                        <th style="width: 44px; text-align: center;">#</th>
+                                        <th style="width: 32%;">NISN</th>
+                                        <th style="width: calc(68% - 44px);">Nama Siswa</th>
                                     </tr>
                                 </thead>
                                 <tbody>
                                     <?php foreach ($available_students as $s): ?>
                                         <?php $s_search = mb_strtolower((string)($s['nama_siswa'] ?? '') . ' ' . (string)($s['nisn'] ?? '')); ?>
                                         <tr class="siswa-tersedia-row" data-search="<?= htmlspecialchars($s_search, ENT_QUOTES, 'UTF-8') ?>">
-                                            <td class="text-center">
+                                            <td class="text-center align-middle" style="width: 44px;">
                                                 <input type="checkbox" class="check-siswa" name="selected_siswa[]" value="<?= (int)$s['id_siswa'] ?>">
                                             </td>
-                                            <td><?= htmlspecialchars($s['nisn'] ?? '-') ?></td>
-                                            <td><?= htmlspecialchars($s['nama_siswa']) ?></td>
+                                            <td class="align-middle text-break"><?= htmlspecialchars($s['nisn'] ?? '-') ?></td>
+                                            <td class="align-middle text-break font-weight-600"><?= htmlspecialchars($s['nama_siswa']) ?></td>
                                         </tr>
                                     <?php endforeach; ?>
                                 </tbody>

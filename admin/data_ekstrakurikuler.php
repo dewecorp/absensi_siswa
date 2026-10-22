@@ -283,14 +283,14 @@ $(document).ready(function() {
         var info = table.page.info();
         $('#table-1 tbody tr').each(function(index) {
             var currentPageNumber = info.page * info.length + (index + 1);
-            $(this).find('td:first-child').text(currentPageNumber);
+            $(this).find('td:first-child').html('<span class=\"badge-card-no\">#' + currentPageNumber + '</span>');
         });
     });
 
     // Set initial row numbers
     var info = table.page.info();
     $('#table-1 tbody tr').each(function(index) {
-        $(this).find('td:first-child').text(info.page * info.length + (index + 1));
+        $(this).find('td:first-child').html('<span class=\"badge-card-no\">#' + (info.page * info.length + (index + 1)) + '</span>');
     });
 
     // Fill edit modal
@@ -464,6 +464,7 @@ $(document).ready(function() {
 include '../templates/header.php';
 include '../templates/sidebar.php';
 ?>
+<link rel="stylesheet" href="../assets/css/simad-card-view.css?v=<?= (int) @filemtime(__DIR__ . '/../assets/css/simad-card-view.css') ?>">
 
 <div class="main-content">
     <section class="section">
@@ -500,55 +501,61 @@ include '../templates/sidebar.php';
                         </div>
                     <?php endif; ?>
 
-                    <div class="table-responsive">
-                        <table class="table table-striped" id="table-1">
-                            <thead>
-                                <tr>
-                                    <th class="text-center" width="5%">No</th>
-                                    <th>Nama Ekstrakurikuler</th>
-                                    <th>Hari</th>
-                                    <th>Waktu</th>
-                                    <?php if ($can_manage_ekstrakurikuler): ?><th width="15%">Aksi</th><?php endif; ?>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                <?php if (!empty($ekstrakurikuler)): ?>
-                                    <?php foreach ($ekstrakurikuler as $idx => $row): ?>
-                                        <?php
-                                            $waktu_mulai = normalizeWaktuForInput($row['waktu'] ?? '');
-                                            $waktu_selesai_in = normalizeWaktuForInput($row['waktu_selesai'] ?? '');
-                                        ?>
-                                        <tr>
-                                            <td class="text-center"><?= (int)($idx + 1) ?></td>
-                                            <td><?= htmlspecialchars($row['nama_ekstrakurikuler'] ?? '') ?></td>
-                                            <td><?= htmlspecialchars($row['hari'] ?? '') ?></td>
-                                            <td><?= htmlspecialchars(formatWaktuEkstraRange($row['waktu'] ?? '', $row['waktu_selesai'] ?? '')) ?></td>
-                                            <?php if ($can_manage_ekstrakurikuler): ?><td>
-                                                <button class="btn btn-warning btn-sm edit-btn"
-                                                    data-id="<?= (int)($row['id_ekstrakurikuler'] ?? 0) ?>"
-                                                    data-nama="<?= htmlspecialchars($row['nama_ekstrakurikuler'] ?? '', ENT_QUOTES) ?>"
-                                                    data-hari="<?= htmlspecialchars($row['hari'] ?? '', ENT_QUOTES) ?>"
-                                                    data-mulai="<?= htmlspecialchars($waktu_mulai, ENT_QUOTES) ?>"
-                                                    data-selesai="<?= htmlspecialchars($waktu_selesai_in, ENT_QUOTES) ?>"
-                                                    type="button">
-                                                    <i class="fas fa-edit"></i>
-                                                </button>
-                                                <button class="btn btn-danger btn-sm delete-btn"
-                                                    data-id="<?= (int)($row['id_ekstrakurikuler'] ?? 0) ?>"
-                                                    data-nama="<?= htmlspecialchars($row['nama_ekstrakurikuler'] ?? '', ENT_QUOTES) ?>"
-                                                    type="button">
-                                                    <i class="fas fa-trash"></i>
-                                                </button>
-                                            </td><?php endif; ?>
-                                        </tr>
-                                    <?php endforeach; ?>
-                                <?php else: ?>
+                    <div class="simad-card-view-wrapper">
+                        <div class="table-responsive">
+                            <table class="table table-striped simad-card-view" id="table-1">
+                                <thead>
                                     <tr>
-                                        <td colspan="<?= $can_manage_ekstrakurikuler ? '5' : '4' ?>" class="text-center text-muted">Tidak ada data.</td>
+                                        <th class="text-center" width="5%">No</th>
+                                        <th>Nama Ekstrakurikuler</th>
+                                        <th>Hari</th>
+                                        <th>Waktu</th>
+                                        <?php if ($can_manage_ekstrakurikuler): ?><th width="15%">Aksi</th><?php endif; ?>
                                     </tr>
-                                <?php endif; ?>
-                            </tbody>
-                        </table>
+                                </thead>
+                                <tbody>
+                                    <?php if (!empty($ekstrakurikuler)): ?>
+                                        <?php foreach ($ekstrakurikuler as $idx => $row): ?>
+                                            <?php
+                                                $waktu_mulai = normalizeWaktuForInput($row['waktu'] ?? '');
+                                                $waktu_selesai_in = normalizeWaktuForInput($row['waktu_selesai'] ?? '');
+                                                $waktu_tampil = formatWaktuEkstraRange($row['waktu'] ?? '', $row['waktu_selesai'] ?? '');
+                                            ?>
+                                            <tr>
+                                                <td class="simad-card-no"><span class="badge-card-no">#<?= (int)($idx + 1) ?></span></td>
+                                                <td class="simad-card-name">
+                                                    <div class="person-name"><?= htmlspecialchars($row['nama_ekstrakurikuler'] ?? '') ?></div>
+                                                    <div class="person-sub"><i class="fas fa-medal mr-1 text-primary"></i>Ekstrakurikuler</div>
+                                                </td>
+                                                <td data-label="Hari"><?= htmlspecialchars($row['hari'] ?? '-') ?></td>
+                                                <td data-label="Waktu"><?= htmlspecialchars($waktu_tampil !== '' ? $waktu_tampil : '-') ?></td>
+                                                <?php if ($can_manage_ekstrakurikuler): ?><td class="simad-card-actions">
+                                                    <button class="btn btn-warning btn-sm edit-btn"
+                                                        data-id="<?= (int)($row['id_ekstrakurikuler'] ?? 0) ?>"
+                                                        data-nama="<?= htmlspecialchars($row['nama_ekstrakurikuler'] ?? '', ENT_QUOTES) ?>"
+                                                        data-hari="<?= htmlspecialchars($row['hari'] ?? '', ENT_QUOTES) ?>"
+                                                        data-mulai="<?= htmlspecialchars($waktu_mulai, ENT_QUOTES) ?>"
+                                                        data-selesai="<?= htmlspecialchars($waktu_selesai_in, ENT_QUOTES) ?>"
+                                                        type="button">
+                                                        <i class="fas fa-edit"></i> Edit
+                                                    </button>
+                                                    <button class="btn btn-danger btn-sm delete-btn"
+                                                        data-id="<?= (int)($row['id_ekstrakurikuler'] ?? 0) ?>"
+                                                        data-nama="<?= htmlspecialchars($row['nama_ekstrakurikuler'] ?? '', ENT_QUOTES) ?>"
+                                                        type="button">
+                                                        <i class="fas fa-trash"></i> Hapus
+                                                    </button>
+                                                </td><?php endif; ?>
+                                            </tr>
+                                        <?php endforeach; ?>
+                                    <?php else: ?>
+                                        <tr>
+                                            <td colspan="<?= $can_manage_ekstrakurikuler ? '5' : '4' ?>" class="text-center text-muted">Tidak ada data.</td>
+                                        </tr>
+                                    <?php endif; ?>
+                                </tbody>
+                            </table>
+                        </div>
                     </div>
                 </div>
             </div>

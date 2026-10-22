@@ -376,3 +376,564 @@ body.modal-open .modal .modal-footer {
         padding: 10px 12px 18px;
     }
 }
+
+/* ============================================================
+   SIMAD Data Gaji Guru: E-Wallet Hero, Stat Grid, & Breakdown
+   Berlaku baik di dalam .gaji-app maupun global standalone
+   ============================================================ */
+
+/* Hero Salary Card (E-Wallet Card Style) */
+.gaji-hero-card {
+    position: relative;
+    background: linear-gradient(135deg, #0f172a 0%, #1e3a8a 38%, #2563eb 78%, #0284c7 100%);
+    border-radius: 22px;
+    padding: 26px 28px;
+    color: #ffffff;
+    overflow: hidden;
+    box-shadow: 0 16px 36px -10px rgba(37, 99, 235, .45), 0 4px 16px rgba(15, 23, 42, .12);
+    margin-bottom: 24px;
+    border: 1px solid rgba(255, 255, 255, 0.12);
+}
+
+.gaji-hero-card::before {
+    content: '';
+    position: absolute;
+    top: -60px;
+    right: -60px;
+    width: 240px;
+    height: 240px;
+    border-radius: 50%;
+    background: radial-gradient(circle, rgba(56, 189, 248, 0.28) 0%, rgba(255, 255, 255, 0) 70%);
+    pointer-events: none;
+}
+
+.gaji-hero-card::after {
+    content: '';
+    position: absolute;
+    bottom: -80px;
+    left: 20%;
+    width: 260px;
+    height: 260px;
+    border-radius: 50%;
+    background: radial-gradient(circle, rgba(14, 165, 233, 0.18) 0%, rgba(255, 255, 255, 0) 70%);
+    pointer-events: none;
+}
+
+.gaji-hero-top {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    gap: 14px;
+    position: relative;
+    z-index: 1;
+    margin-bottom: 22px;
+    flex-wrap: wrap;
+}
+
+.gaji-hero-user {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    min-width: 0;
+}
+
+.gaji-hero-avatar {
+    width: 48px;
+    height: 48px;
+    border-radius: 14px;
+    background: rgba(255, 255, 255, 0.18);
+    backdrop-filter: blur(8px);
+    -webkit-backdrop-filter: blur(8px);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.35rem;
+    color: #ffffff;
+    flex-shrink: 0;
+    border: 1.5px solid rgba(255, 255, 255, 0.3);
+    box-shadow: 0 4px 14px rgba(0, 0, 0, 0.12);
+}
+
+.gaji-hero-name {
+    font-size: 1.15rem;
+    font-weight: 800;
+    color: #ffffff;
+    letter-spacing: -0.01em;
+    line-height: 1.25;
+}
+
+.gaji-hero-sub {
+    font-size: 0.82rem;
+    color: rgba(255, 255, 255, 0.85);
+    font-weight: 500;
+    margin-top: 3px;
+}
+
+.gaji-hero-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 7px;
+    padding: 6px 14px;
+    border-radius: 999px;
+    background: rgba(255, 255, 255, 0.16);
+    backdrop-filter: blur(8px);
+    -webkit-backdrop-filter: blur(8px);
+    border: 1px solid rgba(255, 255, 255, 0.28);
+    color: #ffffff;
+    font-size: 0.78rem;
+    font-weight: 700;
+    white-space: nowrap;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+}
+
+.gaji-hero-balance-wrap {
+    position: relative;
+    z-index: 1;
+    margin-bottom: 22px;
+}
+
+.gaji-hero-balance-lbl {
+    font-size: 0.75rem;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    font-weight: 700;
+    color: rgba(255, 255, 255, 0.8);
+    margin-bottom: 4px;
+}
+
+.gaji-hero-balance {
+    font-size: 2.35rem;
+    font-weight: 900;
+    color: #ffffff;
+    letter-spacing: -0.02em;
+    line-height: 1.15;
+    word-break: break-word;
+}
+
+.gaji-hero-balance-sub {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    margin-top: 8px;
+    font-size: 0.84rem;
+    color: rgba(255, 255, 255, 0.92);
+    font-weight: 600;
+    background: rgba(255, 255, 255, 0.12);
+    padding: 4px 12px;
+    border-radius: 999px;
+    border: 1px solid rgba(255, 255, 255, 0.2);
+}
+
+.gaji-hero-stats {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 12px;
+    position: relative;
+    z-index: 1;
+}
+
+.gaji-hero-stat-pill {
+    background: rgba(15, 23, 42, 0.28);
+    backdrop-filter: blur(10px);
+    -webkit-backdrop-filter: blur(10px);
+    border: 1px solid rgba(255, 255, 255, 0.18);
+    border-radius: 14px;
+    padding: 10px 14px;
+    transition: transform 0.15s ease, background 0.15s ease;
+}
+
+.gaji-hero-stat-pill .lbl {
+    font-size: 0.72rem;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    color: rgba(255, 255, 255, 0.78);
+    font-weight: 700;
+    margin-bottom: 3px;
+}
+
+.gaji-hero-stat-pill .val {
+    font-size: 0.98rem;
+    font-weight: 800;
+    color: #ffffff;
+    word-break: break-word;
+}
+
+.gaji-hero-stat-pill.tone-tunj .val {
+    color: #86efac;
+}
+
+.gaji-hero-stat-pill.tone-pot .val {
+    color: #fca5a5;
+}
+
+/* 4 KPI Stat Cards Grid */
+.gaji-stat-grid {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 16px;
+    margin-bottom: 24px;
+}
+
+.gaji-stat-card {
+    background: #ffffff;
+    border: 1.5px solid #e2e8f0;
+    border-radius: 18px;
+    padding: 18px;
+    box-shadow: 0 4px 18px rgba(15, 23, 42, .04);
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+    transition: transform .18s ease, box-shadow .18s ease, border-color .18s ease;
+}
+
+.gaji-stat-card:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 10px 26px rgba(15, 23, 42, .08);
+    border-color: #cbd5e1;
+}
+
+.gaji-stat-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 12px;
+}
+
+.gaji-stat-title {
+    font-size: 0.78rem;
+    font-weight: 800;
+    color: #64748b;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+}
+
+.gaji-stat-ico {
+    width: 38px;
+    height: 38px;
+    border-radius: 11px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.05rem;
+    flex-shrink: 0;
+}
+
+.gaji-stat-ico.tone-blue {
+    background: #eff6ff;
+    color: #2563eb;
+}
+
+.gaji-stat-ico.tone-green {
+    background: #ecfdf5;
+    color: #059669;
+}
+
+.gaji-stat-ico.tone-red {
+    background: #fef2f2;
+    color: #dc2626;
+}
+
+.gaji-stat-ico.tone-teal {
+    background: #f0fdfa;
+    color: #0d9488;
+}
+
+.gaji-stat-val {
+    font-size: 1.3rem;
+    font-weight: 900;
+    line-height: 1.2;
+    margin-bottom: 4px;
+    letter-spacing: -0.01em;
+}
+
+.gaji-stat-val.c-blue { color: #1e3a8a; }
+.gaji-stat-val.c-green { color: #047857; }
+.gaji-stat-val.c-red { color: #b91c1c; }
+.gaji-stat-val.c-teal { color: #0f766e; }
+
+.gaji-stat-sub {
+    font-size: 0.76rem;
+    color: #94a3b8;
+    font-weight: 600;
+}
+
+/* Rincian Komponen Slip Gaji */
+.gaji-breakdown-card {
+    background: #ffffff;
+    border: 1.5px solid #e2e8f0;
+    border-radius: 20px;
+    box-shadow: 0 6px 24px rgba(15, 23, 42, .05);
+    overflow: hidden;
+    margin-bottom: 24px;
+}
+
+.gaji-breakdown-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 18px 22px;
+    border-bottom: 1.5px solid #edf2f7;
+    background: #ffffff;
+    flex-wrap: wrap;
+    gap: 12px;
+}
+
+.gaji-breakdown-title {
+    margin: 0;
+    font-size: 1.05rem;
+    font-weight: 800;
+    color: #0f172a;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.gaji-breakdown-title i {
+    color: #2563eb;
+    font-size: 1.15rem;
+}
+
+.gaji-section-tag {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 10px 22px;
+    background: #f8fafc;
+    border-top: 1px solid #edf2f7;
+    border-bottom: 1px solid #edf2f7;
+    font-size: 0.78rem;
+    font-weight: 800;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    color: #475569;
+}
+
+.gaji-item-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 15px 22px;
+    border-bottom: 1px solid #f1f5f9;
+    transition: background 0.15s ease;
+    gap: 16px;
+}
+
+.gaji-item-row:hover {
+    background: #fbfcfe;
+}
+
+.gaji-item-row:last-of-type {
+    border-bottom: none;
+}
+
+.gaji-item-info {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    min-width: 0;
+    flex: 1 1 auto;
+}
+
+.gaji-item-bullet {
+    width: 38px;
+    height: 38px;
+    border-radius: 12px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 0.95rem;
+    flex-shrink: 0;
+}
+
+.gaji-item-bullet.tone-blue {
+    background: #e0f2fe;
+    color: #0284c7;
+}
+
+.gaji-item-bullet.tone-green {
+    background: #dcfce7;
+    color: #16a34a;
+}
+
+.gaji-item-bullet.tone-red {
+    background: #fee2e2;
+    color: #ef4444;
+}
+
+.gaji-item-name {
+    font-size: 0.92rem;
+    font-weight: 700;
+    color: #1e293b;
+    line-height: 1.3;
+}
+
+.gaji-item-sub {
+    font-size: 0.75rem;
+    color: #64748b;
+    margin-top: 2px;
+}
+
+.gaji-item-values {
+    text-align: right;
+    flex-shrink: 0;
+}
+
+.gaji-item-total {
+    font-size: 0.98rem;
+    font-weight: 800;
+    color: #0f172a;
+}
+
+.gaji-item-total.c-green {
+    color: #16a34a;
+}
+
+.gaji-item-total.c-red {
+    color: #dc2626;
+}
+
+.gaji-item-perbulan {
+    font-size: 0.74rem;
+    color: #94a3b8;
+    font-weight: 600;
+    margin-top: 2px;
+}
+
+.gaji-total-bar {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 18px 22px;
+    background: linear-gradient(135deg, #f0fdf4 0%, #dcfce7 100%);
+    border-top: 2px dashed #86efac;
+    flex-wrap: wrap;
+    gap: 12px;
+}
+
+.gaji-total-bar .lbl {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    font-size: 0.95rem;
+    font-weight: 800;
+    color: #166534;
+}
+
+.gaji-total-bar .lbl i {
+    font-size: 1.15rem;
+    color: #15803d;
+}
+
+.gaji-total-bar .val-wrap {
+    text-align: right;
+}
+
+.gaji-total-bar .val {
+    font-size: 1.5rem;
+    font-weight: 900;
+    color: #14532d;
+    letter-spacing: -0.01em;
+    line-height: 1.2;
+}
+
+.gaji-total-bar .val-sub {
+    font-size: 0.78rem;
+    font-weight: 700;
+    color: #16a34a;
+    margin-top: 2px;
+}
+
+/* Responsivitas Mobile */
+@media (max-width: 991.98px) {
+    .gaji-stat-grid {
+        grid-template-columns: repeat(2, 1fr);
+    }
+}
+
+@media (max-width: 767.98px) {
+    .gaji-hero-card {
+        padding: 20px 18px;
+        border-radius: 18px;
+    }
+
+    .gaji-hero-top {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 12px;
+        margin-bottom: 18px;
+    }
+
+    .gaji-hero-badge {
+        align-self: flex-start;
+    }
+
+    .gaji-hero-balance {
+        font-size: 1.85rem;
+    }
+
+    .gaji-hero-stats {
+        grid-template-columns: 1fr;
+        gap: 8px;
+    }
+
+    .gaji-hero-stat-pill {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        padding: 8px 12px;
+    }
+
+    .gaji-hero-stat-pill .lbl {
+        margin-bottom: 0;
+    }
+
+    .gaji-stat-grid {
+        grid-template-columns: repeat(2, 1fr);
+        gap: 10px;
+    }
+
+    .gaji-stat-card {
+        padding: 14px;
+        border-radius: 16px;
+    }
+
+    .gaji-stat-val {
+        font-size: 1.1rem;
+    }
+
+    .gaji-breakdown-header,
+    .gaji-section-tag,
+    .gaji-item-row,
+    .gaji-total-bar {
+        padding-left: 16px;
+        padding-right: 16px;
+    }
+
+    .gaji-item-bullet {
+        width: 32px;
+        height: 32px;
+        font-size: 0.85rem;
+    }
+
+    .gaji-item-name {
+        font-size: 0.86rem;
+    }
+
+    .gaji-total-bar {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 8px;
+    }
+
+    .gaji-total-bar .val-wrap {
+        text-align: left;
+        width: 100%;
+    }
+}
+
+@media (max-width: 480px) {
+    .gaji-stat-grid {
+        grid-template-columns: 1fr;
+    }
+}
+

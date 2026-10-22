@@ -231,8 +231,9 @@ function formatRupiah($amount) {
 
 ?>
 <?php include '../templates/user_header.php'; ?>
+<link rel="stylesheet" href="../assets/css/gaji-app.css?v=<?= (int) @filemtime(__DIR__ . '/../assets/css/gaji-app.css') ?>">
 
-<div class="main-content">
+<div class="main-content gaji-app">
     <section class="section">
         <div class="section-header">
             <h1><i class="fas fa-money-bill-wave mr-2"></i>Data Gaji Guru</h1>
