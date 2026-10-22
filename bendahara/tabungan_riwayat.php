@@ -52,9 +52,14 @@ include_once __DIR__ . '/../templates/sidebar.php';
         <div class="section-body">
 
             <?php if ($pesan !== ''): ?>
-                <div class="alert alert-<?= stripos($pesan, 'berhasil') !== false ? 'success' : 'warning' ?>">
-                    <?= htmlspecialchars($pesan) ?>
-                </div>
+                <?php
+                    $is_success = stripos($pesan, 'berhasil') !== false;
+                ?>
+                <noscript>
+                    <div class="alert alert-<?= $is_success ? 'success' : 'warning' ?>">
+                        <?= htmlspecialchars($pesan) ?>
+                    </div>
+                </noscript>
             <?php endif; ?>
 
             <div class="card mb-3">
@@ -176,3 +181,28 @@ include_once __DIR__ . '/../templates/sidebar.php';
 </div>
 
 <?php include __DIR__ . '/../templates/footer.php'; ?>
+<?php if ($pesan !== ''): ?>
+<?php
+    $is_success = stripos($pesan, 'berhasil') !== false;
+    $swal_icon = $is_success ? 'success' : 'warning';
+    $swal_title = $is_success ? 'Berhasil!' : 'Perhatian!';
+?>
+<script>
+document.addEventListener('DOMContentLoaded', function () {
+    if (typeof Swal !== 'undefined') {
+        Swal.fire({
+            icon: <?= json_encode($swal_icon) ?>,
+            title: <?= json_encode($swal_title) ?>,
+            text: <?= json_encode($pesan) ?>,
+            timer: <?= $is_success ? '2500' : 'null' ?>,
+            timerProgressBar: <?= $is_success ? 'true' : 'false' ?>,
+            showConfirmButton: <?= $is_success ? 'false' : 'true' ?>,
+            confirmButtonColor: '#0d9488'
+        });
+    } else if (typeof toastr !== 'undefined') {
+        toastr.options = { closeButton: true, progressBar: true, positionClass: 'toast-top-right', timeOut: 3000 };
+        toastr[<?= json_encode($swal_icon) ?>](<?= json_encode($pesan) ?>, <?= json_encode($swal_title) ?>);
+    }
+});
+</script>
+<?php endif; ?>
