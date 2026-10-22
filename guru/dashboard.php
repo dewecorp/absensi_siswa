@@ -671,61 +671,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                         </div>
                     </div>
 
-                    <!-- KBM Info -->
-                    <?php if (!$holiday['is_holiday']): ?>
-                    <div class="row">
-                        <div class="col-12 mb-3">
-                            <div class="card mapp-kbm-card">
-                                <div class="mapp-kbm-header">
-                                    <div class="mapp-kbm-title-group">
-                                        <div class="mapp-kbm-icon-pulse">
-                                            <i class="fas fa-bell"></i>
-                                        </div>
-                                        <div>
-                                            <h5 class="mapp-kbm-title">Informasi &amp; Jadwal KBM Hari Ini</h5>
-                                            <p class="mapp-kbm-subtitle">Pastikan aktivitas harian tercatat tepat waktu demi kelancaran proses pembelajaran.</p>
-                                        </div>
-                                    </div>
-                                    <span class="badge badge-primary px-2.5 py-1.5 font-weight-bold d-none d-sm-inline-block" style="border-radius: 8px; font-size: 11px;">Aktif</span>
-                                </div>
-
-                                <div class="mapp-kbm-notice">
-                                    <div class="mapp-kbm-notice-icon">
-                                        <i class="fas fa-exclamation-triangle"></i>
-                                    </div>
-                                    <p class="mapp-kbm-notice-text">
-                                        <b>Catatan Penting:</b> Mohon segera lakukan pengisian <b>Kehadiran Siswa</b> sebelum memulai jam pelajaran pertama.
-                                    </p>
-                                </div>
-
-                                <div class="mapp-kbm-badges-grid">
-                                    <div class="mapp-kbm-pill-card">
-                                        <div class="mapp-kbm-pill-icon tone-green">
-                                            <i class="fas fa-user-check"></i>
-                                        </div>
-                                        <div class="mapp-kbm-pill-label">Kehadiran Siswa</div>
-                                        <span class="mapp-kbm-pill-time time-green">07:00 - 14:00</span>
-                                    </div>
-                                    <div class="mapp-kbm-pill-card">
-                                        <div class="mapp-kbm-pill-icon tone-blue">
-                                            <i class="fas fa-chalkboard-teacher"></i>
-                                        </div>
-                                        <div class="mapp-kbm-pill-label">Kehadiran Guru</div>
-                                        <span class="mapp-kbm-pill-time time-blue">06:00 - 15:00</span>
-                                    </div>
-                                    <div class="mapp-kbm-pill-card">
-                                        <div class="mapp-kbm-pill-icon tone-amber">
-                                            <i class="fas fa-book-open"></i>
-                                        </div>
-                                        <div class="mapp-kbm-pill-label">Jurnal Mengajar</div>
-                                        <span class="mapp-kbm-pill-time time-amber">07:00 - 14:00</span>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                    <?php endif; ?>
-
                     <?php
                     // Box Jadwal Reguler Hari Ini (khusus guru login)
                     $jd_hari_map = ['Monday' => 'Senin', 'Tuesday' => 'Selasa', 'Wednesday' => 'Rabu', 'Thursday' => 'Kamis', 'Friday' => 'Jumat', 'Saturday' => 'Sabtu', 'Sunday' => 'Ahad'];
@@ -800,9 +745,62 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                         }
                     }
                     ?>
-                    <!-- Jadwal + Kehadiran sejajar 2 kolom -->
+
+                    <!-- Baris 1: Box Informasi KBM sejajar dengan Box Jadwal Hari Ini -->
                     <div class="row align-items-stretch">
+                        <?php if (!$holiday['is_holiday']): ?>
                         <div class="col-12 col-md-6 mb-4 d-flex">
+                            <div class="card w-100 h-100 mapp-kbm-card">
+                                <div class="mapp-kbm-header">
+                                    <div class="mapp-kbm-title-group">
+                                        <div class="mapp-kbm-icon-pulse">
+                                            <i class="fas fa-bell"></i>
+                                        </div>
+                                        <div>
+                                            <h5 class="mapp-kbm-title">Informasi &amp; Jadwal KBM Hari Ini</h5>
+                                            <p class="mapp-kbm-subtitle">Pastikan aktivitas harian tercatat tepat waktu demi kelancaran proses pembelajaran.</p>
+                                        </div>
+                                    </div>
+                                    <span class="badge badge-primary px-2.5 py-1.5 font-weight-bold d-none d-sm-inline-block" style="border-radius: 8px; font-size: 11px;">Aktif</span>
+                                </div>
+
+                                <div class="mapp-kbm-notice">
+                                    <div class="mapp-kbm-notice-icon">
+                                        <i class="fas fa-exclamation-triangle"></i>
+                                    </div>
+                                    <p class="mapp-kbm-notice-text">
+                                        <b>Catatan Penting:</b> Mohon segera lakukan pengisian <b>Kehadiran Siswa</b> sebelum memulai jam pelajaran pertama.
+                                    </p>
+                                </div>
+
+                                <div class="mapp-kbm-badges-grid">
+                                    <div class="mapp-kbm-pill-card">
+                                        <div class="mapp-kbm-pill-icon tone-green">
+                                            <i class="fas fa-user-check"></i>
+                                        </div>
+                                        <div class="mapp-kbm-pill-label">Kehadiran Siswa</div>
+                                        <span class="mapp-kbm-pill-time time-green">07:00 - 14:00</span>
+                                    </div>
+                                    <div class="mapp-kbm-pill-card">
+                                        <div class="mapp-kbm-pill-icon tone-blue">
+                                            <i class="fas fa-chalkboard-teacher"></i>
+                                        </div>
+                                        <div class="mapp-kbm-pill-label">Kehadiran Guru</div>
+                                        <span class="mapp-kbm-pill-time time-blue">06:00 - 15:00</span>
+                                    </div>
+                                    <div class="mapp-kbm-pill-card">
+                                        <div class="mapp-kbm-pill-icon tone-amber">
+                                            <i class="fas fa-book-open"></i>
+                                        </div>
+                                        <div class="mapp-kbm-pill-label">Jurnal Mengajar</div>
+                                        <span class="mapp-kbm-pill-time time-amber">07:00 - 14:00</span>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        <?php endif; ?>
+
+                        <div class="col-12 <?php echo (!$holiday['is_holiday']) ? 'col-md-6' : 'col-md-12'; ?> mb-4 d-flex">
                             <div class="card w-100 h-100 mapp-jadwal-card border-0 shadow-sm">
                                 <div class="card-header d-flex justify-content-between align-items-center flex-wrap" style="gap:8px;">
                                     <h4 class="mb-0"><i class="fas fa-calendar-day text-primary mr-2"></i>Jadwal Mengajar Hari Ini</h4>
@@ -862,7 +860,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                                 </div>
                             </div>
                         </div>
-                    <!-- Attendance Box: kolom kanan, satu baris dengan box jadwal -->
+                    </div>
+                    <!-- Baris 2: Kehadiran Harian sejajar Kehadiran Les Guru -->
+                    <div class="row align-items-stretch">
                         <?php
                         // Box les selalu muncul untuk guru kelas 6, cek apakah ada jadwal hari ini
                         $show_les_box = $is_grade_6_guru && $has_les_schedule_guru; // Hanya tampilkan jika ada jadwal les hari ini
@@ -982,79 +982,99 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                             </div>
                         </div>
                         <?php endif; ?>
-                    </div>
 
-                    <div class="row mapp-row-les">
+                        <!-- Box Kehadiran Les Guru (Kelas 6) -->
                         <?php
                         if ($show_les_box):
                             // Get current les attendance
                             $stmt_check_les = $pdo->prepare("SELECT * FROM tb_absensi_les_guru WHERE id_guru = ? AND tanggal = ?");
                             $stmt_check_les->execute([$teacher['id_guru'], $today]);
                             $today_les_attendance = $stmt_check_les->fetch(PDO::FETCH_ASSOC);
+
+                            $les_status = $today_les_attendance ? strtolower($today_les_attendance['status']) : '';
+                            $les_time = ($today_les_attendance && !empty($today_les_attendance['waktu_input'])) ? date('H.i', strtotime($today_les_attendance['waktu_input'])) . ' WIB' : '';
+                            $les_hero_cls = 'is-empty';
+                            $les_hero_icon = 'fas fa-hourglass-half';
+                            $les_hero_title = 'Belum Absen Les';
+                            $les_hero_sub = 'Silakan pilih status kehadiran les Anda hari ini.';
+
+                            if ($les_status === 'hadir') {
+                                $les_hero_cls = 'is-hadir';
+                                $les_hero_icon = 'fas fa-check-circle';
+                                $les_hero_title = 'Hadir Les';
+                                $les_hero_sub = $les_time !== '' ? 'Kehadiran les dicatat pukul ' . $les_time : 'Kehadiran les Anda sudah tercatat.';
+                            } elseif ($les_status === 'sakit') {
+                                $les_hero_cls = 'is-sakit';
+                                $les_hero_icon = 'fas fa-procedures';
+                                $les_hero_title = 'Sakit (Les)';
+                                $les_hero_sub = !empty($today_les_attendance['keterangan']) ? htmlspecialchars($today_les_attendance['keterangan']) : 'Semoga lekas sembuh.';
+                            } elseif ($les_status === 'izin') {
+                                $les_hero_cls = 'is-izin';
+                                $les_hero_icon = 'fas fa-paper-plane';
+                                $les_hero_title = 'Izin (Les)';
+                                $les_hero_sub = !empty($today_les_attendance['keterangan']) ? htmlspecialchars($today_les_attendance['keterangan']) : 'Izin les Anda sudah tercatat.';
+                            }
                         ?>
-                        <div class="col-12 col-md-6 mb-4">
-                            <div class="card card-dark">
-                                <div class="card-header">
-                                    <h4>Kehadiran Les Guru (Kelas 6)</h4>
+                        <div class="col-12 col-md-6 mb-4 d-flex mapp-col-absen">
+                            <div class="card w-100 h-100 mapp-absen-card border-0 shadow-sm">
+                                <div class="card-header d-flex justify-content-between align-items-center flex-wrap" style="gap:8px;">
+                                    <h4 class="mb-0"><i class="fas fa-book-reader text-primary mr-2"></i>Kehadiran Les Guru (Kelas 6)</h4>
                                 </div>
                                 <div class="card-body">
                                     <?php if ($has_les_schedule_guru): ?>
-                                    <div class="alert alert-light alert-has-icon shadow-sm border mb-3">
-                                        <div class="alert-icon text-dark"><i class="far fa-bell"></i></div>
-                                        <div class="alert-body">
-                                            <div class="alert-title font-weight-bold">Penting</div>
-                                            Jangan lupa untuk mengisi <b>Kehadiran Les</b> Anda, <b>Kehadiran Siswa Les</b>, serta <b>Jurnal Les</b> sesuai jadwal Anda.
+                                    <div class="mapp-att-hero <?= $les_hero_cls ?>">
+                                        <div class="mapp-att-hero-ico"><i class="<?= $les_hero_icon ?>"></i></div>
+                                        <div class="mapp-att-hero-txt">
+                                            <div class="mapp-att-hero-title"><?= $les_hero_title ?></div>
+                                            <div class="mapp-att-hero-sub"><?= $les_hero_sub ?></div>
                                         </div>
                                     </div>
+
+                                    <div class="mapp-att-hint">
+                                        <i class="far fa-bell"></i>
+                                        <span>Jangan lupa mengisi <b>Kehadiran Les</b>, <b>Kehadiran Siswa Les</b>, dan <b>Jurnal Les</b> sesuai jadwal.</span>
+                                    </div>
+
                                     <form method="POST" action="" id="attendanceFormLes">
-                                        <div class="form-group mb-4 text-center">
-                                            <label class="d-block font-weight-bold">Status Kehadiran Les (<?php echo date('d-m-Y'); ?>)</label>
-                                            <div class="selectgroup selectgroup-pills justify-content-center">
-                                                <label class="selectgroup-item">
-                                                    <input type="radio" name="attendance_status_les" value="hadir" class="selectgroup-input" <?php echo ($today_les_attendance && strtolower($today_les_attendance['status']) == 'hadir') ? 'checked' : ''; ?> required>
-                                                    <span class="selectgroup-button selectgroup-button-icon btn-outline-success <?php echo ($today_les_attendance && strtolower($today_les_attendance['status']) == 'hadir') ? 'active-hadir' : ''; ?>" data-status="hadir"><i class="fas fa-check"></i> Hadir</span>
-                                                </label>
-                                                <label class="selectgroup-item">
-                                                    <input type="radio" name="attendance_status_les" value="sakit" class="selectgroup-input" <?php echo ($today_les_attendance && strtolower($today_les_attendance['status']) == 'sakit') ? 'checked' : ''; ?>>
-                                                    <span class="selectgroup-button selectgroup-button-icon btn-outline-warning <?php echo ($today_les_attendance && strtolower($today_les_attendance['status']) == 'sakit') ? 'active-sakit' : ''; ?>" data-status="sakit"><i class="fas fa-procedures"></i> Sakit</span>
-                                                </label>
-                                                <label class="selectgroup-item">
-                                                    <input type="radio" name="attendance_status_les" value="izin" class="selectgroup-input" <?php echo ($today_les_attendance && strtolower($today_les_attendance['status']) == 'izin') ? 'checked' : ''; ?>>
-                                                    <span class="selectgroup-button selectgroup-button-icon btn-outline-info <?php echo ($today_les_attendance && strtolower($today_les_attendance['status']) == 'izin') ? 'active-izin' : ''; ?>" data-status="izin"><i class="fas fa-paper-plane"></i> Izin</span>
-                                                </label>
-                                            </div>
+                                        <div class="mapp-att-label">Pilih Status Kehadiran Les</div>
+                                        <div class="mapp-att-actions">
+                                            <button type="button" onclick="lesAutoAtt('hadir')" class="mapp-att-btn is-hadir <?php echo ($les_status === 'hadir') ? 'active' : ''; ?>">
+                                                <i class="fas fa-check"></i><span>Hadir</span>
+                                            </button>
+                                            <button type="button" onclick="lesAutoAtt('sakit')" class="mapp-att-btn is-sakit <?php echo ($les_status === 'sakit') ? 'active' : ''; ?>">
+                                                <i class="fas fa-procedures"></i><span>Sakit</span>
+                                            </button>
+                                            <button type="button" onclick="lesAutoAtt('izin')" class="mapp-att-btn is-izin <?php echo ($les_status === 'izin') ? 'active' : ''; ?>">
+                                                <i class="fas fa-paper-plane"></i><span>Izin</span>
+                                            </button>
                                         </div>
 
-                                        <?php 
-                                        // Show keterangan as info if already saved with sakit/izin
-                                        $show_keterangan_info_les_guru = ($today_les_attendance && in_array(strtolower($today_les_attendance['status']), ['sakit', 'izin']) && !empty($today_les_attendance['keterangan']));
-                                        ?>
-
-                                        <div class="form-group keterangan-box" id="keterangan_box_les_guru" style="display: <?php echo $show_keterangan_info_les_guru ? 'none' : (($today_les_attendance && in_array(strtolower($today_les_attendance['status']), ['izin', 'sakit'])) ? 'block' : 'none'); ?>;">
-                                            <label>Keterangan</label>
-                                            <textarea name="attendance_note_les" class="form-control"><?php echo $today_les_attendance ? htmlspecialchars($today_les_attendance['keterangan']) : ''; ?></textarea>
+                                        <div class="form-group mapp-att-note" id="keteranganAreaLes" style="display: <?php echo in_array($les_status, ['izin', 'sakit']) ? 'block' : 'none'; ?>; margin-top: 14px;">
+                                            <label class="font-weight-bold" id="lblKeteranganLes">Alasan <?php echo ($les_status === 'sakit') ? 'Sakit' : 'Izin'; ?></label>
+                                            <textarea name="attendance_note_les" id="noteLes" class="form-control" placeholder="Tuliskan keterangan..."><?php echo $today_les_attendance ? htmlspecialchars($today_les_attendance['keterangan']) : ''; ?></textarea>
+                                            <button type="submit" name="submit_attendance_les" class="btn btn-info btn-lg btn-block mt-2"><i class="fas fa-save mr-2"></i> Simpan Keterangan Les</button>
                                         </div>
 
-                                        <?php if ($show_keterangan_info_les_guru): ?>
-                                        <div class="form-group" id="keterangan_info_les_guru" style="display: block;">
-                                            <label>Keterangan</label>
-                                            <div class="alert alert-light border shadow-sm mb-2">
-                                                <div class="d-flex justify-content-between align-items-start">
-                                                    <div class="flex-grow-1">
-                                                        <i class="fas fa-info-circle text-info mr-2"></i>
-                                                        <span><?php echo htmlspecialchars($today_les_attendance['keterangan']); ?></span>
-                                                    </div>
-                                                    <button type="button" class="btn btn-sm btn-outline-primary btn-edit-keterangan" onclick="editKeterangan('attendanceFormLes', 'keterangan_box_les_guru', 'keterangan_info_les_guru')">
-                                                        <i class="fas fa-edit"></i> Edit
-                                                    </button>
-                                                </div>
-                                            </div>
-                                            <input type="hidden" name="attendance_note_les" value="<?php echo htmlspecialchars($today_les_attendance['keterangan']); ?>">
-                                        </div>
-                                        <?php endif; ?>
-
-                                        <button type="submit" name="submit_attendance_les" class="btn btn-primary btn-lg btn-block shadow-sm"><i class="fas fa-save mr-2"></i> Simpan Kehadiran Les</button>
+                                        <input type="hidden" name="attendance_status_les" id="attStatusLes" value="<?php echo htmlspecialchars($les_status); ?>">
+                                        <input type="hidden" name="submit_attendance_les" value="1">
                                     </form>
+                                    <script>
+                                    function lesAutoAtt(status) {
+                                        var form = document.getElementById('attendanceFormLes');
+                                        var cur = '<?php echo $les_status; ?>';
+                                        if (cur !== '' && status === cur) { return; }
+                                        document.getElementById('attStatusLes').value = status;
+                                        var area = document.getElementById('keteranganAreaLes');
+                                        var lbl = document.getElementById('lblKeteranganLes');
+                                        if (status === 'izin' || status === 'sakit') {
+                                            if (lbl) lbl.innerText = 'Alasan ' + (status === 'sakit' ? 'Sakit' : 'Izin');
+                                            area.style.display = 'block';
+                                            return;
+                                        }
+                                        area.style.display = 'none';
+                                        form.submit();
+                                    }
+                                    </script>
                                     <?php else: ?>
                                     <div class="alert alert-info shadow-sm d-flex flex-column justify-content-center mb-0">
                                         <div class="alert-body text-center py-3">
