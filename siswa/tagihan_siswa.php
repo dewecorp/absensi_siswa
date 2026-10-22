@@ -225,7 +225,7 @@ include '../templates/header.php';
 include_once '../templates/sidebar.php';
 ?>
 
-<link rel="stylesheet" href="../assets/css/siswa-keuangan-mobile.css">
+<link rel="stylesheet" href="../assets/css/siswa-keuangan-mobile.css?v=<?= (int) @filemtime(__DIR__ . '/../assets/css/siswa-keuangan-mobile.css') ?>">
 
 <div class="main-content">
     <section class="section">
@@ -246,7 +246,7 @@ include_once '../templates/sidebar.php';
             <?php endif; ?>
 
             <!-- Hero Card Tagihan Siswa Ala Mobile Apps -->
-            <div class="sfin-hero-card <?php echo $total_all > 0 ? 'theme-danger' : 'theme-success'; ?>">
+            <div class="sfin-hero-card <?php echo $total_all > 0 ? 'theme-warning' : 'theme-success'; ?>">
                 <div class="sfin-hero-top">
                     <div class="sfin-student-info">
                         <div class="sfin-student-name">
@@ -257,12 +257,6 @@ include_once '../templates/sidebar.php';
                             <span>•</span>
                             <span>Kelas <?php echo htmlspecialchars((string)($api_student['kelas'] ?? $student['nama_kelas'] ?? '-'), ENT_QUOTES, 'UTF-8'); ?></span>
                         </div>
-                    </div>
-                    <div>
-                        <span class="sfin-badge-pill">
-                            <i class="fas fa-<?php echo $api_status === 'success' ? 'sync-alt' : 'exclamation-circle'; ?> mr-1"></i>
-                            <?php echo $api_status === 'success' ? 'Pembayaran Live' : 'Offline'; ?>
-                        </span>
                     </div>
                 </div>
 

@@ -38,6 +38,71 @@
     box-shadow: 0 8px 24px rgba(217, 119, 6, 0.22);
 }
 
+.sfin-hero-card.theme-warning {
+    background: linear-gradient(135deg, #fef08a 0%, #facc15 35%, #eab308 75%, #ca8a04 100%);
+    box-shadow: 0 10px 28px -4px rgba(202, 138, 4, 0.32);
+    border: 1.5px solid #facc15;
+    color: #451a03;
+}
+
+.sfin-hero-card.theme-warning::after {
+    background: radial-gradient(circle, rgba(255, 255, 255, 0.45) 0%, rgba(255, 255, 255, 0) 70%);
+}
+
+.sfin-hero-card.theme-warning .sfin-student-name {
+    color: #3f1d04;
+    text-shadow: none;
+    font-weight: 900;
+}
+
+.sfin-hero-card.theme-warning .sfin-student-sub {
+    color: #713f12;
+    font-weight: 700;
+}
+
+.sfin-hero-card.theme-warning .sfin-hero-main-title {
+    color: #78350f;
+    font-weight: 800;
+    letter-spacing: 0.6px;
+}
+
+.sfin-hero-card.theme-warning .sfin-hero-amount,
+.sfin-hero-card.theme-warning .sfin-hero-amount.gold {
+    color: #3f1d04;
+    text-shadow: none;
+    font-weight: 900;
+}
+
+.sfin-hero-card.theme-warning .sfin-stat-box {
+    background: rgba(255, 255, 255, 0.72);
+    backdrop-filter: blur(8px);
+    -webkit-backdrop-filter: blur(8px);
+    border: 1px solid rgba(180, 83, 9, 0.28);
+    box-shadow: 0 2px 8px rgba(120, 53, 15, 0.08);
+}
+
+.sfin-hero-card.theme-warning .sfin-stat-box .lbl {
+    color: #78350f;
+    font-weight: 800;
+}
+
+.sfin-hero-card.theme-warning .sfin-stat-box .val {
+    color: #3f1d04;
+    font-weight: 900;
+}
+
+.sfin-hero-card.theme-warning .sfin-stat-box .val i.fa-exclamation-circle {
+    color: #b91c1c;
+}
+
+.sfin-hero-card.theme-warning .sfin-stat-box .val i.fa-clock {
+    color: #b45309;
+}
+
+.sfin-hero-card.theme-warning .sfin-stat-box .val i.fa-check-circle {
+    color: #15803d;
+}
+
 .sfin-hero-card::after {
     content: "";
     position: absolute;
