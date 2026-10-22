@@ -181,12 +181,14 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['save_attendance'])) {
             
             logActivity($pdo, $username, 'Input Absensi Les', "Melakukan input absensi les siswa kelas $log_class_name untuk $saved_count siswa");
 
-            // Add notification for Admin/Kepala
-            if (in_array($user_level, ['guru', 'wali'])) {
+            // Kirim notifikasi ringkas satu kali ke Admin dan Kepala Madrasah
+            if (function_exists('simadNotifKehadiranLesSiswa')) {
+                simadNotifKehadiranLesSiswa($pdo, (int)$id_kelas, (string)$tanggal, (int)$saved_count);
+            } elseif (in_array($user_level, ['guru', 'wali'])) {
                 $nama_guru = $_SESSION['nama_guru'] ?? $_SESSION['nama'] ?? $_SESSION['username'] ?? 'Guru';
                 $role_label = ($user_level == 'wali') ? 'Wali' : 'Guru';
-                $msg = "$nama_guru ($role_label) telah mengisi kehadiran les siswa kelas $log_class_name pada " . date('d-m-Y H:i');
-                createNotification($pdo, $msg, 'absensi_les_siswa.php');
+                $msg = "$nama_guru ($role_label) telah mengisi kehadiran les siswa kelas $log_class_name ($saved_count siswa) pada " . date('d-m-Y H:i');
+                createNotification($pdo, $msg, 'rekap_absensi_les_siswa.php', 'absensi_les', null, 'admin_kepala');
             }
         }
     }
@@ -269,9 +271,9 @@ include '../templates/sidebar.php';
                                 <div class="att-grid">
                                     <?php foreach ($students as $index => $student): ?>
                                     <?php
-                                        $status_badge = $student['keterangan'] ?? 'Hadir';
+                                        $status_badge = $student['keterangan'] ?? '';
                                         $status_now = $status_badge;
-                                        $stat_slug = strtolower($status_now);
+                                        $stat_slug = strtolower($status_now ?: 'none');
                                         switch ($status_badge) {
                                             case 'Hadir': $badgeClass = 'badge-success'; break;
                                             case 'Sakit': $badgeClass = 'badge-warning'; break;
@@ -291,7 +293,7 @@ include '../templates/sidebar.php';
                                                 <div class="att-name"><?= htmlspecialchars($nm) ?></div>
                                                 <div class="att-sub">
                                                     <span class="att-num">No <?= $index + 1 ?></span>
-                                                    <span class="badge <?= $badgeClass ?>" id="badge_<?= $student['id_siswa'] ?>"><?= htmlspecialchars($status_badge) ?></span>
+                                                    <span class="badge <?= $badgeClass ?>" id="badge_<?= $student['id_siswa'] ?>"><?= htmlspecialchars($status_badge ?: 'Belum Absen') ?></span>
                                                 </div>
                                             </div>
                                         </div>
@@ -314,7 +316,12 @@ include '../templates/sidebar.php';
                                     <?php endforeach; ?>
                                 </div>
                                 
-                                <p class="text-center text-muted mb-0"><i class="fas fa-info-circle"></i> Perubahan tersimpan otomatis saat memilih status.</p>
+                                <div class="att-save-bar mt-4">
+                                    <button type="submit" class="btn btn-primary btn-lg btn-block shadow-sm" <?php echo !$has_schedule ? 'disabled' : ''; ?>>
+                                        <i class="fas fa-save mr-2"></i> Simpan Kehadiran Les Siswa
+                                    </button>
+                                </div>
+                                <p class="text-center text-muted mt-3 mb-0"><i class="fas fa-info-circle"></i> Pilih status setiap siswa, lalu klik <strong>Simpan Kehadiran Les Siswa</strong>.</p>
                             </form>
                             <?php elseif (empty($students)): ?>
                                 <div class="alert alert-info text-center">Data siswa tidak ditemukan untuk kelas <?php echo $nama_kelas_selected; ?>.</div>
@@ -384,7 +391,7 @@ $(document).ready(function() {
 
     $('.attendance-btn-group.disabled .btn-kehadiran-siswa').prop('disabled', true);
 
-    // Handle klik tombol status untuk tiap siswa
+    // Handle klik tombol status untuk tiap siswa (tanpa autosave, simpan via tombol)
     $('.btn-kehadiran-siswa').on('click', function() {
         if ($(this).prop('disabled')) {
             return;
@@ -395,19 +402,16 @@ $(document).ready(function() {
         var badge = $('#badge_' + studentId);
         var currentStatus = input.val();
 
-        // Klik ulang status yang sama = reset ke Belum Absen
-        var nextStatus = (currentStatus === status) ? '' : status;
+        // Klik status yang dipilih
         var group = $(this).closest('.attendance-btn-group');
         group.find('.btn-kehadiran-siswa').removeClass('active');
-        if (nextStatus !== '') {
-            group.find('.btn-kehadiran-siswa[data-status=\"' + nextStatus + '\"]').addClass('active');
-        }
+        $(this).addClass('active');
 
-        input.val(nextStatus);
-        badge.text(nextStatus !== '' ? nextStatus : 'Belum Absen');
+        input.val(status);
+        badge.text(status);
         badge.removeClass('badge-success badge-warning badge-info badge-danger badge-secondary');
 
-        switch(nextStatus) {
+        switch(status) {
             case 'Hadir': badge.addClass('badge-success'); break;
             case 'Sakit': badge.addClass('badge-warning'); break;
             case 'Izin': badge.addClass('badge-info'); break;
@@ -415,10 +419,10 @@ $(document).ready(function() {
             default: badge.addClass('badge-secondary');
         }
 
-        // Auto-save tanpa tombol simpan
-        if (typeof simadAutoSaveAttendance === 'function') {
-            simadAutoSaveAttendance(studentId, nextStatus);
-        }
+        var card = $(this).closest('.att-card');
+        var avatar = card.find('.att-avatar');
+        avatar.removeClass(function(i, c) { return (c.match(/att-avatar--\S+/g) || []).join(' '); });
+        avatar.addClass('att-avatar--' + status.toLowerCase());
     });
 });
 ";

@@ -4189,3 +4189,54 @@ if (!function_exists('simadNotifKehadiranKelas')) {
         }
     }
 }
+
+// ============================================================
+// Notifikasi Simpan Kehadiran Les Siswa ke Admin & Kepala
+// ============================================================
+if (!function_exists('simadNotifKehadiranLesSiswa')) {
+    function simadNotifKehadiranLesSiswa(PDO $pdo, int $id_kelas, string $tanggal, int $saved_count = 0): void {
+        $id_kelas = (int)$id_kelas;
+        $nama_kelas = '';
+        if ($id_kelas > 0) {
+            try {
+                $s = $pdo->prepare("SELECT nama_kelas FROM tb_kelas WHERE id_kelas = ? LIMIT 1");
+                $s->execute([$id_kelas]);
+                $nama_kelas = trim((string)$s->fetchColumn());
+            } catch (Throwable $e) {}
+        }
+        if ($nama_kelas === '') {
+            $nama_kelas = 'Kelas VI';
+        }
+
+        $aktor = 'Petugas';
+        $user_level = function_exists('getUserLevel') ? getUserLevel() : ($_SESSION['level'] ?? '');
+        if ($user_level === 'wali') {
+            $aktor = 'Wali Kelas ' . ($_SESSION['nama_guru'] ?? $_SESSION['nama'] ?? '');
+        } elseif ($user_level === 'guru') {
+            $aktor = 'Guru Pengampu ' . ($_SESSION['nama_guru'] ?? $_SESSION['nama'] ?? '');
+        } elseif ($user_level === 'admin' || $user_level === 'tata_usaha') {
+            $aktor = ucfirst($user_level) . ' (' . ($_SESSION['username'] ?? '') . ')';
+        }
+
+        $raw_kelas   = preg_replace('/^kelas\s+/i', '', $nama_kelas);
+        $jam         = date('H:i');
+        $tanggal_txt = date('d-m-Y', strtotime($tanggal) ?: time());
+
+        $message = "$aktor telah menyimpan kehadiran les siswa kelas $raw_kelas ($saved_count siswa) pada pukul $jam WIB, $tanggal_txt.";
+
+        // Cegah duplikasi notifikasi dalam 2 menit
+        try {
+            $dup = $pdo->prepare("SELECT COUNT(*) FROM tb_notifikasi WHERE message = ? AND created_at >= DATE_SUB(NOW(), INTERVAL 2 MINUTE)");
+            $dup->execute([$message]);
+            if ((int)$dup->fetchColumn() > 0) {
+                return;
+            }
+        } catch (Throwable $e) {}
+
+        try {
+            createNotification($pdo, $message, 'rekap_absensi_les_siswa.php', 'absensi_les', null, 'admin_kepala');
+        } catch (Throwable $e) {
+            // Notifikasi tidak boleh menggagalkan proses penyimpanan
+        }
+    }
+}
