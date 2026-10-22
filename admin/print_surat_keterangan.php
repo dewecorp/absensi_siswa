@@ -9,7 +9,108 @@ if (session_status() == PHP_SESSION_NONE) {
     session_start();
 }
 
-if (!isAuthorized(['admin', 'tata_usaha'])) {
+if (!function_exists('normalize_person_name_for_match')) {
+    /** @param mixed $name */
+    function normalize_person_name_for_match($name): string {
+        $v = strtolower(trim((string)$name));
+        $v = preg_replace('/[^a-z0-9]+/u', '', $v);
+        return (string)$v;
+    }
+}
+if (!function_exists('is_current_guru_pembina_pramuka')) {
+    function is_current_guru_pembina_pramuka(PDO $pdo): bool
+    {
+        $idGuru = 0;
+        $candidateNames = [];
+
+        $sessionNames = [
+            (string)($_SESSION['nama'] ?? ''),
+            (string)($_SESSION['nama_guru'] ?? ''),
+            (string)($_SESSION['username'] ?? ''),
+        ];
+        foreach ($sessionNames as $nm) {
+            $nm = trim($nm);
+            if ($nm !== '') {
+                $candidateNames[] = $nm;
+            }
+        }
+
+        if (isset($_SESSION['user_id'])) {
+            $idGuru = (int)$_SESSION['user_id'];
+            if (isset($_SESSION['login_source']) && $_SESSION['login_source'] === 'tb_pengguna') {
+                try {
+                    $st = $pdo->prepare("SELECT id_guru FROM tb_pengguna WHERE id_pengguna = ? LIMIT 1");
+                    $st->execute([$idGuru]);
+                    $idGuru = (int)($st->fetchColumn() ?: 0);
+                } catch (Exception $e) {
+                    $idGuru = 0;
+                }
+            }
+        }
+
+        if ($idGuru > 0) {
+            try {
+                $stG = $pdo->prepare("SELECT nama_guru FROM tb_guru WHERE id_guru = ? LIMIT 1");
+                $stG->execute([$idGuru]);
+                $ng = trim((string)$stG->fetchColumn());
+                if ($ng !== '') {
+                    $candidateNames[] = $ng;
+                }
+            } catch (Exception $e) {
+            }
+        }
+
+        $normalizedCandidates = [];
+        foreach ($candidateNames as $cn) {
+            $norm = normalize_person_name_for_match($cn);
+            if ($norm !== '') {
+                $normalizedCandidates[] = $norm;
+            }
+        }
+        $normalizedCandidates = array_values(array_unique($normalizedCandidates));
+
+        try {
+            if ($idGuru > 0) {
+                $stId = $pdo->prepare("SELECT COUNT(*) FROM tb_pembina_pramuka WHERE id_guru = ?");
+                $stId->execute([$idGuru]);
+                if ((int)$stId->fetchColumn() > 0) {
+                    return true;
+                }
+            }
+
+            if ($normalizedCandidates === []) {
+                return false;
+            }
+
+            $rows = $pdo->query("SELECT nama_pembina FROM tb_pembina_pramuka")->fetchAll(PDO::FETCH_COLUMN, 0);
+            foreach ($rows as $nmPbRaw) {
+                $nmPb = normalize_person_name_for_match((string)$nmPbRaw);
+                if ($nmPb === '') {
+                    continue;
+                }
+                foreach ($normalizedCandidates as $cand) {
+                    if (
+                        $cand === $nmPb ||
+                        strpos($nmPb, $cand) !== false ||
+                        strpos($cand, $nmPb) !== false
+                    ) {
+                        return true;
+                    }
+                }
+            }
+        } catch (Exception $e) {
+            return false;
+        }
+
+        return false;
+    }
+}
+
+$can_manage_suket = isAuthorized(['admin', 'tata_usaha']);
+$is_pembina_pramuka_user = is_current_guru_pembina_pramuka($pdo);
+$can_view_suket = $can_manage_suket || ($is_pembina_pramuka_user && isAuthorized(['guru', 'wali']));
+
+if (!$can_view_suket) {
     redirect('../login.php');
 }
 

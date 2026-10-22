@@ -9,8 +9,190 @@ if (session_status() == PHP_SESSION_NONE) {
     session_start();
 }
 
-if (!isAuthorized(['admin', 'tata_usaha'])) {
+if (!function_exists('normalize_person_name_for_match')) {
+    /** @param mixed $name */
+    function normalize_person_name_for_match($name): string {
+        $v = strtolower(trim((string)$name));
+        $v = preg_replace('/[^a-z0-9]+/u', '', $v);
+        return (string)$v;
+    }
+}
+if (!function_exists('is_current_guru_pembina_pramuka')) {
+    function is_current_guru_pembina_pramuka(PDO $pdo): bool
+    {
+        $idGuru = 0;
+        $candidateNames = [];
+
+        $sessionNames = [
+            (string)($_SESSION['nama'] ?? ''),
+            (string)($_SESSION['nama_guru'] ?? ''),
+            (string)($_SESSION['username'] ?? ''),
+        ];
+        foreach ($sessionNames as $nm) {
+            $nm = trim($nm);
+            if ($nm !== '') {
+                $candidateNames[] = $nm;
+            }
+        }
+
+        if (isset($_SESSION['user_id'])) {
+            $idGuru = (int)$_SESSION['user_id'];
+            if (isset($_SESSION['login_source']) && $_SESSION['login_source'] === 'tb_pengguna') {
+                try {
+                    $st = $pdo->prepare("SELECT id_guru FROM tb_pengguna WHERE id_pengguna = ? LIMIT 1");
+                    $st->execute([$idGuru]);
+                    $idGuru = (int)($st->fetchColumn() ?: 0);
+                } catch (Exception $e) {
+                    $idGuru = 0;
+                }
+            }
+        }
+
+        if ($idGuru > 0) {
+            try {
+                $stG = $pdo->prepare("SELECT nama_guru FROM tb_guru WHERE id_guru = ? LIMIT 1");
+                $stG->execute([$idGuru]);
+                $ng = trim((string)$stG->fetchColumn());
+                if ($ng !== '') {
+                    $candidateNames[] = $ng;
+                }
+            } catch (Exception $e) {
+            }
+        }
+
+        $normalizedCandidates = [];
+        foreach ($candidateNames as $cn) {
+            $norm = normalize_person_name_for_match($cn);
+            if ($norm !== '') {
+                $normalizedCandidates[] = $norm;
+            }
+        }
+        $normalizedCandidates = array_values(array_unique($normalizedCandidates));
+
+        try {
+            if ($idGuru > 0) {
+                $stId = $pdo->prepare("SELECT COUNT(*) FROM tb_pembina_pramuka WHERE id_guru = ?");
+                $stId->execute([$idGuru]);
+                if ((int)$stId->fetchColumn() > 0) {
+                    return true;
+                }
+            }
+
+            if ($normalizedCandidates === []) {
+                return false;
+            }
+
+            $rows = $pdo->query("SELECT nama_pembina FROM tb_pembina_pramuka")->fetchAll(PDO::FETCH_COLUMN, 0);
+            foreach ($rows as $nmPbRaw) {
+                $nmPb = normalize_person_name_for_match((string)$nmPbRaw);
+                if ($nmPb === '') {
+                    continue;
+                }
+                foreach ($normalizedCandidates as $cand) {
+                    if (
+                        $cand === $nmPb ||
+                        strpos($nmPb, $cand) !== false ||
+                        strpos($cand, $nmPb) !== false
+                    ) {
+                        return true;
+                    }
+                }
+            }
+        } catch (Exception $e) {
+            return false;
+        }
+
+        return false;
+    }
+}
+
+$can_manage_suket = isAuthorized(['admin', 'tata_usaha']);
+$is_pembina_pramuka_user = is_current_guru_pembina_pramuka($pdo);
+$can_view_suket = $can_manage_suket || ($is_pembina_pramuka_user && isAuthorized(['guru', 'wali']));
+
+if (!$can_view_suket) {
     redirect('../login.php');
+}
+
+// Session type query preservation
+$session_type = trim((string)($_GET['session_type'] ?? ''));
+if ($session_type === '' && !$can_manage_suket) {
+    $session_type = (string)($_SESSION['level'] ?? 'guru');
+}
+$session_type_param = $session_type !== '' ? ('&session_type=' . urlencode($session_type)) : '';
+
+// Resolusi tingkat yang dibina jika pembina pramuka (non-admin)
+$assigned_tingkat_ids = [];
+$suket_assignment_missing = false;
+if (!$can_manage_suket) {
+    $idGuruSuket = 0;
+    if (isset($_SESSION['user_id'])) {
+        $idGuruSuket = (int)$_SESSION['user_id'];
+        if (isset($_SESSION['login_source']) && $_SESSION['login_source'] === 'tb_pengguna') {
+            try {
+                $st = $pdo->prepare("SELECT id_guru FROM tb_pengguna WHERE id_pengguna = ? LIMIT 1");
+                $st->execute([$idGuruSuket]);
+                $idGuruSuket = (int)($st->fetchColumn() ?: 0);
+            } catch (Exception $e) {
+                $idGuruSuket = 0;
+            }
+        }
+    }
+
+    $id_pembina_suket = 0;
+    if ($idGuruSuket > 0) {
+        $stPb = $pdo->prepare("SELECT id_pembina_pramuka FROM tb_pembina_pramuka WHERE id_guru = ? LIMIT 1");
+        $stPb->execute([$idGuruSuket]);
+        $id_pembina_suket = (int)($stPb->fetchColumn() ?: 0);
+    }
+    if ($id_pembina_suket <= 0) {
+        $cands = [(string)($_SESSION['nama'] ?? ''), (string)($_SESSION['nama_guru'] ?? ''), (string)($_SESSION['username'] ?? '')];
+        $pbRows = $pdo->query("SELECT id_pembina_pramuka, nama_pembina FROM tb_pembina_pramuka")->fetchAll(PDO::FETCH_ASSOC);
+        foreach ($cands as $c) {
+            $cn = normalize_person_name_for_match($c);
+            if ($cn === '') continue;
+            foreach ($pbRows as $pbr) {
+                $pbn = normalize_person_name_for_match($pbr['nama_pembina'] ?? '');
+                if ($pbn !== '' && ($pbn === $cn || strpos($pbn, $cn) !== false || strpos($cn, $pbn) !== false)) {
+                    $id_pembina_suket = (int)$pbr['id_pembina_pramuka'];
+                    break 2;
+                }
+            }
+        }
+    }
+
+    if ($id_pembina_suket > 0) {
+        try {
+            $stAssign = $pdo->prepare("SELECT id_tingkat_barung FROM tb_pembina_tingkat WHERE id_pembina_pramuka = ?");
+            $stAssign->execute([$id_pembina_suket]);
+            $assigned_tingkat_ids = array_map('intval', $stAssign->fetchAll(PDO::FETCH_COLUMN));
+        } catch (Exception $e) {
+            $assigned_tingkat_ids = [];
+        }
+        if (empty($assigned_tingkat_ids)) {
+            $stLegacy = $pdo->prepare("SELECT id_tingkat_barung FROM tb_pembina_pramuka WHERE id_pembina_pramuka = ? LIMIT 1");
+            $stLegacy->execute([$id_pembina_suket]);
+            $singleT = (int)$stLegacy->fetchColumn();
+            if ($singleT > 0) {
+                $assigned_tingkat_ids = [$singleT];
+            }
+        }
+    }
+
+    if (empty($assigned_tingkat_ids)) {
+        $suket_assignment_missing = true;
+    }
+}
+
+if (!$can_manage_suket && $suket_assignment_missing) {
+    // Tidak ada tingkatan yang dibina
+    $page_title = 'Surat Keterangan';
+    include '../templates/header.php';
+    include '../templates/sidebar.php';
+    echo '<div class="main-content"><section class="section"><div class="section-header"><h1>Surat Keterangan</h1></div>';
+    echo '<div class="section-body"><div class="alert alert-warning"><i class="fas fa-exclamation-triangle mr-2"></i>Anda terdaftar sebagai Pembina Pramuka tetapi belum ditugaskan pada tingkatan mana pun. Silakan hubungi Admin.</div></div></section></div>';
+    include '../templates/footer.php';
+    exit;
 }
 
 // Aksi batalkan kelulusan: kembali ke tingkat sebelumnya + kosongkan SKU lama
@@ -30,6 +212,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && ($_POST['suket_ajax'] ?? '') === '1
             exit;
         }
         $cur_tingkat = (int)($cur['id_tingkat_barung'] ?? 0);
+
+        if (!$can_manage_suket && !empty($assigned_tingkat_ids) && !in_array($cur_tingkat, $assigned_tingkat_ids)) {
+            echo json_encode(['ok' => false, 'msg' => 'Anda tidak memiliki hak akses untuk tingkatan ini.']);
+            exit;
+        }
 
         // Tentukan tingkat asal: prioritas promoted_from, fallback tingkat sebelumnya di urutan
         $asal_tingkat = (int)($cur['promoted_from_tingkat_id'] ?? 0);
@@ -204,7 +391,13 @@ $isMula = static function (string $name): bool {
 foreach ($all_tingkat_list as $t) {
     $nm = (string)($t['nama_tingkat'] ?? '');
     if (!$isPraMula($nm)) {
-        $tingkat_list[] = $t;
+        if (!$can_manage_suket && !empty($assigned_tingkat_ids)) {
+            if (in_array((int)($t['id_tingkat_barung'] ?? 0), $assigned_tingkat_ids, true)) {
+                $tingkat_list[] = $t;
+            }
+        } else {
+            $tingkat_list[] = $t;
+        }
     }
 }
 
@@ -368,7 +561,9 @@ function printSingleLetter(id, nama, nta) {
   }
   const tingkat = ($('#selectedTingkatId').val() || '').toString();
   const tahunAjaran = ($('#selectedTahunAjaran').val() || '').toString();
-  const url = `print_surat_keterangan.php?mode=single&id=${encodeURIComponent(id)}&tingkat=${encodeURIComponent(tingkat)}&tahun_ajaran=${encodeURIComponent(tahunAjaran)}`;
+  const sessionType = ($('#sessionType').val() || '').toString();
+  const sessionParam = sessionType ? `&session_type=${encodeURIComponent(sessionType)}` : '';
+  const url = `print_surat_keterangan.php?mode=single&id=${encodeURIComponent(id)}&tingkat=${encodeURIComponent(tingkat)}&tahun_ajaran=${encodeURIComponent(tahunAjaran)}${sessionParam}`;
   window.open(url, '_blank');
 }
 
@@ -376,22 +571,26 @@ function printSingleLetter(id, nama, nta) {
 function printAllLetters() {
   const tingkat = ($('#selectedTingkatId').val() || '').toString();
   const tahunAjaran = ($('#selectedTahunAjaran').val() || '').toString();
+  const sessionType = ($('#sessionType').val() || '').toString();
+  const sessionParam = sessionType ? `&session_type=${encodeURIComponent(sessionType)}` : '';
   if (!tingkat) {
     Swal.fire('Peringatan', 'Pilih tingkat terlebih dahulu.', 'warning');
     return;
   }
-  const url = `print_surat_keterangan.php?mode=all&tingkat=${encodeURIComponent(tingkat)}&tahun_ajaran=${encodeURIComponent(tahunAjaran)}`;
+  const url = `print_surat_keterangan.php?mode=all&tingkat=${encodeURIComponent(tingkat)}&tahun_ajaran=${encodeURIComponent(tahunAjaran)}${sessionParam}`;
   window.open(url, '_blank');
 }
 
 function exportPDF() {
   const tingkat = ($('#selectedTingkatId').val() || '').toString();
   const tahunAjaran = ($('#selectedTahunAjaran').val() || '').toString();
+  const sessionType = ($('#sessionType').val() || '').toString();
+  const sessionParam = sessionType ? `&session_type=${encodeURIComponent(sessionType)}` : '';
   if (!tingkat) {
     Swal.fire('Peringatan', 'Pilih tingkat terlebih dahulu.', 'warning');
     return;
   }
-  const url = `export_surat_keterangan_pdf.php?tingkat=${encodeURIComponent(tingkat)}&tahun_ajaran=${encodeURIComponent(tahunAjaran)}`;
+  const url = `export_surat_keterangan_pdf.php?tingkat=${encodeURIComponent(tingkat)}&tahun_ajaran=${encodeURIComponent(tahunAjaran)}${sessionParam}`;
   window.open(url, '_blank');
 }
 
@@ -658,7 +857,7 @@ $suket_total = count($participants);
             <input type="hidden" id="printPlace" value="<?= htmlspecialchars($print_settings['print_place']) ?>">
             <input type="hidden" id="tingkatName" value="<?= htmlspecialchars($selected_tingkat_name) ?>">
             <input type="hidden" id="selectedTingkatId" value="<?= (int)$selected_tingkat_id ?>">
-            <input type="hidden" id="selectedTahunAjaran" value="<?= htmlspecialchars($selected_tahun_ajaran) ?>">
+            <input type="hidden" id="sessionType" value="<?= htmlspecialchars($session_type) ?>">
             <input type="hidden" id="printDate" value="<?= date('d F Y') ?>">
 
             <div class="app-summary-row">
@@ -691,7 +890,7 @@ $suket_total = count($participants);
                     $aktif = ($selected_tingkat_id === $tid);
                     $penggalang = (($tingkat['golongan'] ?? 'Siaga') === 'Penggalang');
                 ?>
-                    <a href="?tingkat=<?= $tid ?>&tahun_ajaran=<?= urlencode($selected_tahun_ajaran) ?>"
+                    <a href="?tingkat=<?= $tid ?>&tahun_ajaran=<?= urlencode($selected_tahun_ajaran) ?><?= $session_type_param ?>"
                        class="suket-tab-pill <?= $penggalang ? 'penggalang' : 'siaga' ?> <?= $aktif ? 'active' : '' ?>"
                        aria-selected="<?= $aktif ? 'true' : 'false' ?>">
                         <i class="fas <?= $penggalang ? 'fa-compass' : 'fa-seedling' ?>"></i>
@@ -717,7 +916,7 @@ $suket_total = count($participants);
                         <?php foreach ($tahun_ajaran_set as $_ta): ?>
                             <?php $ta_selected = ($_ta === $selected_tahun_ajaran); ?>
                             <a class="dropdown-item <?= $ta_selected ? 'app-select-selected' : '' ?>"
-                               href="?tingkat=<?= (int)$selected_tingkat_id ?>&tahun_ajaran=<?= urlencode($_ta) ?>">
+                               href="?tingkat=<?= (int)$selected_tingkat_id ?>&tahun_ajaran=<?= urlencode($_ta) ?><?= $session_type_param ?>">
                                 <i class="fas fa-calendar-alt mr-2"></i><?= htmlspecialchars($_ta) ?><?= ($_ta === $current_tahun_ajaran) ? ' (Aktif)' : '' ?>
                                 <?php if ($ta_selected): ?><i class="fas fa-check app-select-check"></i><?php endif; ?>
                             </a>

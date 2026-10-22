@@ -1182,6 +1182,7 @@ switch ($user_level) {
         ];
         if ($is_guru_pembina_pramuka) {
             $ekstrakurikuler_submenu_guru[] = ['title' => 'Syarat Kecakapan Umum', 'url' => '../admin/syarat_kecakapan_umum.php?session_type=guru', 'active' => $current_page === 'syarat_kecakapan_umum.php'];
+            $ekstrakurikuler_submenu_guru[] = ['title' => 'Surat Keterangan', 'url' => '../admin/surat_keterangan.php?session_type=guru', 'active' => $current_page === 'surat_keterangan.php'];
         }
 
         $nilai_submenu_guru = [
@@ -1276,7 +1277,7 @@ switch ($user_level) {
                 'title' => 'Ekstrakurikuler',
                 'icon' => 'fas fa-users',
                 'submenu' => $ekstrakurikuler_submenu_guru,
-                'active' => in_array($current_page, ['data_ekstrakurikuler.php', 'data_pembina_pramuka.php', 'data_pembina_ekstrakurikuler.php', 'data_anggota_ekskul.php', 'data_anggota_pencak_silat.php', 'data_anggota_rebana.php', 'data_barung.php', 'syarat_kecakapan_umum.php'])
+                'active' => in_array($current_page, ['data_ekstrakurikuler.php', 'data_pembina_pramuka.php', 'data_pembina_ekstrakurikuler.php', 'data_anggota_ekskul.php', 'data_anggota_pencak_silat.php', 'data_anggota_rebana.php', 'data_barung.php', 'syarat_kecakapan_umum.php', 'surat_keterangan.php'])
             ],
             [
                 'title' => 'Jadwal',
@@ -1500,6 +1501,7 @@ switch ($user_level) {
         ];
         if ($is_wali_pembina_pramuka) {
             $ekstrakurikuler_submenu_wali[] = ['title' => 'Syarat Kecakapan Umum', 'url' => '../admin/syarat_kecakapan_umum.php?session_type=wali', 'active' => $current_page === 'syarat_kecakapan_umum.php'];
+            $ekstrakurikuler_submenu_wali[] = ['title' => 'Surat Keterangan', 'url' => '../admin/surat_keterangan.php?session_type=wali', 'active' => $current_page === 'surat_keterangan.php'];
         }
 
         $pembelajaran_submenu_wali = [
@@ -1577,7 +1579,7 @@ switch ($user_level) {
                 'title' => 'Ekstrakurikuler',
                 'icon' => 'fas fa-users',
                 'submenu' => $ekstrakurikuler_submenu_wali,
-                'active' => in_array($current_page, ['data_ekstrakurikuler.php', 'data_pembina_pramuka.php', 'data_pembina_ekstrakurikuler.php', 'data_anggota_ekskul.php', 'data_anggota_pencak_silat.php', 'data_anggota_rebana.php', 'data_barung.php', 'syarat_kecakapan_umum.php'])
+                'active' => in_array($current_page, ['data_ekstrakurikuler.php', 'data_pembina_pramuka.php', 'data_pembina_ekstrakurikuler.php', 'data_anggota_ekskul.php', 'data_anggota_pencak_silat.php', 'data_anggota_rebana.php', 'data_barung.php', 'syarat_kecakapan_umum.php', 'surat_keterangan.php'])
             ],
             [
                 'title' => 'Jadwal',
