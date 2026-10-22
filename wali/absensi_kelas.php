@@ -81,6 +81,9 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['save_attendance'])) {
                         $delete_stmt = $pdo->prepare("DELETE FROM tb_absensi WHERE id_siswa = ? AND tanggal = ?");
                         $delete_stmt->execute([$id_siswa, $tanggal]);
                         $saved_count++;
+                        if (function_exists('updateSholatAttendance')) {
+                            updateSholatAttendance($pdo, (int)$id_siswa, (string)$tanggal, '');
+                        }
                     }
                     continue;
                 }
@@ -105,6 +108,11 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['save_attendance'])) {
                     $insert_stmt->execute([$id_siswa, $tanggal, $keterangan, $id_guru, $jam_masuk]);
                 }
                 $saved_count++;
+
+                // Sinkron otomatis ke Sholat Dhuha dan Sholat Berjamaah
+                if (function_exists('updateSholatAttendance')) {
+                    updateSholatAttendance($pdo, (int)$id_siswa, (string)$tanggal, (string)$keterangan);
+                }
             }
         }
         

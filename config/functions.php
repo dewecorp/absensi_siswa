@@ -2226,13 +2226,23 @@ function timeAgo(string $timestamp): string {
 
 // Function to automatically update sholat attendance based on daily attendance
 function updateSholatAttendance(PDO $pdo, int $id_siswa, string $tanggal, string $keterangan_absensi): void {
+    // If keterangan is empty (reset attendance), delete sholat records unless marked 'Berhalangan'
+    if ($keterangan_absensi === '') {
+        $pdo->prepare("DELETE FROM tb_sholat WHERE id_siswa = ? AND tanggal = ? AND status != 'Berhalangan'")
+            ->execute([$id_siswa, $tanggal]);
+        $pdo->prepare("DELETE FROM tb_sholat_dhuha WHERE id_siswa = ? AND tanggal = ? AND status != 'Berhalangan'")
+            ->execute([$id_siswa, $tanggal]);
+        return;
+    }
+
     $status_sholat = '';
-    
-    // Determine status
+    // Determine status matching ENUM('Hadir','Tidak Hadir','Berhalangan')
     if ($keterangan_absensi == 'Hadir' || $keterangan_absensi == 'Terlambat') {
-        $status_sholat = 'Melaksanakan';
+        $status_sholat = 'Hadir';
     } elseif (in_array($keterangan_absensi, ['Sakit', 'Izin', 'Alpa'])) {
-        $status_sholat = 'Tidak Melaksanakan';
+        $status_sholat = 'Tidak Hadir';
+    } elseif ($keterangan_absensi == 'Berhalangan') {
+        $status_sholat = 'Berhalangan';
     }
     
     if ($status_sholat) {
@@ -2241,8 +2251,8 @@ function updateSholatAttendance(PDO $pdo, int $id_siswa, string $tanggal, string
         $stmt->execute([$id_siswa, $tanggal]);
         $existing = $stmt->fetch(PDO::FETCH_ASSOC);
         
-        // Skip update if status is 'Berhalangan' - manual override takes precedence
-        if (!$existing || $existing['status'] != 'Berhalangan') {
+        // Skip update if status is 'Berhalangan' - manual override takes precedence unless new status is also specific
+        if (!$existing || $existing['status'] != 'Berhalangan' || $status_sholat == 'Berhalangan') {
             if ($existing) {
                 $pdo->prepare("UPDATE tb_sholat SET status = ? WHERE id_siswa = ? AND tanggal = ?")
                     ->execute([$status_sholat, $id_siswa, $tanggal]);
@@ -2258,7 +2268,7 @@ function updateSholatAttendance(PDO $pdo, int $id_siswa, string $tanggal, string
         $existing_dhuha = $stmt->fetch(PDO::FETCH_ASSOC);
         
         // Skip update if status is 'Berhalangan'
-        if (!$existing_dhuha || $existing_dhuha['status'] != 'Berhalangan') {
+        if (!$existing_dhuha || $existing_dhuha['status'] != 'Berhalangan' || $status_sholat == 'Berhalangan') {
             if ($existing_dhuha) {
                 $pdo->prepare("UPDATE tb_sholat_dhuha SET status = ? WHERE id_siswa = ? AND tanggal = ?")
                     ->execute([$status_sholat, $id_siswa, $tanggal]);
