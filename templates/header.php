@@ -428,13 +428,45 @@ if (getUserLevel() === 'siswa' && isset($_SESSION['user_id'])) {
         }
 
         /* Navbar Styling - High Contrast White Text with Clean Frosted Glass Frame */
-        .main-navbar .navbar-nav .nav-link,
-        .main-navbar .navbar-nav .nav-link-user,
-        .main-navbar .navbar-nav .nav-link-user div,
-        .main-navbar .navbar-nav .text-white,
-        .main-navbar .navbar-nav span,
-        .main-navbar .navbar-nav i {
+        .main-navbar .navbar-nav > li > .nav-link,
+        .main-navbar .navbar-nav > li > .nav-link-user,
+        .main-navbar .navbar-nav > li > .nav-link-user div,
+        .main-navbar .navbar-nav .nav-item > div.text-white,
+        .main-navbar .navbar-nav > li > .nav-link span,
+        .main-navbar .navbar-nav > li > .nav-link i {
             color: #ffffff !important;
+        }
+
+        /* User Dropdown Menu - Ikon dan Teks harus kontras */
+        .main-navbar .dropdown-menu {
+            color: #34395e !important;
+        }
+        .main-navbar .dropdown-menu .dropdown-item {
+            color: #34395e !important;
+        }
+        .main-navbar .dropdown-menu .dropdown-item i {
+            color: inherit !important;
+            display: inline-block !important;
+            float: left !important;
+            width: 16px !important;
+            margin-right: 10px !important;
+            text-align: center !important;
+        }
+        .main-navbar .dropdown-menu .dropdown-item.text-muted,
+        .main-navbar .dropdown-menu .dropdown-item.text-muted i {
+            color: #6c757d !important;
+        }
+        .main-navbar .dropdown-menu .dropdown-item.text-primary,
+        .main-navbar .dropdown-menu .dropdown-item.text-primary i {
+            color: #6777ef !important;
+        }
+        .main-navbar .dropdown-menu .dropdown-item.text-danger,
+        .main-navbar .dropdown-menu .dropdown-item.text-danger i {
+            color: #fc544b !important;
+        }
+        .main-navbar .dropdown-menu .dropdown-item.text-warning,
+        .main-navbar .dropdown-menu .dropdown-item.text-warning i {
+            color: #ffa426 !important;
         }
 
         .main-navbar .navbar-nav .nav-item > div.text-white {

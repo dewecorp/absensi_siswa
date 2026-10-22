@@ -570,6 +570,99 @@ $notif_list_h_u = $n_notif_nav_u <= 0 ? 'height:auto;max-height:140px;overflow:h
             box-shadow: 0 1px 3px rgba(0,0,0,.25);
         }
         .notification-toggle { position: relative; }
+
+        /* Navbar Styling - High Contrast White Text with Clean Frosted Glass Frame (Konsisten dengan header.php) */
+        .main-navbar .navbar-nav > li > .nav-link,
+        .main-navbar .navbar-nav > li > .nav-link-user,
+        .main-navbar .navbar-nav > li > .nav-link-user div,
+        .main-navbar .navbar-nav .nav-item > div.text-white,
+        .main-navbar .navbar-nav > li > .nav-link span,
+        .main-navbar .navbar-nav > li > .nav-link i {
+            color: #ffffff !important;
+        }
+
+        /* User Dropdown Menu - Ikon dan Teks harus kontras */
+        .main-navbar .dropdown-menu {
+            color: #34395e !important;
+        }
+        .main-navbar .dropdown-menu .dropdown-item {
+            color: #34395e !important;
+        }
+        .main-navbar .dropdown-menu .dropdown-item i {
+            color: inherit !important;
+            display: inline-block !important;
+            float: left !important;
+            width: 16px !important;
+            margin-right: 10px !important;
+            text-align: center !important;
+        }
+        .main-navbar .dropdown-menu .dropdown-item.text-muted,
+        .main-navbar .dropdown-menu .dropdown-item.text-muted i {
+            color: #6c757d !important;
+        }
+        .main-navbar .dropdown-menu .dropdown-item.text-primary,
+        .main-navbar .dropdown-menu .dropdown-item.text-primary i {
+            color: #6777ef !important;
+        }
+        .main-navbar .dropdown-menu .dropdown-item.text-danger,
+        .main-navbar .dropdown-menu .dropdown-item.text-danger i {
+            color: #fc544b !important;
+        }
+        .main-navbar .dropdown-menu .dropdown-item.text-warning,
+        .main-navbar .dropdown-menu .dropdown-item.text-warning i {
+            color: #ffa426 !important;
+        }
+
+        .main-navbar .navbar-nav .nav-item > div.text-white {
+            background: rgba(255, 255, 255, 0.18) !important;
+            border: 1.5px solid rgba(255, 255, 255, 0.45) !important;
+            border-radius: 999px !important;
+            padding: 6px 16px !important;
+            backdrop-filter: blur(8px);
+            -webkit-backdrop-filter: blur(8px);
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.12) !important;
+            letter-spacing: .3px;
+        }
+
+        .main-navbar .nav-link-user {
+            background: rgba(255, 255, 255, 0.18) !important;
+            border: 1.5px solid rgba(255, 255, 255, 0.45) !important;
+            border-radius: 999px !important;
+            padding: 4px 16px 4px 6px !important;
+            backdrop-filter: blur(8px);
+            -webkit-backdrop-filter: blur(8px);
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.12) !important;
+            transition: all .2s ease;
+        }
+        .main-navbar .nav-link-user:hover {
+            background: rgba(255, 255, 255, 0.28) !important;
+            border-color: rgba(255, 255, 255, 0.8) !important;
+        }
+        .main-navbar .nav-link-user img {
+            border: 2px solid #ffffff !important;
+        }
+
+        .main-navbar .nav-link-lg.notification-toggle,
+        .main-navbar .nav-link-lg.nav-msg-toggle {
+            background: rgba(255, 255, 255, 0.18) !important;
+            border: 1.5px solid rgba(255, 255, 255, 0.45) !important;
+            border-radius: 50% !important;
+            width: 42px !important;
+            height: 42px !important;
+            display: flex !important;
+            align-items: center !important;
+            justify-content: center !important;
+            backdrop-filter: blur(8px);
+            -webkit-backdrop-filter: blur(8px);
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.12) !important;
+            margin-right: 10px !important;
+            transition: all .2s ease;
+        }
+        .main-navbar .nav-link-lg.notification-toggle:hover,
+        .main-navbar .nav-link-lg.nav-msg-toggle:hover {
+            background: rgba(255, 255, 255, 0.28) !important;
+            border-color: rgba(255, 255, 255, 0.8) !important;
+        }
     </style>
 </head>
 
@@ -589,18 +682,18 @@ $notif_list_h_u = $n_notif_nav_u <= 0 ? 'height:auto;max-height:140px;overflow:h
             
             <div class="navbar-bg"></div>
             <nav class="navbar navbar-expand-lg main-navbar">
-                <div class="mr-auto d-flex align-items-center"></div>
+                <div class="mr-auto"></div>
                 <ul class="navbar-nav mr-auto">
                     <!-- Academic Year and Semester Info -->
-                    <li class="nav-item d-flex align-items-center">
-                        <div class="bg-primary text-white px-3 py-2 rounded small">
+                    <li class="nav-item d-none d-lg-flex align-items-center">
+                        <div class="text-white small font-weight-bold">
                             <span class="mr-2"><?php echo htmlspecialchars($school_profile['tahun_ajaran'] ?? '-'); ?></span>
                             <span class="mx-2">|</span>
                             <span><?php echo htmlspecialchars($school_profile['semester'] ?? '-'); ?></span>
                         </div>
                     </li>
                     <!-- Date and Time Info -->
-                    <li class="nav-item d-flex align-items-center ml-2">
+                    <li class="nav-item d-none d-lg-flex align-items-center ml-2">
                         <div class="text-white small font-weight-bold">
                             <i class="far fa-calendar-alt mr-1"></i>
                             <span id="header-date-time"></span>
