@@ -8,7 +8,7 @@
     background: #ffffff;
     border-radius: 14px !important;
     border: none !important;
-    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.03) !important;
+    box-shadow: 0 8px 24px rgba(15, 23, 42, 0.08), 0 2px 6px rgba(15, 23, 42, 0.04) !important;
     overflow: hidden;
     position: relative;
     transition: all .25s ease;
@@ -194,7 +194,7 @@
 .mapp-absen-card {
     border-radius: 14px !important;
     border: none !important;
-    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.03) !important;
+    box-shadow: 0 8px 24px rgba(15, 23, 42, 0.08), 0 2px 6px rgba(15, 23, 42, 0.04) !important;
     overflow: hidden;
 }
 
@@ -213,7 +213,7 @@
 .mapp-jadwal-card {
     border-radius: 14px !important;
     border: none !important;
-    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.03) !important;
+    box-shadow: 0 8px 24px rgba(15, 23, 42, 0.08), 0 2px 6px rgba(15, 23, 42, 0.04) !important;
     overflow: hidden;
 }
 
@@ -227,6 +227,19 @@
     font-size: 15px;
     font-weight: 800;
     color: #0f172a;
+}
+
+/* ---------- Box Agenda Dashboard ---------- */
+.dashboard-agenda-card {
+    border-radius: 14px !important;
+    border: none !important;
+    box-shadow: 0 8px 24px rgba(15, 23, 42, 0.08), 0 2px 6px rgba(15, 23, 42, 0.04) !important;
+    overflow: hidden;
+    position: relative;
+}
+
+.dashboard-agenda-card::before {
+    display: none !important;
 }
 
 .mapp-day-banner {
@@ -339,18 +352,17 @@
     gap: 12px;
     align-items: center;
     background: #ffffff;
-    border: 1px solid #edf2f7 !important;
-    border-left: 4px solid #3b82f6 !important;
+    border: none !important;
+    border-left: none !important;
     border-radius: 14px !important;
     padding: 10px 12px;
     transition: all .2s cubic-bezier(.4, 0, .2, 1);
-    box-shadow: 0 2px 6px rgba(15, 23, 42, .03);
+    box-shadow: 0 8px 24px rgba(15, 23, 42, 0.12), 0 2px 6px rgba(15, 23, 42, 0.06) !important;
 }
 
 .mapp-agenda-item:hover {
-    transform: translateY(-2px);
-    box-shadow: 0 8px 18px rgba(15, 23, 42, .07);
-    border-color: #cbd5e1 !important;
+    transform: translateY(-3px);
+    box-shadow: 0 14px 30px rgba(15, 23, 42, 0.18) !important;
 }
 
 .mapp-agenda-clock {

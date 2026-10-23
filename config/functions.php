@@ -3179,8 +3179,8 @@ function renderDashboardAgendaBulanBerjalan(PDO $pdo, ?string $date = null): str
                                 $itemWarna = (string)($item['warna'] ?? 'info');
                                 $itemColor = $warnaMap[$itemWarna] ?? $warnaMap['info'];
                                 ?>
-                                <div class="dashboard-agenda-item <?php echo $isToday ? 'is-today' : ''; ?>" style="--tone: <?php echo htmlspecialchars($itemColor, ENT_QUOTES, 'UTF-8'); ?>;">
-                                    <div class="agenda-date-box" style="background: <?php echo htmlspecialchars($itemColor, ENT_QUOTES, 'UTF-8'); ?>14; border-color: <?php echo htmlspecialchars($itemColor, ENT_QUOTES, 'UTF-8'); ?>40;">
+                                <div class="dashboard-agenda-item <?php echo $isToday ? 'is-today' : ''; ?>" style="--tone: <?php echo htmlspecialchars($itemColor, ENT_QUOTES, 'UTF-8'); ?>; border: none !important; box-shadow: 0 8px 24px rgba(15, 23, 42, 0.12), 0 2px 6px rgba(15, 23, 42, 0.06) !important;">
+                                    <div class="agenda-date-box" style="background: <?php echo htmlspecialchars($itemColor, ENT_QUOTES, 'UTF-8'); ?>14; border: none !important;">
                                         <div class="agenda-day"><?php echo htmlspecialchars(date('d', strtotime($dateBoxDate)), ENT_QUOTES, 'UTF-8'); ?></div>
                                         <div class="agenda-month" style="background: <?php echo htmlspecialchars($itemColor, ENT_QUOTES, 'UTF-8'); ?>; color: #fff;"><?php echo htmlspecialchars($monthShort, ENT_QUOTES, 'UTF-8'); ?></div>
                                     </div>
@@ -3207,8 +3207,8 @@ function renderDashboardAgendaBulanBerjalan(PDO $pdo, ?string $date = null): str
         </div>
     </div>
     <style>
-        .dashboard-agenda-card { border-radius: 18px !important; border: 1px solid #edf2f7 !important; box-shadow: 0 4px 18px rgba(15, 23, 42, .04) !important; overflow: hidden; position: relative; }
-        .dashboard-agenda-card::before { content: ''; position: absolute; top: 0; left: 0; right: 0; height: 4px; background: linear-gradient(90deg, #f59e0b, #f97316, #ef4444); }
+        .dashboard-agenda-card { border-radius: 14px !important; border: none !important; box-shadow: 0 8px 24px rgba(15, 23, 42, 0.08), 0 2px 6px rgba(15, 23, 42, 0.04) !important; overflow: hidden; position: relative; }
+        .dashboard-agenda-card::before { display: none !important; }
         .dash-agenda-head { display: flex; align-items: center; gap: 12px; padding: 16px 18px 12px; }
         .dash-agenda-headicon { width: 44px; height: 44px; flex: 0 0 44px; border-radius: 13px; background: linear-gradient(135deg, #f59e0b, #d97706); color: #fff; display: flex; align-items: center; justify-content: center; font-size: 18px; box-shadow: 0 4px 12px rgba(217, 119, 6, .25); }
         .dash-agenda-headtext { flex: 1 1 auto; min-width: 0; }
@@ -3217,10 +3217,10 @@ function renderDashboardAgendaBulanBerjalan(PDO $pdo, ?string $date = null): str
         .dash-agenda-count { flex: 0 0 auto; font-size: 10.5px; font-weight: 800; color: #b45309; background: #fffbeb; border: 1px solid #fde68a; border-radius: 999px; padding: 5px 10px; white-space: nowrap; }
         .dash-agenda-body { padding: 0 18px 16px; }
         .dashboard-agenda-list { display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 10px; }
-        .dashboard-agenda-item { display: flex; align-items: center; gap: 12px; background: #fff; border: 1px solid #edf2f7; border-left: 4px solid var(--tone, #3b82f6); border-radius: 14px; padding: 10px 12px; box-shadow: 0 2px 6px rgba(15, 23, 42, .03); transition: transform .2s ease, box-shadow .2s ease; }
-        .dashboard-agenda-item:hover { transform: translateY(-2px); box-shadow: 0 8px 18px rgba(15, 23, 42, .07); }
-        .dashboard-agenda-item.is-today { background: #f8fff9; border-color: #bbf7d0; border-left-color: #10b981; }
-        .agenda-date-box { flex: 0 0 56px; min-width: 56px; border-radius: 13px; overflow: hidden; text-align: center; border: 1.5px solid #e2e8f0; }
+        .dashboard-agenda-item { display: flex; align-items: center; gap: 12px; background: #fff; border: none !important; border-left: none !important; border-radius: 14px; padding: 10px 12px; box-shadow: 0 8px 24px rgba(15, 23, 42, 0.12), 0 2px 6px rgba(15, 23, 42, 0.06) !important; transition: transform .2s ease, box-shadow .2s ease; }
+        .dashboard-agenda-item:hover { transform: translateY(-3px); box-shadow: 0 14px 30px rgba(15, 23, 42, 0.18) !important; }
+        .dashboard-agenda-item.is-today { background: #f8fff9; border: none !important; border-left: none !important; box-shadow: 0 8px 24px rgba(16, 185, 129, 0.22), 0 2px 6px rgba(15, 23, 42, 0.06) !important; }
+        .agenda-date-box { flex: 0 0 56px; min-width: 56px; border-radius: 13px; overflow: hidden; text-align: center; border: none !important; }
         .agenda-day { font-size: 19px; line-height: 1.25; font-weight: 900; padding-top: 5px; color: #0f172a; letter-spacing: -0.5px; }
         .agenda-month { font-size: 9.5px; font-weight: 800; letter-spacing: .5px; padding: 3px 0 4px; }
         .agenda-content { min-width: 0; flex: 1 1 auto; }
