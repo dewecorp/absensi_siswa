@@ -124,6 +124,14 @@ $js_libs[] = 'https://cdn.datatables.net/1.10.25/js/dataTables.bootstrap4.min.js
 // Prepare category totals JSON for JavaScript
 $category_totals_json = json_encode($category_totals);
 
+// Ringkasan untuk hero / kartu statistik
+$total_unit = 0;
+foreach ($inventories as $inv_row) {
+    $total_unit += (int) $inv_row['jumlah'];
+}
+$total_item = count($inventories);
+$total_kategori = count($category_totals);
+
 include '../templates/header.php';
 include '../templates/sidebar.php';
 ?>
@@ -152,6 +160,61 @@ include '../templates/sidebar.php';
 .dataTables_wrapper {
     width: 100% !important;
 }
+
+/* ---- Mobile: gaya kartu app (konsisten dengan halaman RAB) ---- */
+@media (max-width: 767.98px) {
+    /* Baris judul kategori diubah jadi banner, bukan kartu data */
+    #table-inventaris tbody tr.group-row {
+        display: block !important;
+        background: linear-gradient(135deg, #eff6ff 0%, #e0e7ff 100%) !important;
+        border: 1px solid #bfdbfe !important;
+        border-left: 4px solid #2563eb !important;
+        border-radius: 12px !important;
+        padding: 10px 12px !important;
+        margin: 16px 0 8px !important;
+        width: 100% !important;
+        max-width: 100% !important;
+        box-shadow: none !important;
+        box-sizing: border-box !important;
+    }
+
+    #table-inventaris tbody tr.group-row td {
+        display: flex !important;
+        flex-wrap: wrap !important;
+        align-items: center !important;
+        justify-content: space-between !important;
+        gap: 6px !important;
+        width: 100% !important;
+        max-width: 100% !important;
+        padding: 0 !important;
+        margin: 0 !important;
+        border: 0 !important;
+        background: transparent !important;
+        font-size: 13px !important;
+        color: #1e3a8a !important;
+        text-align: left !important;
+    }
+
+    #table-inventaris tbody tr.group-row .badge-lg {
+        font-size: 12px !important;
+        padding: 4px 10px !important;
+    }
+
+    #table-inventaris tbody tr.group-row td > span[style] {
+        float: none !important;
+        font-size: 12px !important;
+        color: #1d4ed8 !important;
+        white-space: nowrap !important;
+    }
+
+    /* Baris kosong */
+    #table-inventaris tbody tr td[colspan] {
+        display: block !important;
+        width: 100% !important;
+        padding: 18px 10px !important;
+        text-align: center !important;
+    }
+}
 </style>
 
 <div class="main-content">
@@ -165,80 +228,85 @@ include '../templates/sidebar.php';
         </div>
 
         <div class="section-body">
-            <!-- Summary Cards -->
-            <div class="row">
-                <div class="col-lg-4 col-md-6 col-sm-6 col-12">
-                    <div class="card card-statistic-1">
-                        <div class="card-icon bg-primary">
-                            <i class="fas fa-check-circle"></i>
+            <!-- Hero Overview (gaya mobile app, sama seperti halaman RAB) -->
+            <div class="rab-hero-card theme-inventaris">
+                <div class="rab-hero-top">
+                    <div class="rab-hero-meta">
+                        <div class="rab-hero-icon">
+                            <i class="fas fa-boxes"></i>
                         </div>
-                        <div class="card-wrap">
-                            <div class="card-header">
-                                <h4>Inventaris Baik</h4>
-                            </div>
-                            <div class="card-body">
-                                <?php echo number_format($stats['total_baik'] ?? 0); ?> Unit
-                            </div>
+                        <div>
+                            <div class="rab-hero-title">Inventaris Sarpras</div>
+                            <div class="rab-hero-sub">Sarana &amp; Prasarana Madrasah</div>
                         </div>
+                    </div>
+                    <div class="rab-hero-badge">
+                        <i class="fas fa-cubes"></i>
+                        <span><?= number_format($total_unit, 0, ',', '.') ?> Unit</span>
                     </div>
                 </div>
-                <div class="col-lg-4 col-md-6 col-sm-6 col-12">
-                    <div class="card card-statistic-1">
-                        <div class="card-icon bg-danger">
-                            <i class="fas fa-times-circle"></i>
-                        </div>
-                        <div class="card-wrap">
-                            <div class="card-header">
-                                <h4>Inventaris Rusak</h4>
-                            </div>
-                            <div class="card-body">
-                                <?php echo number_format($stats['total_rusak'] ?? 0); ?> Unit
-                            </div>
-                        </div>
+
+                <div class="rab-hero-balance-wrap">
+                    <div class="rab-hero-balance-lbl">Total Nilai Aset</div>
+                    <div class="rab-hero-balance">Rp <?= number_format($stats['total_nilai_aset'] ?? 0, 0, ',', '.') ?></div>
+                </div>
+
+                <div class="rab-hero-stats two-cols">
+                    <div class="rab-hero-stat-pill">
+                        <div class="lbl">Item Baik</div>
+                        <div class="val"><?= number_format($stats['total_baik'] ?? 0, 0, ',', '.') ?></div>
+                    </div>
+                    <div class="rab-hero-stat-pill">
+                        <div class="lbl">Item Rusak</div>
+                        <div class="val"><?= number_format($stats['total_rusak'] ?? 0, 0, ',', '.') ?></div>
                     </div>
                 </div>
-                <div class="col-lg-4 col-md-6 col-sm-6 col-12">
-                    <div class="card card-statistic-1">
-                        <div class="card-icon bg-success">
-                            <i class="fas fa-money-bill-wave"></i>
-                        </div>
-                        <div class="card-wrap">
-                            <div class="card-header">
-                                <h4>Total Nilai Aset</h4>
-                            </div>
-                            <div class="card-body">
-                                <?php echo number_format($stats['total_nilai_aset'] ?? 0, 0, ',', '.'); ?>
-                            </div>
-                        </div>
+            </div>
+
+            <!-- App Stat Grid -->
+            <div class="rab-stat-grid two-cards">
+                <div class="rab-stat-card">
+                    <div class="rab-stat-top">
+                        <span class="rab-stat-title">Jenis Inventaris</span>
+                        <div class="rab-stat-ico tone-blue"><i class="fas fa-clipboard-list"></i></div>
                     </div>
+                    <div class="rab-stat-val c-blue"><?= number_format($total_item, 0, ',', '.') ?></div>
+                    <div class="rab-stat-sub">Baris data inventaris</div>
+                </div>
+
+                <div class="rab-stat-card">
+                    <div class="rab-stat-top">
+                        <span class="rab-stat-title">Kategori</span>
+                        <div class="rab-stat-ico tone-purple"><i class="fas fa-tags"></i></div>
+                    </div>
+                    <div class="rab-stat-val c-purple"><?= number_format($total_kategori, 0, ',', '.') ?></div>
+                    <div class="rab-stat-sub">Kelompok inventaris</div>
                 </div>
             </div>
 
             <!-- Inventory Table -->
             <div class="row">
                 <div class="col-12">
-                    <div class="card">
-                        <div class="card-header">
-                            <h4>Daftar Inventaris Sarpras</h4>
-                            <div class="card-header-action">
-                                <div class="btn-group mr-2">
-                                    <a href="../config/export_inventaris_pdf.php?session_type=<?= urlencode($user_level) ?>" target="_blank" class="btn btn-danger">
-                                        <i class="fas fa-file-pdf"></i> Export PDF
-                                    </a>
-                                    <a href="../config/export_inventaris_excel.php?session_type=<?= urlencode($user_level) ?>" target="_blank" class="btn btn-success">
-                                        <i class="fas fa-file-excel"></i> Export Excel
-                                    </a>
-                                </div>
+                    <div class="rab-card">
+                        <div class="rab-card-header">
+                            <h4 class="rab-card-title"><i class="fas fa-boxes"></i>Daftar Inventaris Sarpras</h4>
+                            <div class="rab-actions-bar mb-0">
+                                <a href="../config/export_inventaris_pdf.php?session_type=<?= urlencode($user_level) ?>" target="_blank" class="rab-chip-btn chip-danger">
+                                    <i class="fas fa-file-pdf"></i> Export PDF
+                                </a>
+                                <a href="../config/export_inventaris_excel.php?session_type=<?= urlencode($user_level) ?>" target="_blank" class="rab-chip-btn chip-success">
+                                    <i class="fas fa-file-excel"></i> Export Excel
+                                </a>
                                 <?php if ($is_admin): ?>
-                                <button class="btn btn-primary" data-toggle="modal" data-target="#modalAdd">
+                                <button type="button" class="rab-chip-btn chip-primary" data-toggle="modal" data-target="#modalAdd">
                                     <i class="fas fa-plus"></i> Tambah Inventaris
                                 </button>
                                 <?php endif; ?>
                             </div>
                         </div>
-                        <div class="card-body">
+                        <div class="card-body p-0">
                             <div class="table-responsive">
-                                <table class="table table-striped table-bordered" id="table-inventaris">
+                                <table class="table table-striped table-hover rab-table-responsive" id="table-inventaris">
                                     <thead>
                                         <tr>
                                             <th class="text-center" width="5%">No</th>
@@ -259,31 +327,39 @@ include '../templates/sidebar.php';
                                         <?php if (count($inventories) > 0): ?>
                                             <?php foreach ($inventories as $idx => $row): ?>
                                             <tr>
-                                                <td class="text-center"></td>
-                                                <td><?php echo htmlspecialchars($row['nama_kategori'] ?? 'Tanpa Kategori'); ?></td>
-                                                <td>
-                                                    <strong><?php echo htmlspecialchars($row['nama_inventaris']); ?></strong>
+                                                <td class="cell-no text-center"></td>
+                                                <td class="cell-kategori"><?php echo htmlspecialchars($row['nama_kategori'] ?? 'Tanpa Kategori'); ?></td>
+                                                <td class="cell-uraian font-weight-bold">
+                                                    <?php echo htmlspecialchars($row['nama_inventaris']); ?>
                                                 </td>
-                                                <td class="text-center"><?php echo number_format($row['jumlah']); ?></td>
-                                                <td class="text-center"><?php echo $row['luas'] ? number_format($row['luas'], 0, ',', '.') : '-'; ?></td>
-                                                <td class="text-right"><?php echo number_format($row['harga_satuan'], 0, ',', '.'); ?></td>
-                                                <td class="text-right"><?php echo number_format($row['total'], 0, ',', '.'); ?></td>
-                                                <td class="text-center">
+                                                <td class="cell-calc text-center" data-label="Jumlah">
+                                                    <span class="cell-val"><?php echo number_format($row['jumlah']); ?></span>
+                                                </td>
+                                                <td class="cell-calc text-center" data-label="Luas (m²)">
+                                                    <span class="cell-val"><?php echo $row['luas'] ? number_format($row['luas'], 0, ',', '.') : '-'; ?></span>
+                                                </td>
+                                                <td class="cell-calc text-right" data-label="Harga Satuan">
+                                                    <span class="cell-val"><?php echo number_format($row['harga_satuan'], 0, ',', '.'); ?></span>
+                                                </td>
+                                                <td class="cell-total text-right" data-label="Total (Rp)">
+                                                    <span class="cell-val"><?php echo number_format($row['total'], 0, ',', '.'); ?></span>
+                                                </td>
+                                                <td class="cell-calc text-center" data-label="Status">
                                                     <?php if ($row['status'] == 'Sertifikat'): ?>
-                                                        <span class="badge badge-primary">Sertifikat</span>
+                                                        <span class="cell-val badge badge-primary">Sertifikat</span>
                                                     <?php else: ?>
-                                                        <span class="badge badge-secondary">Milik Sendiri</span>
+                                                        <span class="cell-val badge badge-secondary">Milik Sendiri</span>
                                                     <?php endif; ?>
                                                 </td>
-                                                <td class="text-center">
+                                                <td class="cell-calc text-center" data-label="Kondisi">
                                                     <?php if ($row['kondisi'] == 'Baik'): ?>
-                                                        <span class="badge badge-success">Baik</span>
+                                                        <span class="cell-val badge badge-success">Baik</span>
                                                     <?php else: ?>
-                                                        <span class="badge badge-danger">Rusak</span>
+                                                        <span class="cell-val badge badge-danger">Rusak</span>
                                                     <?php endif; ?>
                                                 </td>
                                                 <?php if ($is_admin): ?>
-                                                <td class="text-center">
+                                                <td class="cell-aksi text-center" data-label="Aksi">
                                                     <button class="btn btn-warning btn-sm btn-edit" 
                                                             data-id="<?php echo $row['id']; ?>"
                                                             data-toggle="modal" 
