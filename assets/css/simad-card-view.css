@@ -423,4 +423,53 @@ table.simad-card-view {
         padding: 6px 6px !important;
         font-size: 0.75rem !important;
     }
+
+    /* Toolbar DataTables: panjang data & kotak cari full width, tidak berdesakan */
+    .simad-card-view-wrapper .dataTables_wrapper .row:first-child > [class*="col-"] {
+        padding-left: 0 !important;
+        padding-right: 0 !important;
+    }
+
+    .simad-card-view-wrapper .dataTables_wrapper .dataTables_length,
+    .simad-card-view-wrapper .dataTables_wrapper .dataTables_filter {
+        display: block !important;
+        float: none !important;
+        width: 100% !important;
+        text-align: left !important;
+        margin-bottom: 12px !important;
+    }
+
+    .simad-card-view-wrapper .dataTables_wrapper .dataTables_length label,
+    .simad-card-view-wrapper .dataTables_wrapper .dataTables_filter label {
+        display: flex !important;
+        align-items: center !important;
+        gap: 8px !important;
+        width: 100% !important;
+        margin: 0 !important;
+        white-space: nowrap !important;
+    }
+
+    .simad-card-view-wrapper .dataTables_wrapper .dataTables_length select,
+    .simad-card-view-wrapper .dataTables_wrapper .dataTables_filter input {
+        flex: 1 1 auto !important;
+        width: auto !important;
+        min-width: 0 !important;
+        margin-left: 0 !important;
+    }
+
+    .simad-card-view-wrapper .dataTables_wrapper .dataTables_info,
+    .simad-card-view-wrapper .dataTables_wrapper .dataTables_paginate {
+        float: none !important;
+        width: 100% !important;
+        text-align: center !important;
+    }
+
+    .simad-card-view-wrapper .dataTables_wrapper .dataTables_paginate {
+        margin-top: 10px !important;
+    }
+
+    .simad-card-view-wrapper .dataTables_wrapper .dataTables_paginate .paginate_button {
+        padding: 4px 8px !important;
+        font-size: 0.8rem !important;
+    }
 }

@@ -126,6 +126,8 @@ include '../templates/header.php';
 include '../templates/sidebar.php';
 ?>
 
+<link rel="stylesheet" href="../assets/css/table-mobile-cards.css?v=<?= (int) @filemtime(__DIR__ . '/../assets/css/table-mobile-cards.css') ?>">
+
 <div class="main-content">
     <section class="section">
         <div class="section-header">
@@ -152,29 +154,31 @@ include '../templates/sidebar.php';
                                 <div style="height: 380px; position: relative;">
                                     <canvas id="alumniChart"></canvas>
                                 </div>
-                                <div class="table-responsive mt-4">
-                                    <table class="table table-sm table-bordered table-striped mb-0">
-                                        <thead>
-                                            <tr>
-                                                <th class="text-center" style="width: 60px;">No</th>
-                                                <th>Tahun Ajaran</th>
-                                                <th class="text-center">Laki-laki</th>
-                                                <th class="text-center">Perempuan</th>
-                                                <th class="text-center">Total Alumni</th>
-                                            </tr>
-                                        </thead>
-                                        <tbody>
-                                            <?php $no_chart = 1; foreach ($alumni_chart_data as $row): ?>
+                                <div class="table-mobile-cards-wrap mt-4">
+                                    <div class="table-responsive">
+                                        <table class="table table-sm table-bordered table-striped mb-0 table-mobile-cards" style="font-size: .82rem;">
+                                            <thead>
                                                 <tr>
-                                                    <td class="text-center"><?= $no_chart++ ?></td>
-                                                    <td><?= htmlspecialchars((string)$row['tahun_lulus']) ?></td>
-                                                    <td class="text-center"><span class="badge badge-primary"><?= (int)$row['jumlah_laki'] ?></span></td>
-                                                    <td class="text-center"><span class="badge badge-danger"><?= (int)$row['jumlah_perempuan'] ?></span></td>
-                                                    <td class="text-center"><strong><?= (int)$row['total'] ?></strong></td>
+                                                    <th class="text-center" style="width: 60px;">No</th>
+                                                    <th>Tahun Ajaran</th>
+                                                    <th class="text-center">Laki-laki</th>
+                                                    <th class="text-center">Perempuan</th>
+                                                    <th class="text-center">Total Alumni</th>
                                                 </tr>
-                                            <?php endforeach; ?>
-                                        </tbody>
-                                    </table>
+                                            </thead>
+                                            <tbody>
+                                                <?php $no_chart = 1; foreach ($alumni_chart_data as $row): ?>
+                                                    <tr>
+                                                        <td class="text-center mcard-hide"><?= $no_chart++ ?></td>
+                                                        <td class="mcard-title"><?= htmlspecialchars((string)$row['tahun_lulus']) ?></td>
+                                                        <td class="text-center" data-label="Laki-laki"><span class="badge badge-primary"><?= (int)$row['jumlah_laki'] ?></span></td>
+                                                        <td class="text-center" data-label="Perempuan"><span class="badge badge-danger"><?= (int)$row['jumlah_perempuan'] ?></span></td>
+                                                        <td class="text-center" data-label="Total Alumni"><strong><?= (int)$row['total'] ?></strong></td>
+                                                    </tr>
+                                                <?php endforeach; ?>
+                                            </tbody>
+                                        </table>
+                                    </div>
                                 </div>
                                 <form id="exportGrafikAlumniForm" method="POST" action="../config/export_grafik_alumni_pdf.php" target="_blank" style="display:none;">
                                     <input type="hidden" name="chart_image" id="alumni_chart_image">
@@ -228,33 +232,41 @@ include '../templates/sidebar.php';
                                 </div>
                             </form>
 
-                            <div class="table-responsive">
-                                <table class="table table-striped" id="table-1">
-                                    <thead>
-                                        <tr>
-                                            <th>No</th>
-                                            <th>Nama Siswa</th>
-                                            <th>NISN</th>
-                                            <th>Jenis Kelamin</th>
-                                            <th>Tempat, Tgl Lahir</th>
-                                            <th>Orang Tua/Wali</th>
-                                            <th>Tahun Lulus</th>
-                                        </tr>
-                                    </thead>
-                                    <tbody>
-                                        <?php $no = 1; foreach ($alumni as $a): ?>
+                            <div class="table-mobile-cards-wrap">
+                                <div class="table-responsive">
+                                    <table class="table table-striped table-mobile-cards" id="table-1">
+                                        <thead>
                                             <tr>
-                                                <td><?= $no++ ?></td>
-                                                <td><?= htmlspecialchars($a['nama_siswa']) ?></td>
-                                                <td><?= htmlspecialchars($a['nisn']) ?></td>
-                                                <td><?= $a['jenis_kelamin'] == 'L' ? 'Laki-laki' : 'Perempuan' ?></td>
-                                                <td><?= htmlspecialchars($a['tempat_lahir'] ?? '-') . ', ' . ($a['tanggal_lahir'] ? date('d-m-Y', strtotime($a['tanggal_lahir'])) : '-') ?></td>
-                                                <td><?= htmlspecialchars($a['wali'] ?? '-') ?></td>
-                                                <td><?= htmlspecialchars($a['tahun_lulus']) ?></td>
+                                                <th>No</th>
+                                                <th>Nama Siswa</th>
+                                                <th>NISN</th>
+                                                <th>Jenis Kelamin</th>
+                                                <th>Tempat, Tgl Lahir</th>
+                                                <th>Orang Tua/Wali</th>
+                                                <th>Tahun Lulus</th>
                                             </tr>
-                                        <?php endforeach; ?>
-                                    </tbody>
-                                </table>
+                                        </thead>
+                                        <tbody>
+                                            <?php $no = 1; foreach ($alumni as $a): ?>
+                                                <tr>
+                                                    <td class="mcard-hide"><?= $no++ ?></td>
+                                                    <td class="mcard-title">
+                                                        <?= htmlspecialchars($a['nama_siswa']) ?>
+                                                        <span class="mcard-sub">
+                                                            <span class="badge badge-info"><?= $a['jenis_kelamin'] == 'L' ? 'Laki-laki' : ($a['jenis_kelamin'] == 'P' ? 'Perempuan' : '-') ?></span>
+                                                            <span class="badge badge-light border"><?= htmlspecialchars($a['tahun_lulus']) ?></span>
+                                                        </span>
+                                                    </td>
+                                                    <td data-label="NISN"><?= htmlspecialchars($a['nisn']) ?></td>
+                                                    <td data-label="Jenis Kelamin"><?= $a['jenis_kelamin'] == 'L' ? 'Laki-laki' : ($a['jenis_kelamin'] == 'P' ? 'Perempuan' : '-') ?></td>
+                                                    <td data-label="TTL"><?= htmlspecialchars($a['tempat_lahir'] ?? '-') . ', ' . ($a['tanggal_lahir'] ? date('d-m-Y', strtotime($a['tanggal_lahir'])) : '-') ?></td>
+                                                    <td data-label="Orang Tua / Wali"><?= htmlspecialchars($a['wali'] ?? '-') ?></td>
+                                                    <td data-label="Tahun Lulus"><?= htmlspecialchars($a['tahun_lulus']) ?></td>
+                                                </tr>
+                                            <?php endforeach; ?>
+                                        </tbody>
+                                    </table>
+                                </div>
                             </div>
                             
                             <!-- Hidden Table for Export -->
