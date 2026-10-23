@@ -2027,30 +2027,59 @@ if (!function_exists('get_bottom_nav_quick_links')) {
             font-weight: 700 !important;
             letter-spacing: 1.3px !important;
         }
+        .main-sidebar .sidebar-menu {
+            padding: 10px 12px !important;
+        }
+        .main-sidebar .sidebar-menu li {
+            margin-bottom: 4px !important;
+        }
         .main-sidebar .sidebar-menu li a {
             display: flex !important;
             align-items: center !important;
             white-space: nowrap !important;
-            color: #1e293b !important;
+            color: #475569 !important;
             font-weight: 600 !important;
+            border-radius: 12px !important;
+            padding: 10px 14px !important;
+            height: auto !important;
+            min-height: 44px !important;
+            transition: all .2s ease !important;
         }
         .main-sidebar .sidebar-menu li a i {
-            color: #334155 !important;
+            color: #64748b !important;
+            font-size: 15px !important;
+            width: 24px !important;
+            margin-right: 14px !important;
+            transition: all .2s ease !important;
         }
         .main-sidebar .sidebar-menu li a:hover {
-            color: #6777ef !important;
+            color: #2563eb !important;
             background-color: #f1f5f9 !important;
         }
         .main-sidebar .sidebar-menu li a:hover i {
-            color: #6777ef !important;
+            color: #2563eb !important;
         }
-        .main-sidebar .sidebar-menu li.active > a {
-            color: #6777ef !important;
+        /* Modern Active Menu Styling: Pill Gradient + Glow Shadow + Left Indicator Pill */
+        .main-sidebar .sidebar-menu li.active > a,
+        .main-sidebar .sidebar-menu > li.active:not(.dropdown) > a {
+            color: #ffffff !important;
             font-weight: 700 !important;
-            background-color: #eef2ff !important;
+            background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%) !important;
+            box-shadow: 0 6px 18px rgba(37, 99, 235, 0.35) !important;
+            position: relative !important;
         }
-        .main-sidebar .sidebar-menu li.active > a i {
-            color: #6777ef !important;
+        .main-sidebar .sidebar-menu li.active > a i,
+        .main-sidebar .sidebar-menu > li.active:not(.dropdown) > a i {
+            color: #ffffff !important;
+            transform: scale(1.08) !important;
+        }
+        .main-sidebar .sidebar-menu > li.dropdown.active > a.has-dropdown {
+            background: #eff6ff !important;
+            color: #2563eb !important;
+            box-shadow: none !important;
+        }
+        .main-sidebar .sidebar-menu > li.dropdown.active > a.has-dropdown i {
+            color: #2563eb !important;
         }
         .main-sidebar .sidebar-menu li a span {
             white-space: nowrap !important;
@@ -2081,20 +2110,39 @@ if (!function_exists('get_bottom_nav_quick_links')) {
             display: flex !important;
             align-items: center !important;
             justify-content: space-between !important;
-            padding-right: 15px !important;
-            color: #334155 !important;
+            padding: 8px 16px 8px 58px !important;
+            color: #475569 !important;
             font-weight: 500 !important;
+            border-radius: 10px !important;
+            transition: all .15s ease !important;
         }
         .main-sidebar .sidebar-menu ul.dropdown-menu li a:hover {
-            color: #6777ef !important;
+            color: #2563eb !important;
+            background: #f1f5f9 !important;
         }
         .main-sidebar .sidebar-menu ul.dropdown-menu li a .badge-circle {
             margin-left: 8px !important;
             margin-right: 0 !important;
         }
-        .main-sidebar .sidebar-menu ul.dropdown-menu li a.active {
-            color: #6777ef !important;
+        .main-sidebar .sidebar-menu ul.dropdown-menu li a.active,
+        .main-sidebar .sidebar-menu ul.dropdown-menu li.active > a {
+            color: #2563eb !important;
             font-weight: 700 !important;
+            background: #eff6ff !important;
+            position: relative !important;
+        }
+        .main-sidebar .sidebar-menu ul.dropdown-menu li a.active::before,
+        .main-sidebar .sidebar-menu ul.dropdown-menu li.active > a::before {
+            content: '' !important;
+            position: absolute !important;
+            left: 42px !important;
+            top: 50% !important;
+            transform: translateY(-50%) !important;
+            width: 6px !important;
+            height: 6px !important;
+            border-radius: 50% !important;
+            background: #2563eb !important;
+            box-shadow: 0 0 8px rgba(37, 99, 235, 0.6) !important;
         }
         .main-sidebar .sidebar-menu li.nav-logout {
             padding: 4px 10px !important;
@@ -2175,49 +2223,53 @@ if (!function_exists('get_bottom_nav_quick_links')) {
 <script>
 window.forumUnreadList = <?php echo json_encode($forum_unread_list ?? []); ?>;
 window.diskusiUnreadList = <?php echo json_encode($diskusi_unread_list ?? []); ?>;
-</script>
-<?php
-// Auto-scroll sidebar ke menu aktif (pas di posisi menu) setelah halaman dimuat
-if (!isset($js_page) || !is_array($js_page)) { $js_page = []; }
-$js_page[] = <<<'SIDEBARJS'
-$(function() {
-    function scrollToActiveMenu() {
+
+// Auto-scroll sidebar langsung (tidak terhambat penimpaan variabel $js_page)
+(function() {
+    function ensureActiveMenuVisible() {
         try {
-            var $sidebar = $('.main-sidebar');
-            if (!$sidebar.length) return;
+            var sidebar = document.querySelector('.main-sidebar');
+            if (!sidebar) return;
 
-            var $active = $sidebar.find('.sidebar-menu a.active').first();
-            if (!$active.length) {
-                $active = $sidebar.find('.sidebar-menu li.active > a').first();
-            }
-            if (!$active.length) {
-                $('body').removeClass('sidebar-scroll-on');
-                return;
-            }
+            var active = sidebar.querySelector('.sidebar-menu a.active, .sidebar-menu li.active > a');
+            if (!active) return;
 
-            var $drop = $active.closest('li.dropdown');
-            if ($drop.length) {
-                $drop.addClass('active');
-                $drop.children('ul.dropdown-menu').show();
-                $('body').addClass('sidebar-scroll-on');
+            var drop = active.closest('li.dropdown');
+            if (drop) {
+                drop.classList.add('active');
+                var dm = drop.querySelector('ul.dropdown-menu');
+                if (dm) dm.style.display = 'block';
             }
 
-            var sidebarTop = $sidebar.offset().top;
-            var activeTop = $active.offset().top;
-            var currentScroll = $sidebar.scrollTop() || 0;
-            var targetTop = (activeTop - sidebarTop + currentScroll) - 140;
-            if (targetTop < 0) targetTop = 0;
+            // Scroll langsung elemen aktif ke viewport tengah sidebar
+            active.scrollIntoView({ block: 'center', behavior: 'auto' });
 
-            $sidebar.scrollTop(targetTop);
-            $('#sidebar-wrapper').scrollTop(targetTop);
+            // Sinkronkan nicescroll jika terpasang
+            if (window.jQuery && typeof window.jQuery.fn.niceScroll === 'function') {
+                var $sb = window.jQuery(sidebar);
+                var ns = $sb.getNiceScroll();
+                if (ns && ns.length) {
+                    ns.resize();
+                    ns.setScrollTop(sidebar.scrollTop);
+                }
+            }
         } catch (e) {}
     }
 
-    scrollToActiveMenu();
-    setTimeout(scrollToActiveMenu, 300);
-    setTimeout(scrollToActiveMenu, 700);
-});
-SIDEBARJS;
-?>
+    if (document.readyState === 'loading') {
+        document.addEventListener('DOMContentLoaded', function() {
+            ensureActiveMenuVisible();
+            setTimeout(ensureActiveMenuVisible, 100);
+            setTimeout(ensureActiveMenuVisible, 350);
+            setTimeout(ensureActiveMenuVisible, 700);
+        });
+    } else {
+        ensureActiveMenuVisible();
+        setTimeout(ensureActiveMenuVisible, 100);
+        setTimeout(ensureActiveMenuVisible, 350);
+        setTimeout(ensureActiveMenuVisible, 700);
+    }
+})();
+</script>
 </div>
 

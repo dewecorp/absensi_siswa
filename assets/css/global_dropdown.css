@@ -709,20 +709,33 @@ select[multiple].gds-source {
   height: 0 !important;
 }
 
-/* Sidebar scrollbar hidden by default (saat tidak ada anak menu terbuka) */
+/* Sidebar scrollbar: izinkan scroll vertikal kapan saja konten melebihi layar */
 .main-sidebar {
-  overflow: hidden !important;
+  overflow-y: auto !important;
+  overflow-x: hidden !important;
   overscroll-behavior: contain;
   scroll-behavior: smooth;
-  scrollbar-width: none !important;
-  -ms-overflow-style: none !important;
+  scrollbar-width: thin !important;
+  scrollbar-color: #c3cad6 transparent !important;
 }
 .main-sidebar::-webkit-scrollbar {
-  display: none !important;
-  width: 0 !important;
+  display: block !important;
+  width: 5px !important;
+}
+.main-sidebar::-webkit-scrollbar-track {
+  background: transparent !important;
+  margin-top: 64px !important;
+  margin-bottom: 24px !important;
+}
+.main-sidebar::-webkit-scrollbar-thumb {
+  background-color: #c3cad6 !important;
+  border-radius: 999px !important;
+}
+.main-sidebar::-webkit-scrollbar-thumb:hover {
+  background-color: #94a3b8 !important;
 }
 
-/* HANYA saat ada anak menu terbuka (body.sidebar-scroll-on), tampilkan scrollbar halus dibatasi bawah header */
+/* Saat ada anak menu terbuka (body.sidebar-scroll-on) */
 body.sidebar-scroll-on .main-sidebar {
   overflow-y: auto !important;
   scrollbar-width: thin !important;
