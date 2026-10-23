@@ -1585,4 +1585,4 @@ if ($__flash_success !== '' || $__flash_error !== ''):
             </div>
             <?php endif; ?>
 
-            <?php include_once 'sidebar.php'; ?>
+            <?php include_once __DIR__ . '/sidebar.php'; ?>

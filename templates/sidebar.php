@@ -2,6 +2,16 @@
 // Sidebar template for the attendance system
 // This file should be included after the header
 
+// Cegah render ganda. templates/header.php sudah menyertakan sidebar ini
+// (include_once), sementara banyak halaman masih memanggil
+// include '../templates/sidebar.php' lagi. Dua sidebar di DOM membuat
+// salinan paling atas menutupi salinan yang sudah di-scroll, sehingga
+// anak menu aktif di bawah layar tidak pernah terlihat.
+if (defined('SIMAD_SIDEBAR_RENDERED')) {
+    return;
+}
+define('SIMAD_SIDEBAR_RENDERED', true);
+
 // Determine active menu based on current page
 $current_page = basename($_SERVER['PHP_SELF']);
 $current_dir = basename(dirname($_SERVER['PHP_SELF'] ?? ''));
@@ -15,7 +25,7 @@ $nilai_ujian_biasa_menu_active = ($current_page === 'nilai_ujian.php' && !$nilai
 // Define menu items based on user level
 $user_level = isset($_GET['session_type']) && in_array($_GET['session_type'], ['guru', 'wali', 'admin', 'kepala_madrasah', 'tata_usaha', 'bendahara', 'siswa'], true) 
     ? $_GET['session_type'] 
-    : getUserLevel();
+    : (($current_dir === 'wali') ? 'wali' : getUserLevel());
 global $menu_items;
 $menu_items = [];
 
@@ -1554,7 +1564,7 @@ switch ($user_level) {
                 'title' => 'Pembelajaran',
                 'icon' => 'fas fa-chalkboard-teacher',
                 'submenu' => $pembelajaran_submenu_wali,
-                'active' => in_array($current_page, ['perangkat_pembelajaran.php', 'preview_perangkat.php', 'tugas.php', 'detail_tugas.php', 'bank_soal.php', 'preview_bank_soal.php', 'generate_soal.php', 'generate_perangkat.php', 'bahan_ajar.php', 'catatan_perkembangan.php', 'data_perkembangan.php', 'komunikasi_kelas.php', 'diskusi.php'])
+                'active' => in_array($current_page, ['jurnal_mengajar.php', 'jurnal_les.php', 'perangkat_pembelajaran.php', 'preview_perangkat.php', 'tugas.php', 'detail_tugas.php', 'bank_soal.php', 'preview_bank_soal.php', 'generate_soal.php', 'generate_perangkat.php', 'bahan_ajar.php', 'catatan_perkembangan.php', 'data_perkembangan.php', 'komunikasi_kelas.php', 'diskusi.php'])
             ],
             [
                 'title' => 'Forum Guru',
@@ -1615,10 +1625,10 @@ switch ($user_level) {
             'title' => 'Keuangan',
             'icon' => 'fas fa-money-bill-wave',
             'submenu' => [
-                    ['title' => 'RAB Madrasah', 'url' => '../admin/rab_madrasah.php', 'active' => $current_page === 'rab_madrasah.php'],
-                ['title' => 'RAB Ekstrakurikuler', 'url' => '../admin/rab_ekstrakurikuler.php', 'active' => $current_page === 'rab_ekstrakurikuler.php'],
-                ['title' => 'RAB Ujian', 'url' => '../admin/rab_ujian.php', 'active' => $current_page === 'rab_ujian.php'],
-                ['title' => 'Data Gaji Guru', 'url' => '../guru/data_gaji.php', 'active' => $current_page === 'data_gaji.php']
+                ['title' => 'RAB Madrasah', 'url' => '../admin/rab_madrasah.php?session_type=wali', 'active' => $current_page === 'rab_madrasah.php'],
+                ['title' => 'RAB Ekstrakurikuler', 'url' => '../admin/rab_ekstrakurikuler.php?session_type=wali', 'active' => $current_page === 'rab_ekstrakurikuler.php'],
+                ['title' => 'RAB Ujian', 'url' => '../admin/rab_ujian.php?session_type=wali', 'active' => $current_page === 'rab_ujian.php'],
+                ['title' => 'Data Gaji Guru', 'url' => '../guru/data_gaji.php?session_type=wali', 'active' => $current_page === 'data_gaji.php']
             ],
             'active' => in_array($current_page, ['kategori_anggaran.php', 'rab_madrasah.php', 'rab_ekstrakurikuler.php', 'rab_ujian.php', 'data_gaji.php'])
         ];
@@ -1638,7 +1648,7 @@ switch ($user_level) {
         $menu_items[] = [
             'title' => 'Profil & Pengaturan',
             'icon' => 'fas fa-user-cog',
-            'url' => '../wali/profil.php',
+            'url' => '../wali/profil.php?session_type=wali',
             'active' => $current_page === 'profil.php'
         ];
         $menu_items[] = [
@@ -2028,7 +2038,7 @@ if (!function_exists('get_bottom_nav_quick_links')) {
             letter-spacing: 1.3px !important;
         }
         .main-sidebar .sidebar-menu {
-            padding: 10px 12px !important;
+            padding: 10px 12px 200px 12px !important;
         }
         .main-sidebar .sidebar-menu li {
             margin-bottom: 4px !important;
@@ -2180,6 +2190,19 @@ if (!function_exists('get_bottom_nav_quick_links')) {
             <a href="<?php echo htmlspecialchars(app_url('dashboard.php'), ENT_QUOTES, 'UTF-8'); ?>" title="Sistem Informasi Madrasah"><img src="../assets/img/<?php echo htmlspecialchars(isset($favicon_logo) ? $favicon_logo : 'logo.png', ENT_QUOTES, 'UTF-8'); ?>?v=<?php echo htmlspecialchars(isset($favicon_version) ? $favicon_version : '1', ENT_QUOTES, 'UTF-8'); ?>" alt="Logo" style="height: 32px; width: 32px; object-fit: contain;"></a>
         </div>
         <ul class="sidebar-menu">
+            <?php
+            foreach ($menu_items as &$check_item) {
+                if (!empty($check_item['submenu']) && is_array($check_item['submenu'])) {
+                    foreach ($check_item['submenu'] as $check_sub) {
+                        if (!empty($check_sub['active'])) {
+                            $check_item['active'] = true;
+                            break;
+                        }
+                    }
+                }
+            }
+            unset($check_item);
+            ?>
             <?php foreach ($menu_items as $item): ?>
                 <?php
                 $is_forum_item = (strpos($item['title'], 'Forum') !== false);
@@ -2225,49 +2248,83 @@ window.forumUnreadList = <?php echo json_encode($forum_unread_list ?? []); ?>;
 window.diskusiUnreadList = <?php echo json_encode($diskusi_unread_list ?? []); ?>;
 
 // Auto-scroll sidebar langsung (tidak terhambat penimpaan variabel $js_page)
+window.ensureSidebarActiveMenuVisible = function() {
+    try {
+        var sidebar = document.querySelector('.main-sidebar');
+        if (!sidebar) return;
+
+        // Cari anak menu aktif terlebih dahulu, baru fallback ke menu single
+        var active = sidebar.querySelector('.sidebar-menu ul.dropdown-menu a.active, .sidebar-menu ul.dropdown-menu li.active > a');
+        if (!active) {
+            active = sidebar.querySelector('.sidebar-menu > li.active:not(.dropdown) > a, .sidebar-menu > li:not(.dropdown) > a.active');
+        }
+        if (!active) {
+            active = sidebar.querySelector('.sidebar-menu a.active, .sidebar-menu li.active > a');
+        }
+        if (!active) return;
+
+        var drop = active.closest('li.dropdown');
+        if (drop) {
+            drop.classList.add('active');
+            var dm = drop.querySelector('ul.dropdown-menu');
+            if (dm) dm.style.display = 'block';
+        }
+
+        var $sb = (window.jQuery && typeof window.jQuery.fn.niceScroll === 'function') ? window.jQuery(sidebar) : null;
+        var ns = $sb ? $sb.getNiceScroll() : null;
+        if (ns && ns.length && typeof ns.resize === 'function') {
+            ns.resize();
+        }
+
+        var sRect = sidebar.getBoundingClientRect();
+        var aRect = active.getBoundingClientRect();
+
+        var curScroll = sidebar.scrollTop || 0;
+        if (ns && ns[0] && typeof ns[0].getScrollTop === 'function') {
+            var nVal = ns[0].getScrollTop();
+            if (typeof nVal === 'number' && nVal > 0) {
+                curScroll = nVal;
+            }
+        }
+
+        var absActiveTop = (aRect.top - sRect.top) + curScroll;
+        // Posisikan elemen aktif sekitar 30% dari atas viewport sidebar agar terlihat jelas beserta menu induk
+        var targetScroll = Math.max(0, Math.round(absActiveTop - (sidebar.clientHeight * 0.3)));
+
+        sidebar.scrollTop = targetScroll;
+        if (ns && ns.length) {
+            if (typeof ns.doScrollTop === 'function') {
+                ns.doScrollTop(targetScroll, 0);
+            } else if (ns[0] && typeof ns[0].doScrollTop === 'function') {
+                ns[0].doScrollTop(targetScroll, 0);
+            } else if (typeof ns.setScrollTop === 'function') {
+                ns.setScrollTop(targetScroll);
+            }
+        }
+    } catch (e) {}
+};
+
 (function() {
-    function ensureActiveMenuVisible() {
-        try {
-            var sidebar = document.querySelector('.main-sidebar');
-            if (!sidebar) return;
-
-            var active = sidebar.querySelector('.sidebar-menu a.active, .sidebar-menu li.active > a');
-            if (!active) return;
-
-            var drop = active.closest('li.dropdown');
-            if (drop) {
-                drop.classList.add('active');
-                var dm = drop.querySelector('ul.dropdown-menu');
-                if (dm) dm.style.display = 'block';
-            }
-
-            // Scroll langsung elemen aktif ke viewport tengah sidebar
-            active.scrollIntoView({ block: 'center', behavior: 'auto' });
-
-            // Sinkronkan nicescroll jika terpasang
-            if (window.jQuery && typeof window.jQuery.fn.niceScroll === 'function') {
-                var $sb = window.jQuery(sidebar);
-                var ns = $sb.getNiceScroll();
-                if (ns && ns.length) {
-                    ns.resize();
-                    ns.setScrollTop(sidebar.scrollTop);
-                }
-            }
-        } catch (e) {}
-    }
+    var run = function() {
+        if (typeof window.ensureSidebarActiveMenuVisible === 'function') {
+            window.ensureSidebarActiveMenuVisible();
+        }
+    };
 
     if (document.readyState === 'loading') {
         document.addEventListener('DOMContentLoaded', function() {
-            ensureActiveMenuVisible();
-            setTimeout(ensureActiveMenuVisible, 100);
-            setTimeout(ensureActiveMenuVisible, 350);
-            setTimeout(ensureActiveMenuVisible, 700);
+            run();
+            setTimeout(run, 80);
+            setTimeout(run, 250);
+            setTimeout(run, 500);
+            setTimeout(run, 900);
         });
     } else {
-        ensureActiveMenuVisible();
-        setTimeout(ensureActiveMenuVisible, 100);
-        setTimeout(ensureActiveMenuVisible, 350);
-        setTimeout(ensureActiveMenuVisible, 700);
+        run();
+        setTimeout(run, 80);
+        setTimeout(run, 250);
+        setTimeout(run, 500);
+        setTimeout(run, 900);
     }
 })();
 </script>

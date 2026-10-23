@@ -714,7 +714,7 @@ select[multiple].gds-source {
   overflow-y: auto !important;
   overflow-x: hidden !important;
   overscroll-behavior: contain;
-  scroll-behavior: smooth;
+  scroll-behavior: auto !important;
   scrollbar-width: thin !important;
   scrollbar-color: #c3cad6 transparent !important;
 }

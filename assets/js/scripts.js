@@ -116,6 +116,9 @@ $(function() {
           parent.addClass('active');
           parent.find('> .dropdown-menu').slideDown(200, function() {
             sidebar_refresh_scroll_state();
+            if (typeof window.ensureSidebarActiveMenuVisible === 'function') {
+              window.ensureSidebarActiveMenuVisible();
+            }
           });
         }
 
@@ -124,6 +127,9 @@ $(function() {
 
       $('.main-sidebar .sidebar-menu li.active > .dropdown-menu').slideDown(200, function() {
         sidebar_refresh_scroll_state();
+        if (typeof window.ensureSidebarActiveMenuVisible === 'function') {
+          window.ensureSidebarActiveMenuVisible();
+        }
         return false;
       });
       sidebar_refresh_scroll_state();
