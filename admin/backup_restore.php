@@ -64,6 +64,16 @@ if (isset($_POST['backup_db'])) {
         error_log("Backup failed: " . $error_msg);
         $message = ['type' => 'danger', 'text' => 'Gagal membuat backup database! Error: ' . ($result !== 0 ? "Exit code $result" : "File empty")];
     }
+
+    // Respons JSON untuk proses backup via AJAX (menampilkan progres di halaman)
+    if (!empty($_POST['ajax'])) {
+        header('Content-Type: application/json');
+        echo json_encode([
+            'status' => $message['type'] === 'success' ? 'success' : 'error',
+            'message' => $message['text']
+        ]);
+        exit;
+    }
 }
 
 // Restore database
@@ -200,15 +210,15 @@ include '../templates/header.php';
                     </script>
                     <?php endif; ?>
 
-                    <div class="row">
-                        <div class="col-md-6">
-                            <div class="card">
+                    <div class="row align-items-stretch">
+                        <div class="col-md-6 d-flex">
+                            <div class="card w-100">
                                 <div class="card-header">
                                     <h4>Backup Database</h4>
                                 </div>
-                                <div class="card-body">
+                                <div class="card-body d-flex flex-column">
                                     <p>Lakukan backup database untuk menyimpan salinan data saat ini.</p>
-                                    <form method="POST" action="">
+                                    <form method="POST" action="" id="backupForm" class="mt-auto mb-0 text-center">
                                         <button type="submit" name="backup_db" class="btn btn-primary">
                                             <i class="fas fa-download"></i> Buat Backup
                                         </button>
@@ -216,14 +226,14 @@ include '../templates/header.php';
                                 </div>
                             </div>
                         </div>
-                        <div class="col-md-6">
-                            <div class="card">
+                        <div class="col-md-6 d-flex">
+                            <div class="card w-100">
                                 <div class="card-header">
                                     <h4>Restore Database</h4>
                                 </div>
-                                <div class="card-body">
+                                <div class="card-body d-flex flex-column">
                                     <p>Restore database dari file backup sebelumnya.</p>
-                                    <form method="POST" action="">
+                                    <form method="POST" action="" class="d-flex flex-column flex-grow-1 mb-0">
                                         <div class="form-group">
                                             <label>Pilih File Backup</label>
                                             <select class="form-control" name="backup_file" required>
@@ -235,7 +245,7 @@ include '../templates/header.php';
                                                 <?php endforeach; ?>
                                             </select>
                                         </div>
-                                        <button type="submit" name="restore_db" class="btn btn-warning">
+                                        <button type="submit" name="restore_db" class="btn btn-warning mt-auto align-self-center">
                                             <i class="fas fa-upload"></i> Restore Database
                                         </button>
                                     </form>
@@ -366,6 +376,109 @@ include '../templates/header.php';
                             $('body').append(form);
                             form.submit();
                         }
+                    });
+                });
+                // Proses backup: konfirmasi -> progres -> hasil
+                \$('#backupForm').on('submit', function(e) {
+                    e.preventDefault();
+
+                    var formAction = \$(this).attr('action') || window.location.href;
+
+                    Swal.fire({
+                        title: 'Konfirmasi Backup',
+                        html: 'Proses backup database akan dijalankan sekarang.<br>Pastikan tidak ada proses lain yang sedang menulis data.',
+                        icon: 'question',
+                        showCancelButton: true,
+                        confirmButtonColor: '#6777ef',
+                        cancelButtonColor: '#d33',
+                        confirmButtonText: 'Ya, Backup Sekarang',
+                        cancelButtonText: 'Batal'
+                    }).then(function(result) {
+                        if (!result.isConfirmed) {
+                            return;
+                        }
+
+                        var progressValue = 0;
+                        var progressTimer = null;
+
+                        function updateBackupProgress(value) {
+                            var bar = document.getElementById('backupProgressBar');
+                            if (bar) {
+                                bar.style.width = value + '%';
+                                bar.textContent = value + '%';
+                                bar.setAttribute('aria-valuenow', value);
+                            }
+                            var txt = document.getElementById('backupProgressText');
+                            if (txt) {
+                                if (value < 30) {
+                                    txt.textContent = 'Menyiapkan proses backup...';
+                                } else if (value < 70) {
+                                    txt.textContent = 'Mengekspor tabel dan data...';
+                                } else if (value < 100) {
+                                    txt.textContent = 'Menyimpan file backup...';
+                                } else {
+                                    txt.textContent = 'Selesai.';
+                                }
+                            }
+                        }
+
+                        Swal.fire({
+                            title: 'Memproses Backup...',
+                            html: '<div style=\"margin-top:12px;\">' +
+                                  '<div class=\"progress\" style=\"height:18px;border-radius:9px;overflow:hidden;background:#e9ecef;\">' +
+                                  '<div id=\"backupProgressBar\" class=\"progress-bar progress-bar-striped progress-bar-animated bg-primary\" role=\"progressbar\" aria-valuemin=\"0\" aria-valuemax=\"100\" aria-valuenow=\"0\" style=\"width:0%;transition:width .3s ease;\">0%</div>' +
+                                  '</div>' +
+                                  '<div id=\"backupProgressText\" style=\"margin-top:10px;font-size:13px;color:#6c757d;\">Menyiapkan proses backup...</div>' +
+                                  '</div>',
+                            allowOutsideClick: false,
+                            allowEscapeKey: false,
+                            showConfirmButton: false,
+                            didOpen: function() {
+                                progressTimer = setInterval(function() {
+                                    if (progressValue < 90) {
+                                        progressValue += Math.floor(Math.random() * 8) + 2;
+                                        if (progressValue > 90) {
+                                            progressValue = 90;
+                                        }
+                                        updateBackupProgress(progressValue);
+                                    }
+                                }, 400);
+                            }
+                        });
+
+                        \$.ajax({
+                            url: formAction,
+                            type: 'POST',
+                            dataType: 'json',
+                            data: { backup_db: 1, ajax: 1 },
+                            success: function(res) {
+                                clearInterval(progressTimer);
+                                updateBackupProgress(100);
+
+                                setTimeout(function() {
+                                    var ok = res && res.status === 'success';
+                                    Swal.fire({
+                                        icon: ok ? 'success' : 'error',
+                                        title: ok ? 'Backup Berhasil' : 'Backup Gagal',
+                                        text: (res && res.message) ? res.message : (ok ? 'Database berhasil dibackup.' : 'Terjadi kesalahan saat backup.'),
+                                        confirmButtonColor: '#6777ef'
+                                    }).then(function() {
+                                        if (ok) {
+                                            window.location.reload();
+                                        }
+                                    });
+                                }, 600);
+                            },
+                            error: function() {
+                                clearInterval(progressTimer);
+                                Swal.fire({
+                                    icon: 'error',
+                                    title: 'Backup Gagal',
+                                    text: 'Tidak dapat menghubungi server. Silakan coba lagi.',
+                                    confirmButtonColor: '#6777ef'
+                                });
+                            }
+                        });
                     });
                 });
             });

@@ -69,3 +69,6 @@ version.txt
 
 # Runtime admin settings generated on hosting/local machine
 config/runtime_settings.php
+
+# Hasil backup database (berisi data sensitif: API key, hash password, dsb.)
+/backups/*.sql

@@ -249,6 +249,15 @@ include '../templates/header.php';
 include '../templates/sidebar.php';
 ?>
 
+<link rel="stylesheet" href="../assets/css/table-mobile-cards.css?v=<?= (int) @filemtime(__DIR__ . '/../assets/css/table-mobile-cards.css') ?>">
+<style>
+@media (max-width: 767.98px) {
+    .card-header { flex-wrap: wrap !important; gap: 10px !important; }
+    .card-header-action { display: flex !important; flex-wrap: wrap !important; gap: 6px !important; width: 100% !important; }
+    .card-header-action .btn { flex: 1 1 auto !important; justify-content: center !important; }
+}
+</style>
+
             <div class="main-content">
                 <section class="section">
                     <div class="section-header">
@@ -286,60 +295,68 @@ include '../templates/sidebar.php';
                                     </div>
                                 </div>
                                 <div class="card-body">
-                                    <div class="table-responsive">
-                                        <table class="table table-striped" id="table-1">
-                                            <thead>
-                                                <tr>
-                                                    <th class="text-center">#</th>
-                                                    <th>Nama</th>
-                                                    <th>Username</th>
-                                                    <th>Level</th>
-                                                    <th>Foto</th>
-                                                    <th>Aksi</th>
-                                                </tr>
-                                            </thead>
-                                            <tbody>
-                                                <?php $no = 1; foreach ($users as $user): ?>
-                                                <tr>
-                                                    <td class="text-center"><?php echo $no++; ?></td>
-                                                    <td><?php echo htmlspecialchars($user['nama']); ?></td>
-                                                    <td><?php echo htmlspecialchars($user['username']); ?></td>
-                                                    <td>
-                                                        <?php 
-                                                        $badge_class = '';
-                                                        switch ($user['level']) {
-                                                            case 'admin':
-                                                                $badge_class = 'badge-primary';
-                                                                break;
-                                                            case 'kepala_madrasah':
-                                                                $badge_class = 'badge-success';
-                                                                break;
-                                                            case 'tata_usaha':
-                                                                $badge_class = 'badge-info';
-                                                                break;
-                                                            case 'bendahara':
-                                                                $badge_class = 'badge-warning';
-                                                                break;
-                                                            default:
-                                                                $badge_class = 'badge-secondary';
-                                                                break;
-                                                        }
-                                                        ?>
-                                                        <div class="badge <?php echo $badge_class; ?>"><?php echo ucwords(str_replace('_', ' ', $user['level'])); ?></div>
-                                                    </td>
-                                                    <td>
-                                                        <?php echo getUserAvatarImage($user, 40); ?>
-                                                    </td>
-                                                    <td>
-                                                        <a href="#" class="btn btn-primary btn-sm" data-toggle="modal" data-target="#editModal<?php echo $user['id_pengguna']; ?>"><i class="fas fa-edit"></i></a>
-                                                        <?php if (strtolower($user['username']) !== 'admin' && $user['id_pengguna'] != 1): ?>
-                                                        <a href="#" class="btn btn-danger btn-sm delete-btn" data-id="<?php echo $user['id_pengguna']; ?>" data-name="<?php echo htmlspecialchars($user['username']); ?>" data-action="delete_user"><i class="fas fa-trash"></i></a>
-                                                        <?php endif; ?>
-                                                    </td>
-                                                </tr>
-                                                <?php endforeach; ?>
-                                            </tbody>
-                                        </table>
+                                    <div class="table-mobile-cards-wrap">
+                                        <div class="table-responsive">
+                                            <table class="table table-striped table-mobile-cards" id="table-1">
+                                                <thead>
+                                                    <tr>
+                                                        <th class="text-center">#</th>
+                                                        <th>Nama</th>
+                                                        <th>Username</th>
+                                                        <th>Level</th>
+                                                        <th>Foto</th>
+                                                        <th>Aksi</th>
+                                                    </tr>
+                                                </thead>
+                                                <tbody>
+                                                    <?php $no = 1; foreach ($users as $user): ?>
+                                                    <?php
+                                                    $badge_class = '';
+                                                    switch ($user['level']) {
+                                                        case 'admin':
+                                                            $badge_class = 'badge-primary';
+                                                            break;
+                                                        case 'kepala_madrasah':
+                                                            $badge_class = 'badge-success';
+                                                            break;
+                                                        case 'tata_usaha':
+                                                            $badge_class = 'badge-info';
+                                                            break;
+                                                        case 'bendahara':
+                                                            $badge_class = 'badge-warning';
+                                                            break;
+                                                        default:
+                                                            $badge_class = 'badge-secondary';
+                                                            break;
+                                                    }
+                                                    ?>
+                                                    <tr>
+                                                        <td class="text-center mcard-hide"><?php echo $no++; ?></td>
+                                                        <td class="mcard-title">
+                                                            <?php echo htmlspecialchars($user['nama']); ?>
+                                                            <span class="mcard-sub">
+                                                                <span class="badge <?php echo $badge_class; ?>"><?php echo ucwords(str_replace('_', ' ', $user['level'])); ?></span>
+                                                                <span class="text-muted">@<?php echo htmlspecialchars($user['username']); ?></span>
+                                                            </span>
+                                                        </td>
+                                                        <td data-label="Username"><?php echo htmlspecialchars($user['username']); ?></td>
+                                                        <td data-label="Level">
+                                                            <div class="badge <?php echo $badge_class; ?>"><?php echo ucwords(str_replace('_', ' ', $user['level'])); ?></div>
+                                                        </td>
+                                                        <td data-label="Foto">
+                                                            <?php echo getUserAvatarImage($user, 40); ?>
+                                                        </td>
+                                                        <td data-label="Aksi">
+                                                            <a href="#" class="btn btn-primary btn-sm" data-toggle="modal" data-target="#editModal<?php echo $user['id_pengguna']; ?>"><i class="fas fa-edit"></i></a>
+                                                            <?php if (strtolower($user['username']) !== 'admin' && $user['id_pengguna'] != 1): ?>
+                                                            <a href="#" class="btn btn-danger btn-sm delete-btn" data-id="<?php echo $user['id_pengguna']; ?>" data-name="<?php echo htmlspecialchars($user['username']); ?>" data-action="delete_user"><i class="fas fa-trash"></i></a>
+                                                            <?php endif; ?>
+                                                        </td>
+                                                    </tr>
+                                                    <?php endforeach; ?>
+                                                </tbody>
+                                            </table>
+                                        </div>
                                     </div>
                                 </div>
                             </div>
