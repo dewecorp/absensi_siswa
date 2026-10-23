@@ -203,7 +203,7 @@ include '../templates/header.php';
                                             <div class="att-name"><?= htmlspecialchars($nm) ?></div>
                                             <div class="att-sub">
                                                 <span class="att-num">No <?= $index + 1 ?></span>
-                                                <span class="badge <?= $badgeClass ?>" id="badge_<?= $student['id_siswa'] ?>"><?= htmlspecialchars($current_status ?: 'Belum Absen') ?></span>
+                                                <span class="badge <?= $badgeClass ?>" id="badge_<?= $student['id_siswa'] ?>"><?= htmlspecialchars($current_status ?: 'Belum Mengisi Kehadiran') ?></span>
                                             </div>
                                             <?php if ($is_absent_daily): ?>
                                                 <small class="att-note-daily">(Absensi: <?= htmlspecialchars($status_absensi) ?>)</small>

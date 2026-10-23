@@ -889,7 +889,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                             $reg_att_late = false;
                             $reg_hero_cls = 'is-empty';
                             $reg_hero_icon = 'fas fa-hourglass-half';
-                            $reg_hero_title = 'Belum Absen';
+                            $reg_hero_title = 'Belum Mengisi Kehadiran';
                             $reg_hero_sub = 'Silakan pilih status kehadiran Anda hari ini.';
                             if ($reg_status === 'hadir') {
                                 $reg_att_ts = !empty($today_reg_attendance['waktu_input']) ? strtotime($today_reg_attendance['waktu_input']) : time();
@@ -1005,7 +1005,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                             $les_time = ($today_les_attendance && !empty($today_les_attendance['waktu_input'])) ? date('H.i', strtotime($today_les_attendance['waktu_input'])) . ' WIB' : '';
                             $les_hero_cls = 'is-empty';
                             $les_hero_icon = 'fas fa-hourglass-half';
-                            $les_hero_title = 'Belum Absen Les';
+                            $les_hero_title = 'Belum Mengisi Kehadiran Les';
                             $les_hero_sub = 'Silakan pilih status kehadiran les Anda hari ini.';
 
                             if ($les_status === 'hadir') {
@@ -1497,7 +1497,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                                                                 <?php if (!empty($students_in_class)): ?>
                                                                     <?php foreach ($students_in_class as $idx => $siswa): ?>
                                                                         <?php
-                                                                        $status = $siswa['keterangan'] ?? 'Belum Absen';
+                                                                        $status = $siswa['keterangan'] ?? 'Belum Mengisi Kehadiran';
                                                                         $badge_class = '';
                                                                         switch (strtolower($status)) {
                                                                             case 'hadir':

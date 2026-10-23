@@ -142,7 +142,7 @@ $logo_path = '../assets/img/' . ($school_profile['logo'] ?? '');
                             $status = $row['status'] ?? '';
                             if ($status == 'Hadir') echo 'Hadir';
                             elseif (in_array($status, ['Sakit', 'Izin', 'Alpa'])) echo 'Tidak Hadir (' . $status . ')';
-                            else echo 'Belum Absen';
+                            else echo 'Belum Mengisi Kehadiran';
                             ?>
                         </td>
                     </tr>

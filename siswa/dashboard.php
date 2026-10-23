@@ -410,7 +410,7 @@ include_once '../templates/sidebar.php';
 
                             $hero_cls = 'is-empty';
                             $hero_icon = 'fas fa-hourglass-half';
-                            $hero_title = 'Belum Absen';
+                            $hero_title = 'Belum Mengisi Kehadiran';
                             $hero_sub = 'Silakan pilih status kehadiran Anda hari ini.';
 
                             if ($status_siswa === 'Hadir') {

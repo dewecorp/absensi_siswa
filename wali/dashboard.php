@@ -913,7 +913,7 @@ include_once '../templates/sidebar.php';
                                     $wali_time = ($today_attendance && !empty($today_attendance['waktu_input'])) ? date('H.i', strtotime($today_attendance['waktu_input'])) . ' WIB' : '';
                                     $wali_hero_cls = 'is-empty';
                                     $wali_hero_icon = 'fas fa-hourglass-half';
-                                    $wali_hero_title = 'Belum Absen';
+                                    $wali_hero_title = 'Belum Mengisi Kehadiran';
                                     $wali_hero_sub = 'Silakan pilih status kehadiran Anda hari ini.';
                                     if ($wali_status === 'hadir') {
                                         $wali_att_ts = !empty($today_attendance['waktu_input']) ? strtotime($today_attendance['waktu_input']) : time();
@@ -1019,7 +1019,7 @@ include_once '../templates/sidebar.php';
                             $les_time_wali = ($today_les_attendance && !empty($today_les_attendance['waktu_input'])) ? date('H.i', strtotime($today_les_attendance['waktu_input'])) . ' WIB' : '';
                             $les_hero_cls_wali = 'is-empty';
                             $les_hero_icon_wali = 'fas fa-hourglass-half';
-                            $les_hero_title_wali = 'Belum Absen Les';
+                            $les_hero_title_wali = 'Belum Mengisi Kehadiran Les';
                             $les_hero_sub_wali = 'Silakan pilih status kehadiran les Anda hari ini.';
 
                             if ($les_status_wali === 'hadir') {
@@ -1501,7 +1501,7 @@ include_once '../templates/sidebar.php';
                                                             <td><?php echo htmlspecialchars($siswa['nisn']); ?></td>
                                                             <td>
                                                                 <?php
-                                                                $status = $siswa['attendance_status'] ?? 'Belum Absen';
+                                                                $status = $siswa['attendance_status'] ?? 'Belum Mengisi Kehadiran';
                                                                 $badge_class = '';
                                                                 switch (strtolower($status)) {
                                                                     case 'hadir':

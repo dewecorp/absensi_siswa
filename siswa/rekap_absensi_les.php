@@ -106,7 +106,7 @@ include '../templates/sidebar.php';
                                             $badge_class = ($status == 'Sakit') ? 'badge-warning' : (($status == 'Izin') ? 'badge-info' : 'badge-danger');
                                             $tone_color = ($status == 'Sakit') ? '#f59e0b' : (($status == 'Izin') ? '#0ea5e9' : '#ef4444');
                                         } else {
-                                            $display_status = 'Belum Absen';
+                                            $display_status = 'Belum Mengisi Kehadiran';
                                             $badge_class = 'badge-warning';
                                             $tone_color = '#f59e0b';
                                         }
@@ -149,7 +149,7 @@ include '../templates/sidebar.php';
                                             <tr>
                                                 <td><?= $no++ ?></td>
                                                 <td><?= formatDateIndonesia($row['tanggal']) ?></td>
-                                                <td><?= htmlspecialchars($row['status'] ?? 'Belum Absen') ?></td>
+                                                <td><?= htmlspecialchars($row['status'] ?? 'Belum Mengisi Kehadiran') ?></td>
                                             </tr>
                                         <?php endforeach; ?>
                                     <?php endif; ?>
@@ -190,7 +190,7 @@ function exportExcel() {
             $status = $row['status'] ?? '';
             if ($status == 'Hadir') $st_text = 'Hadir';
             elseif (in_array($status, ['Sakit', 'Izin', 'Alpa'])) $st_text = 'Tidak Hadir (' . $status . ')';
-            else $st_text = 'Belum Absen';
+            else $st_text = 'Belum Mengisi Kehadiran';
         ?>
         data.push([
             '<?= $no++ ?>',

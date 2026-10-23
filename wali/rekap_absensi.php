@@ -152,7 +152,7 @@ if ($class_id > 0) {
             } else {
                 // Student has no attendance data for this date
                 $daily_results[] = array_merge($student, [
-                    'keterangan' => 'Belum Absen', // Mark as not yet attended
+                    'keterangan' => 'Belum Mengisi Kehadiran', // Mark as not yet attended
                     'tanggal' => $selected_date,
                     'jam_masuk' => null,
                     'jam_keluar' => null
@@ -520,7 +520,7 @@ include '../templates/user_header.php';
                                                 <div class="att-rekap-timeline">
                                                     <?php $no = 1; foreach ($daily_results as $record): ?>
                                                         <?php 
-                                                        $status_text = $record['keterangan'] ?? 'Belum Absen';
+                                                        $status_text = $record['keterangan'] ?? 'Belum Mengisi Kehadiran';
                                                         $status_class = 'badge-secondary';
                                                         $tone_color = '#64748b';
                                                         switch ($status_text) {
@@ -591,7 +591,7 @@ include '../templates/user_header.php';
                                                                 <td><?php echo $no++; ?></td>
                                                                 <td><?php echo htmlspecialchars($record['nama_siswa']); ?></td>
                                                                 <td><?php echo htmlspecialchars($record['nama_kelas']); ?></td>
-                                                                <td><?php echo htmlspecialchars($record['keterangan'] ?? 'Belum Absen'); ?></td>
+                                                                <td><?php echo htmlspecialchars($record['keterangan'] ?? 'Belum Mengisi Kehadiran'); ?></td>
                                                                 <td><?php echo isset($record['jam_masuk']) && $record['jam_masuk'] ? date('H:i:s', strtotime($record['jam_masuk'])) : '-'; ?></td>
                                                                 <td><?php echo $record['tanggal'] ? date('d M Y', strtotime($record['tanggal'])) : '-'; ?></td>
                                                             </tr>
@@ -935,7 +935,7 @@ include '../templates/user_header.php';
                                                                     <td>
                                                                         <?php 
                                                                         $status_class = '';
-                                                                        $status_text = $record['keterangan'] ?? 'Belum Absen';
+                                                                        $status_text = $record['keterangan'] ?? 'Belum Mengisi Kehadiran';
                                                                         switch ($status_text) {
                                                                             case 'Hadir': $status_class = 'badge-success'; break;
                                                                             case 'Sakit': $status_class = 'badge-warning'; break;

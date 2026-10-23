@@ -321,7 +321,7 @@ var madrasahHeadSignature = '" . ($school_profile['ttd_kepala'] ?? '') . "';
 
 function updateBadgeByValue(studentId, selectedValue) {
     var badge = $('#badge_' + studentId);
-    badge.text(selectedValue ? selectedValue : 'Belum Absen');
+    badge.text(selectedValue ? selectedValue : 'Belum Mengisi Kehadiran');
     badge.removeClass('badge-success badge-info badge-warning badge-danger badge-secondary');
     switch(selectedValue) {
         case 'Hadir': badge.addClass('badge-success'); break;
@@ -578,7 +578,7 @@ include '../templates/user_header.php';
                                             <div class="att-name"><?= htmlspecialchars($nm) ?></div>
                                             <div class="att-sub">
                                                 <span class="att-num">No <?= $index + 1 ?></span>
-                                                <span class="badge <?= $badgeClass ?>" id="badge_<?= $student['id_siswa'] ?>"><?= htmlspecialchars($status ?: 'Belum Absen') ?></span>
+                                                <span class="badge <?= $badgeClass ?>" id="badge_<?= $student['id_siswa'] ?>"><?= htmlspecialchars($status ?: 'Belum Mengisi Kehadiran') ?></span>
                                             </div>
                                         </div>
                                     </div>

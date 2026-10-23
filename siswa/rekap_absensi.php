@@ -188,7 +188,7 @@ include '../templates/sidebar.php';
                                         <div class="att-rekap-timeline">
                                             <?php $no = 1; foreach ($harian_data as $row): ?>
                                                 <?php 
-                                                $status_text = $row['keterangan'] ?? 'Belum Absen';
+                                                $status_text = $row['keterangan'] ?? 'Belum Mengisi Kehadiran';
                                                 $status_class = 'badge-secondary';
                                                 $tone_color = '#64748b';
                                                 switch ($status_text) {

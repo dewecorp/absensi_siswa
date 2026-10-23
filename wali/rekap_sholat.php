@@ -141,7 +141,7 @@ if ($class_id > 0) {
                 $final_status = 'Hadir';
                 $note = "";
             } else {
-                $final_status = 'Belum Absen';
+                $final_status = 'Belum Mengisi Kehadiran';
                 $note = "";
             }
 
@@ -524,7 +524,7 @@ echo "<script>
                         <div class="att-rekap-timeline">
                             <?php $no = 1; foreach ($daily_results as $r): ?>
                                 <?php 
-                                $status_text = $r['keterangan'] ?? 'Belum Absen';
+                                $status_text = $r['keterangan'] ?? 'Belum Mengisi Kehadiran';
                                 $status_class = 'badge-secondary';
                                 $tone_color = '#64748b';
                                 if (in_array($status_text, ['Hadir', 'Melaksanakan'])) {
@@ -577,7 +577,7 @@ echo "<script>
                                 <tr>
                                     <td><?php echo $no++; ?></td>
                                     <td><?php echo htmlspecialchars($r['nama_siswa']); ?></td>
-                                    <td><?php echo htmlspecialchars($r['keterangan'] ?? 'Belum Absen'); ?></td>
+                                    <td><?php echo htmlspecialchars($r['keterangan'] ?? 'Belum Mengisi Kehadiran'); ?></td>
                                     <td><?php echo htmlspecialchars($r['note'] ?? ''); ?></td>
                                 </tr>
                                 <?php endforeach; ?>
