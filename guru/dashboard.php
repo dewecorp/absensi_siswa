@@ -874,9 +874,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     <!-- Baris 2: Kehadiran Harian sejajar Kehadiran Les Guru -->
                     <div class="row align-items-stretch">
                         <?php
-                        // Box les selalu muncul untuk guru kelas 6, cek apakah ada jadwal hari ini
-                        $show_les_box = $is_grade_6_guru && $has_les_schedule_guru; // Hanya tampilkan jika ada jadwal les hari ini
-                        $col_class = 'col-12 col-md-6 mb-4 d-flex';
+                        // Box les selalu muncul untuk guru kelas 6 jika ada jadwal dan bukan hari libur
+                        $show_les_box = !$holiday['is_holiday'] && $is_grade_6_guru && $has_les_schedule_guru;
+                        $col_class = $show_les_box ? 'col-12 col-md-6 mb-4 d-flex' : 'col-12 col-md-12 mb-4 d-flex';
 
                         if (!$holiday['is_holiday']):
                             // Get current regular attendance

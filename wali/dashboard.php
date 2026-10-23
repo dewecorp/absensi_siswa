@@ -888,9 +888,9 @@ include_once '../templates/sidebar.php';
                     <!-- Baris 2: Box Kehadiran Harian sejajar dengan Box Kehadiran Les Guru -->
                     <div class="row align-items-stretch">
                         <?php
-                        // Box les selalu muncul untuk kelas 6, cek apakah ada jadwal hari ini
-                        $show_les_box_wali = $is_grade_6_wali && $has_les_schedule; // Hanya tampilkan jika ada jadwal les hari ini
-                        $col_class_wali = 'col-12 col-md-6 mb-4 d-flex';
+                        // Box les selalu muncul untuk kelas 6 jika ada jadwal dan bukan hari libur
+                        $show_les_box_wali = !$holiday['is_holiday'] && $is_grade_6_wali && $has_les_schedule;
+                        $col_class_wali = $show_les_box_wali ? 'col-12 col-md-6 mb-4 d-flex' : 'col-12 col-md-12 mb-4 d-flex';
 
                         if (!$holiday['is_holiday']):
                         ?>
