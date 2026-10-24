@@ -180,10 +180,10 @@ $bulan_col2 = ['Januari', 'Februari', 'Maret', 'April', 'Mei', 'Juni'];
                             <thead>
                                 <tr>
                                     <th>Bln</th>
-                                    <th>Sts</th>
+                                    <th>Status</th>
                                     <th>Tgl</th>
                                     <th>Bln</th>
-                                    <th>Sts</th>
+                                    <th>Status</th>
                                     <th>Tgl</th>
                                 </tr>
                             </thead>
@@ -192,12 +192,12 @@ $bulan_col2 = ['Januari', 'Februari', 'Maret', 'April', 'Mei', 'Juni'];
                                     $b1 = $bulan_col1[$i];
                                     $d1 = $paid_by_month[$b1] ?? null;
                                     $s1 = $d1 ? '<span class="badge-lunas">&#10004;</span>' : '-';
-                                    $t1 = $d1 ? date('d/m', strtotime($d1['tgl_bayar'])) : '-';
+                                    $t1 = $d1 ? date('d/m/Y', strtotime($d1['tgl_bayar'])) : '-';
 
                                     $b2 = $bulan_col2[$i];
                                     $d2 = $paid_by_month[$b2] ?? null;
                                     $s2 = $d2 ? '<span class="badge-lunas">&#10004;</span>' : '-';
-                                    $t2 = $d2 ? date('d/m', strtotime($d2['tgl_bayar'])) : '-';
+                                    $t2 = $d2 ? date('d/m/Y', strtotime($d2['tgl_bayar'])) : '-';
                                 ?>
                                 <tr>
                                     <td class="text-left"><?= $b1 ?></td>

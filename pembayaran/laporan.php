@@ -1,7 +1,38 @@
 <?php
 $title = 'Laporan Pembayaran';
 include __DIR__ . '/../templates/pembayaran_header.php';
+?>
+<style>
+    .table-actions-stisla {
+        display: inline-flex !important;
+        flex-direction: row !important;
+        flex-wrap: nowrap !important;
+        align-items: center !important;
+        justify-content: flex-start !important;
+        gap: 6px !important;
+        margin: 0 !important;
+    }
 
+    .table-actions-stisla .btn {
+        width: 32px !important;
+        min-width: 32px !important;
+        height: 32px !important;
+        min-height: 32px !important;
+        padding: 0 !important;
+        display: inline-flex !important;
+        align-items: center !important;
+        justify-content: center !important;
+        border-radius: 6px !important;
+        line-height: 1 !important;
+        flex-shrink: 0 !important;
+    }
+
+    .table-actions-stisla .btn i {
+        margin: 0 !important;
+        font-size: 13px !important;
+    }
+</style>
+<?php
 $id_kelas = isset($_GET['id_kelas']) ? $_GET['id_kelas'] : '';
 $kelas_terpilih = null;
 $is_kelas_alumni = false;
@@ -93,13 +124,13 @@ if ($id_kelas !== '') {
                                     <td data-label="NISN"><?= $row['nisn'] ?></td>
                                     <td data-label="Nama Siswa"><?= $row['nama'] ?></td>
                                     <td data-label="Kelas"><?= $row['kelas'] ?></td>
-                                    <td data-label="Aksi">
-                                        <div class="pb-actions">
-                                            <a href="detail_laporan.php?nisn=<?= $row['nisn'] ?>" class="pb-chip pb-chip-info">
-                                                <i class="fas fa-eye"></i> <span class="pb-chip-label">Detail</span>
+                                    <td data-label="Aksi" class="text-nowrap">
+                                        <div class="table-actions-stisla">
+                                            <a href="detail_laporan.php?nisn=<?= $row['nisn'] ?>" class="btn btn-info btn-sm" title="Detail laporan" aria-label="Detail laporan">
+                                                <i class="fas fa-eye"></i>
                                             </a>
-                                            <a href="cetak_laporan.php?nisn=<?= $row['nisn'] ?>" target="_blank" class="pb-chip pb-chip-warning">
-                                                <i class="fas fa-print"></i> <span class="pb-chip-label">Cetak</span>
+                                            <a href="cetak_laporan.php?nisn=<?= $row['nisn'] ?>" target="_blank" class="btn btn-warning btn-sm" title="Cetak laporan" aria-label="Cetak laporan">
+                                                <i class="fas fa-print"></i>
                                             </a>
                                         </div>
                                     </td>
@@ -131,11 +162,11 @@ if ($id_kelas !== '') {
                                 </div>
                             </div>
                             <div class="pb-card-actions">
-                                <a href="detail_laporan.php?nisn=<?= $row['nisn'] ?>" class="pb-chip pb-chip-info">
-                                    <i class="fas fa-eye"></i> <span class="pb-chip-label">Detail</span>
+                                <a href="detail_laporan.php?nisn=<?= $row['nisn'] ?>" class="btn btn-info btn-sm" title="Detail laporan" aria-label="Detail laporan">
+                                    <i class="fas fa-eye"></i> Detail
                                 </a>
-                                <a href="cetak_laporan.php?nisn=<?= $row['nisn'] ?>" target="_blank" class="pb-chip pb-chip-warning">
-                                    <i class="fas fa-print"></i> <span class="pb-chip-label">Cetak</span>
+                                <a href="cetak_laporan.php?nisn=<?= $row['nisn'] ?>" target="_blank" class="btn btn-warning btn-sm" title="Cetak laporan" aria-label="Cetak laporan">
+                                    <i class="fas fa-print"></i> Cetak
                                 </a>
                             </div>
                         </div>

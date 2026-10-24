@@ -232,6 +232,46 @@ include __DIR__ . '/../templates/pembayaran_header.php';
     body > .select2-container--open {
         z-index: 1066 !important;
     }
+
+    /* Wrap kolom Bulan Bayar & tombol aksi Stisla */
+    #table-transaksi th.col-bulan-bayar,
+    #table-transaksi td[data-label="Bulan Bayar"] {
+        white-space: normal !important;
+        word-break: normal !important;
+        overflow-wrap: break-word !important;
+        min-width: 140px;
+        max-width: 260px;
+        line-height: 1.45;
+    }
+
+    #table-transaksi .table-actions-stisla {
+        display: inline-flex !important;
+        flex-direction: row !important;
+        flex-wrap: nowrap !important;
+        align-items: center !important;
+        justify-content: flex-start !important;
+        gap: 6px !important;
+        margin: 0 !important;
+    }
+
+    #table-transaksi .table-actions-stisla .btn {
+        width: 32px !important;
+        min-width: 32px !important;
+        height: 32px !important;
+        min-height: 32px !important;
+        padding: 0 !important;
+        display: inline-flex !important;
+        align-items: center !important;
+        justify-content: center !important;
+        border-radius: 6px !important;
+        line-height: 1 !important;
+        flex-shrink: 0 !important;
+    }
+
+    #table-transaksi .table-actions-stisla .btn i {
+        margin: 0 !important;
+        font-size: 13px !important;
+    }
 </style>
 
 <?php
@@ -470,6 +510,33 @@ if (isset($_POST['tambah'])) {
                         throw new Exception('Bulan bayar wajib dipilih untuk pembayaran bulanan.');
                     }
 
+                    // Validasi: Cegah duplikasi bulan yang sudah dibayar pada tahun ajaran ini
+                    $paid_already = ambil_bulan_bayar_tersimpan($koneksi, $nisn, $id_jb, $tahun_ajaran);
+                    $conflict_months = array_intersect($bulan_bayar_arr, $paid_already);
+                    if (!empty($conflict_months)) {
+                        throw new Exception("Bulan " . implode(', ', $conflict_months) . " untuk {$d_jb['nama_pembayaran']} sudah pernah dibayar (Lunas).");
+                    }
+
+                    // Validasi urutan prioritas: bulan tunggakan sebelumnya wajib dilunasi terlebih dahulu
+                    $academic_months = bulan_akademik_list();
+                    $selected_indexes = [];
+                    foreach ($bulan_bayar_arr as $sel_m) {
+                        $idx = array_search($sel_m, $academic_months, true);
+                        if ($idx !== false) {
+                            $selected_indexes[] = $idx;
+                        }
+                    }
+                    if (!empty($selected_indexes)) {
+                        $min_selected_idx = min($selected_indexes);
+                        $min_masuk_idx = get_bulan_masuk_siswa($koneksi, $nisn, $tahun_ajaran);
+                        for ($i = $min_masuk_idx; $i < $min_selected_idx; $i++) {
+                            $earlier_month = $academic_months[$i];
+                            if (!in_array($earlier_month, $paid_already, true) && !in_array($earlier_month, $bulan_bayar_arr, true)) {
+                                throw new Exception("Harap lunasi bulan tunggakan sebelumnya ($earlier_month) terlebih dahulu sebelum membayar " . implode(', ', $bulan_bayar_arr) . ".");
+                            }
+                        }
+                    }
+
                     $bulan_bayar_str = implode(', ', $bulan_bayar_arr);
                     $jumlah_bayar = ((int)$d_jb['nominal']) * count($bulan_bayar_arr);
                     $ket = "Lunas (Bulanan) - " . $bulan_bayar_str;
@@ -562,6 +629,49 @@ if (isset($_POST['update_transaksi'])) {
         } else {
             // Bulanan
             $bulan_bayar_arr = isset($data['bulan_bayar']) ? $data['bulan_bayar'] : [];
+            if (empty($bulan_bayar_arr)) {
+                $error_update = "Bulan bayar wajib dipilih untuk {$d_jb['nama_pembayaran']}.";
+                break;
+            }
+
+            // Validasi: Cegah duplikasi bulan yang sudah dibayar pada transaksi lain
+            $paid_already = ambil_bulan_bayar_tersimpan($koneksi, $nisn, $id_jb, $tahun_ajaran);
+            // Kecualikan bulan lama pada transaksi ini yang sedang diedit
+            $nisn_esc = mysqli_real_escape_string($koneksi, $nisn);
+            $no_trx_esc = mysqli_real_escape_string($koneksi, $no_transaksi);
+            $q_cur_trx = mysqli_query($koneksi, "SELECT bulan_bayar FROM pembayaran WHERE no_transaksi='$no_trx_esc' AND nisn='$nisn_esc' AND id_jenis_bayar='$id_jb'");
+            $cur_trx_months = [];
+            while ($r_c = mysqli_fetch_assoc($q_cur_trx)) {
+                $cur_trx_months = array_merge($cur_trx_months, normalisasi_bulan_bayar_list($r_c['bulan_bayar'] ?? ''));
+            }
+            $paid_other_trx = array_values(array_diff($paid_already, array_unique($cur_trx_months)));
+            $conflict_months = array_intersect($bulan_bayar_arr, $paid_other_trx);
+            if (!empty($conflict_months)) {
+                $error_update = "Bulan " . implode(', ', $conflict_months) . " untuk {$d_jb['nama_pembayaran']} sudah pernah dibayar di transaksi lain.";
+                break;
+            }
+
+            // Validasi prioritas bulan sebelumnya
+            $academic_months = bulan_akademik_list();
+            $selected_indexes = [];
+            foreach ($bulan_bayar_arr as $sel_m) {
+                $idx = array_search($sel_m, $academic_months, true);
+                if ($idx !== false) {
+                    $selected_indexes[] = $idx;
+                }
+            }
+            if (!empty($selected_indexes)) {
+                $min_selected_idx = min($selected_indexes);
+                $min_masuk_idx = get_bulan_masuk_siswa($koneksi, $nisn, $tahun_ajaran);
+                for ($i = $min_masuk_idx; $i < $min_selected_idx; $i++) {
+                    $earlier_month = $academic_months[$i];
+                    if (!in_array($earlier_month, $paid_other_trx, true) && !in_array($earlier_month, $bulan_bayar_arr, true)) {
+                        $error_update = "Harap lunasi bulan tunggakan sebelumnya ($earlier_month) terlebih dahulu sebelum membayar " . implode(', ', $bulan_bayar_arr) . ".";
+                        break 2;
+                    }
+                }
+            }
+
             $bulan_bayar_str = implode(', ', $bulan_bayar_arr);
             $jumlah_bayar = $d_jb['nominal'] * count($bulan_bayar_arr);
             $ket = "Lunas (Bulanan) - " . $bulan_bayar_str;
@@ -680,7 +790,7 @@ if (isset($_GET['hapus_transaksi'])) {
                                 <th>Nama Siswa</th>
                                 <th>Kelas</th>
                                 <th>Jenis Bayar</th>
-                                <th>Bulan Bayar</th>
+                                <th class="col-bulan-bayar">Bulan Bayar</th>
                                 <th>Cicilan Ke</th>
                                 <th>Nominal</th>
                                 <th>Keterangan</th>
@@ -722,15 +832,15 @@ if (isset($_GET['hapus_transaksi'])) {
                                     <td data-label="Keterangan"><?= $row['ket'] ? $row['ket'] : '-' ?></td>
                                     <td data-label="Tanggal"><?= date('d/m/Y', strtotime($row['tgl_bayar'])) ?></td>
                                     <td data-label="Aksi" class="text-nowrap">
-                                        <div class="pb-actions">
-                                            <a href="cetak_transaksi.php?no_transaksi=<?= $row['no_transaksi'] ?>" class="pb-chip pb-chip-info" target="_blank" title="Cetak transaksi">
-                                                <i class="fas fa-print"></i> <span class="pb-chip-label">Cetak</span>
+                                        <div class="table-actions-stisla">
+                                            <a href="cetak_transaksi.php?no_transaksi=<?= $row['no_transaksi'] ?>" class="btn btn-info btn-sm" target="_blank" title="Cetak transaksi" aria-label="Cetak transaksi">
+                                                <i class="fas fa-print"></i>
                                             </a>
-                                            <button type="button" class="pb-chip pb-chip-warning btn-edit-transaksi" data-id="<?= $row['no_transaksi'] ?>" data-toggle="modal" data-target="#modalEdit" title="Edit transaksi">
-                                                <i class="fas fa-edit"></i> <span class="pb-chip-label">Edit</span>
+                                            <button type="button" class="btn btn-warning btn-sm btn-edit-transaksi" data-id="<?= $row['no_transaksi'] ?>" data-toggle="modal" data-target="#modalEdit" title="Edit transaksi" aria-label="Edit transaksi">
+                                                <i class="fas fa-edit"></i>
                                             </button>
-                                            <a href="<?= base_url('transaksi.php?hapus_transaksi=' . $row['no_transaksi']) ?>" class="pb-chip pb-chip-danger btn-hapus" title="Hapus transaksi">
-                                                <i class="fas fa-trash"></i> <span class="pb-chip-label">Hapus</span>
+                                            <a href="<?= base_url('transaksi.php?hapus_transaksi=' . $row['no_transaksi']) ?>" class="btn btn-danger btn-sm btn-hapus" title="Hapus transaksi" aria-label="Hapus transaksi">
+                                                <i class="fas fa-trash"></i>
                                             </a>
                                         </div>
                                     </td>
@@ -998,15 +1108,16 @@ if (isset($_GET['hapus_transaksi'])) {
 
                 if (tipe === 'Bulanan') {
                     html += '<div class="form-group">';
-                    html += '<label>Bayar Bulan</label>';
+                    html += '<label class="d-flex justify-content-between align-items-center"><span>Bayar Bulan</span> <span class="badge badge-light font-weight-normal status-tagihan-info" id="status_tagihan_' + id + '"><i class="fas fa-spinner fa-spin mr-1"></i>Memeriksa tagihan...</span></label>';
+                    html += '<div id="tagihan_warning_' + id + '" class="mb-2" style="display:none;"></div>';
                     html += '<select name="payment[' + id + '][bulan_bayar][]" id="bulan_bayar_' + id + '" class="form-control select2-dynamic-bulan" multiple="multiple" style="width: 100%;" required>';
                     var months = ['Juli', 'Agustus', 'September', 'Oktober', 'November', 'Desember', 'Januari', 'Februari', 'Maret', 'April', 'Mei', 'Juni'];
-                    var currentMonthIndex = (new Date().getMonth() + 6) % 12;
-                    months.forEach(function(m, i) {
-                         var selected = (i === currentMonthIndex) ? 'selected' : '';
-                         html += '<option value="' + m + '" ' + selected + '>' + m + '</option>';
+                    months.forEach(function(m) {
+                         html += '<option value="' + m + '">' + m + '</option>';
                     });
-                    html += '</select></div>';
+                    html += '</select>';
+                    html += '<small class="form-text text-muted">Bulan yang sudah lunas dinonaktifkan. Bulan tunggakan sebelumnya wajib dipilih terlebih dahulu.</small>';
+                    html += '</div>';
                 } else {
                      html += '<div class="form-group"><label>Cicilan Ke</label>';
                      html += '<input type="number" name="payment[' + id + '][cicilan_ke]" class="form-control" value="1" required></div>';
@@ -1025,6 +1136,124 @@ if (isset($_GET['hapus_transaksi'])) {
                     dropdownParent: getSelect2Parent($(this))
                 });
             });
+
+            // Muat status lunas & tunggakan bulan via AJAX untuk setiap jenis bayar bulanan
+            var selectedNisn = $('#nisnTambah').val();
+            selectedOptions.each(function() {
+                var id = $(this).val();
+                var tipe = $(this).data('tipe');
+                if (tipe === 'Bulanan' && selectedNisn) {
+                    loadBulanStatusTambah(selectedNisn, id);
+                }
+            });
+        });
+
+        var academicMonthsList = ['Juli', 'Agustus', 'September', 'Oktober', 'November', 'Desember', 'Januari', 'Februari', 'Maret', 'April', 'Mei', 'Juni'];
+
+        function loadBulanStatusTambah(nisn, id_jenis_bayar) {
+            var $select = $('#bulan_bayar_' + id_jenis_bayar);
+            var $badge = $('#status_tagihan_' + id_jenis_bayar);
+            var $warn = $('#tagihan_warning_' + id_jenis_bayar);
+
+            $.ajax({
+                url: 'ajax_get_bulan_status.php',
+                type: 'GET',
+                data: { nisn: nisn, id_jenis_bayar: id_jenis_bayar },
+                dataType: 'json',
+                success: function(res) {
+                    if (!res.success) {
+                        $badge.html('<span class="text-danger">Gagal memuat status</span>');
+                        return;
+                    }
+
+                    var paid = res.paid_months || [];
+                    var unpaidPast = res.unpaid_past_months || [];
+
+                    // Simpan data bulan lunas & unpaid di select data
+                    $select.data('paid-months', paid);
+                    $select.data('unpaid-past', unpaidPast);
+
+                    // Tampilkan notifikasi tunggakan jika ada bulan sebelumnya yang belum bayar
+                    if (unpaidPast.length > 0) {
+                        $warn.html('<div class="alert alert-warning py-1 px-2 mb-2 font-weight-bold" style="font-size: 0.82rem;"><i class="fas fa-exclamation-triangle mr-1"></i>Tagihan belum bayar: <span class="text-danger">' + unpaidPast.join(', ') + '</span>. Harap bayar bulan lampau terlebih dahulu.</div>').slideDown(150);
+                        $badge.html('<span class="text-danger font-weight-bold"><i class="fas fa-exclamation-circle mr-1"></i>' + unpaidPast.length + ' Bulan Menunggak</span>');
+                    } else if (paid.length >= 12) {
+                        $warn.html('<div class="alert alert-success py-1 px-2 mb-2 font-weight-bold" style="font-size: 0.82rem;"><i class="fas fa-check-circle mr-1"></i>Semua bulan (12 bulan) pada tahun ajaran ini sudah lunas!</div>').slideDown(150);
+                        $badge.html('<span class="text-success font-weight-bold"><i class="fas fa-check-circle mr-1"></i>Semua Bulan Lunas</span>');
+                    } else {
+                        $warn.hide().empty();
+                        $badge.html('<span class="text-success font-weight-bold"><i class="fas fa-check mr-1"></i>Tidak ada tunggakan</span>');
+                    }
+
+                    // Update option attributes: disable bulan yang sudah dibayar
+                    $select.find('option').each(function() {
+                        var m = $(this).val();
+                        if (paid.indexOf(m) !== -1) {
+                            $(this).prop('disabled', true).text(m + ' (Sudah Lunas)');
+                        } else {
+                            $(this).prop('disabled', false).text(m);
+                        }
+                    });
+
+                    // Default select: jika ada unpaidPast, pilih bulan unpaid pertama; jika tidak, pilih bulan berikutnya yang belum dibayar
+                    var defaultVal = [];
+                    if (unpaidPast.length > 0) {
+                        defaultVal = [unpaidPast[0]];
+                    } else {
+                        for (var i = 0; i < academicMonthsList.length; i++) {
+                            if (paid.indexOf(academicMonthsList[i]) === -1) {
+                                defaultVal = [academicMonthsList[i]];
+                                break;
+                            }
+                        }
+                    }
+                    $select.val(defaultVal).trigger('change');
+                },
+                error: function() {
+                    $badge.html('<span class="text-danger">Gagal memeriksa status</span>');
+                }
+            });
+        }
+
+        // Validasi urutan prioritas bulan pembayaran saat select2 bulan diubah
+        $(document).on('change', '.select2-dynamic-bulan', function() {
+            var $select = $(this);
+            var paid = $select.data('paid-months') || [];
+            var vals = $select.val() || [];
+            if (!Array.isArray(vals)) vals = vals ? [vals] : [];
+
+            // Urutkan nilai yang dipilih berdasarkan urutan bulan akademik
+            vals.sort(function(a, b) {
+                return academicMonthsList.indexOf(a) - academicMonthsList.indexOf(b);
+            });
+
+            // Cek apakah ada bulan yang lebih awal yang belum lunas dan belum dipilih
+            if (vals.length > 0) {
+                var firstIdx = academicMonthsList.indexOf(vals[0]);
+                var skipped = [];
+                for (var i = 0; i < firstIdx; i++) {
+                    var prevMonth = academicMonthsList[i];
+                    if (paid.indexOf(prevMonth) === -1 && vals.indexOf(prevMonth) === -1) {
+                        skipped.push(prevMonth);
+                    }
+                }
+
+                if (skipped.length > 0) {
+                    Swal.fire({
+                        icon: 'warning',
+                        title: 'Prioritas Pembayaran',
+                        text: 'Bulan ' + skipped.join(', ') + ' belum dibayar. Harap lunasi bulan sebelumnya terlebih dahulu sebelum membayar ' + vals[0] + '!',
+                        confirmButtonText: 'Sesuaikan'
+                    });
+                    // Otomatis masukkan bulan yang terlewati
+                    var corrected = skipped.concat(vals);
+                    // Filter duplicates and keep valid only
+                    corrected = corrected.filter(function(item, pos) {
+                        return corrected.indexOf(item) === pos && paid.indexOf(item) === -1;
+                    });
+                    $select.val(corrected).trigger('change.select2');
+                }
+            }
         });
 
         // Format nominal dengan pemisah ribuan pada modal tambah.

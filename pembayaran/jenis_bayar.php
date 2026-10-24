@@ -1,7 +1,38 @@
 <?php
 $title = 'Jenis Pembayaran';
 include __DIR__ . '/../templates/pembayaran_header.php';
+?>
+<style>
+    .table-actions-stisla {
+        display: inline-flex !important;
+        flex-direction: row !important;
+        flex-wrap: nowrap !important;
+        align-items: center !important;
+        justify-content: flex-start !important;
+        gap: 6px !important;
+        margin: 0 !important;
+    }
 
+    .table-actions-stisla .btn {
+        width: 32px !important;
+        min-width: 32px !important;
+        height: 32px !important;
+        min-height: 32px !important;
+        padding: 0 !important;
+        display: inline-flex !important;
+        align-items: center !important;
+        justify-content: center !important;
+        border-radius: 6px !important;
+        line-height: 1 !important;
+        flex-shrink: 0 !important;
+    }
+
+    .table-actions-stisla .btn i {
+        margin: 0 !important;
+        font-size: 13px !important;
+    }
+</style>
+<?php
 // Fetch Kelas Data
 $q_kelas = mysqli_query($koneksi, "SELECT * FROM kelas ORDER BY nama_kelas ASC");
 $kelas_list = [];
@@ -158,13 +189,13 @@ if (isset($_GET['hapus'])) {
                                             <span class="badge badge-danger">Tidak Aktif</span>
                                         <?php endif; ?>
                                     </td>
-                                    <td data-label="Aksi">
-                                        <div class="pb-actions">
-                                            <button type="button" class="pb-chip pb-chip-warning" data-toggle="modal" data-target="#modalEdit<?= $row['id_jenis_bayar'] ?>" title="Edit jenis bayar">
-                                                <i class="fas fa-edit"></i> <span class="pb-chip-label">Edit</span>
+                                    <td data-label="Aksi" class="text-nowrap">
+                                        <div class="table-actions-stisla">
+                                            <button type="button" class="btn btn-warning btn-sm" data-toggle="modal" data-target="#modalEdit<?= $row['id_jenis_bayar'] ?>" title="Edit jenis bayar" aria-label="Edit jenis bayar">
+                                                <i class="fas fa-edit"></i>
                                             </button>
-                                            <a href="jenis_bayar.php?hapus=<?= $row['id_jenis_bayar'] ?>" class="pb-chip pb-chip-danger btn-hapus" title="Hapus jenis bayar">
-                                                <i class="fas fa-trash"></i> <span class="pb-chip-label">Hapus</span>
+                                            <a href="jenis_bayar.php?hapus=<?= $row['id_jenis_bayar'] ?>" class="btn btn-danger btn-sm btn-hapus" title="Hapus jenis bayar" aria-label="Hapus jenis bayar">
+                                                <i class="fas fa-trash"></i>
                                             </a>
                                         </div>
                                     </td>

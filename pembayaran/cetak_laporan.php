@@ -22,7 +22,9 @@ $q_info = mysqli_query($koneksi, "SELECT * FROM pengaturan LIMIT 1");
 $d_info = mysqli_fetch_assoc($q_info);
 $nama_bendahara = $d_info['nama_bendahara'] ?? 'Bendahara';
 $nama_sekolah = $d_info['nama_sekolah'] ?? '';
-$tahun_ajaran_laporan = trim((string)($d_info['tahun_ajaran'] ?? get_tahun_ajaran_aktif($koneksi)));
+$tahun_ajaran_laporan = isset($_GET['tahun_ajaran']) && trim((string)$_GET['tahun_ajaran']) !== ''
+    ? trim((string)$_GET['tahun_ajaran'])
+    : trim((string)($d_info['tahun_ajaran'] ?? get_tahun_ajaran_aktif($koneksi)));
 $bulan_indo = [
     '01' => 'Januari', '02' => 'Februari', '03' => 'Maret', '04' => 'April', '05' => 'Mei', '06' => 'Juni',
     '07' => 'Juli', '08' => 'Agustus', '09' => 'September', '10' => 'Oktober', '11' => 'November', '12' => 'Desember'
@@ -153,18 +155,18 @@ $bulan_col2 = ['Januari', 'Februari', 'Maret', 'April', 'Mei', 'Juni'];
         ?>
         <table class="print-data-table">
             <thead>
-                <tr><th>Bln</th><th>Sts</th><th>Tgl</th><th>Bln</th><th>Sts</th><th>Tgl</th></tr>
+                <tr><th>Bln</th><th>Status</th><th>Tgl</th><th>Bln</th><th>Status</th><th>Tgl</th></tr>
             </thead>
             <tbody>
                 <?php for ($i = 0; $i < 6; $i++):
                     $b1 = $bulan_col1[$i];
                     $d1 = $paid_by_month[$b1] ?? null;
                     $s1 = $d1 ? '<span class="badge-lunas">&#10004;</span>' : '-';
-                    $t1 = $d1 ? date('d/m', strtotime($d1['tgl_bayar'])) : '-';
+                    $t1 = $d1 ? date('d/m/Y', strtotime($d1['tgl_bayar'])) : '-';
                     $b2 = $bulan_col2[$i];
                     $d2 = $paid_by_month[$b2] ?? null;
                     $s2 = $d2 ? '<span class="badge-lunas">&#10004;</span>' : '-';
-                    $t2 = $d2 ? date('d/m', strtotime($d2['tgl_bayar'])) : '-';
+                    $t2 = $d2 ? date('d/m/Y', strtotime($d2['tgl_bayar'])) : '-';
                 ?>
                 <tr>
                     <td class="text-left"><?= $b1 ?></td><td><?= $s1 ?></td><td><?= $t1 ?></td>

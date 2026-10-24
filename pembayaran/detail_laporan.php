@@ -16,7 +16,16 @@ if (kelas_adalah_alumni($d_siswa['nama_kelas'] ?? '')) {
     exit;
 }
 
-$tahun_ajaran_laporan = get_tahun_ajaran_aktif($koneksi);
+$tahun_ajaran_aktif = get_tahun_ajaran_aktif($koneksi);
+$tahun_ajaran_tersimpan = daftar_tahun_ajaran_pembayaran_tersimpan($koneksi, $nisn);
+if (!in_array($tahun_ajaran_aktif, $tahun_ajaran_tersimpan, true)) {
+    array_unshift($tahun_ajaran_tersimpan, $tahun_ajaran_aktif);
+}
+
+$tahun_ajaran_laporan = isset($_GET['tahun_ajaran']) ? trim((string)$_GET['tahun_ajaran']) : $tahun_ajaran_aktif;
+if (!in_array($tahun_ajaran_laporan, $tahun_ajaran_tersimpan, true) && $tahun_ajaran_laporan !== $tahun_ajaran_aktif) {
+    $tahun_ajaran_laporan = $tahun_ajaran_aktif;
+}
 ?>
 
 <div class="card mb-4">
@@ -24,7 +33,7 @@ $tahun_ajaran_laporan = get_tahun_ajaran_aktif($koneksi);
             <div class="d-flex flex-wrap align-items-center justify-content-between mb-3" style="gap:12px;">
                 <h4 class="mb-0">Laporan Pembayaran Siswa</h4>
                 <div class="d-flex align-items-center" style="gap:8px;">
-                    <a href="cetak_laporan.php?nisn=<?= $nisn ?>" target="_blank" class="btn btn-warning">
+                    <a href="cetak_laporan.php?nisn=<?= $nisn ?>&tahun_ajaran=<?= urlencode($tahun_ajaran_laporan) ?>" target="_blank" class="btn btn-warning">
                         <i class="fas fa-print mr-1"></i> Cetak Laporan
                     </a>
                     <a href="laporan.php?id_kelas=<?= $d_siswa['id_kelas'] ?>" class="btn btn-outline-primary">
@@ -33,8 +42,8 @@ $tahun_ajaran_laporan = get_tahun_ajaran_aktif($koneksi);
                 </div>
             </div>
 
-            <div class="row bg-light rounded p-3 mb-4">
-                <div class="col-md-6">
+            <div class="row bg-light rounded p-3 mb-4 align-items-center">
+                <div class="col-md-5">
                     <table class="table table-sm table-borderless mb-0">
                         <tr>
                             <th class="w-50">NISN</th>
@@ -46,7 +55,7 @@ $tahun_ajaran_laporan = get_tahun_ajaran_aktif($koneksi);
                         </tr>
                     </table>
                 </div>
-                <div class="col-md-6">
+                <div class="col-md-4">
                     <table class="table table-sm table-borderless mb-0">
                         <tr>
                             <th class="w-50">Kelas</th>
@@ -57,6 +66,21 @@ $tahun_ajaran_laporan = get_tahun_ajaran_aktif($koneksi);
                             <td>: <?= htmlspecialchars($tahun_ajaran_laporan, ENT_QUOTES, 'UTF-8') ?></td>
                         </tr>
                     </table>
+                </div>
+                <div class="col-md-3">
+                    <?php if (count($tahun_ajaran_tersimpan) > 1): ?>
+                        <form method="GET" action="" class="form-inline justify-content-md-end mt-2 mt-md-0">
+                            <input type="hidden" name="nisn" value="<?= htmlspecialchars($nisn, ENT_QUOTES, 'UTF-8') ?>">
+                            <label for="select_ta" class="sr-only">Tahun Ajaran</label>
+                            <select name="tahun_ajaran" id="select_ta" class="form-control form-control-sm" onchange="this.form.submit()">
+                                <?php foreach ($tahun_ajaran_tersimpan as $ta_opt): ?>
+                                    <option value="<?= htmlspecialchars($ta_opt, ENT_QUOTES, 'UTF-8') ?>" <?= $ta_opt === $tahun_ajaran_laporan ? 'selected' : '' ?>>
+                                        TA <?= htmlspecialchars($ta_opt, ENT_QUOTES, 'UTF-8') ?>
+                                    </option>
+                                <?php endforeach; ?>
+                            </select>
+                        </form>
+                    <?php endif; ?>
                 </div>
             </div>
 
@@ -77,74 +101,80 @@ $tahun_ajaran_laporan = get_tahun_ajaran_aktif($koneksi);
 
                     if ($applies) {
                 ?>
-                        <div class="card mb-4">
+                        <div class="card mb-4 shadow-sm">
                             <div class="card-header bg-primary text-white">
-                                <h6 class="mb-0 text-white"><?= $d_jenis['nama_pembayaran'] ?> (<?= $d_jenis['tipe_bayar'] ?>) - Rp. <?= number_format($d_jenis['nominal'], 0, ',', '.') ?></h6>
+                                <h6 class="mb-0 text-white font-weight-bold"><?= htmlspecialchars($d_jenis['nama_pembayaran'], ENT_QUOTES, 'UTF-8') ?> (<?= htmlspecialchars($d_jenis['tipe_bayar'], ENT_QUOTES, 'UTF-8') ?>) - Rp. <?= number_format($d_jenis['nominal'], 0, ',', '.') ?></h6>
                             </div>
-                            <div class="card-body p-0">
-                                <table class="table table-bordered mb-0 pembayaran-table">
-                                            <?php if ($d_jenis['tipe_bayar'] == 'Bulanan') { ?>
-                                        <thead>
-                                            <tr>
-                                                <th>Bulan</th>
-                                                <th>Status</th>
-                                                <th>Tanggal Bayar</th>
-                                                <th>Jumlah</th>
-                                            </tr>
-                                        </thead>
-                                        <tbody>
-                                            <?php
-                                            $bulan = ['Juli', 'Agustus', 'September', 'Oktober', 'November', 'Desember', 'Januari', 'Februari', 'Maret', 'April', 'Mei', 'Juni'];
-
-                                            $paid_by_month = bulanan_map_pembayaran_per_bulan($koneksi, $nisn, $d_jenis['id_jenis_bayar'], $tahun_ajaran_laporan);
-                                            
-                                            foreach ($bulan as $bln) {
-                                                $d_bayar = $paid_by_month[$bln] ?? null;
-                                                
-                                                $status = $d_bayar ? '<span class="badge badge-success">Lunas</span>' : '<span class="badge badge-danger">Belum Bayar</span>';
-                                                $tgl = $d_bayar ? date('d/m/Y', strtotime($d_bayar['tgl_bayar'])) : '-';
-                                                $jml = $d_bayar ? 'Rp. ' . number_format($d_bayar['jumlah'], 0, ',', '.') : '-';
-                                            ?>
+                            <div class="card-body p-3">
+                                <?php if ($d_jenis['tipe_bayar'] == 'Bulanan') { ?>
+                                    <div class="table-responsive">
+                                        <table class="table table-bordered table-striped mb-0 no-data-table">
+                                            <thead>
                                                 <tr>
-                                                    <td data-label="Bulan"><?= $bln ?></td>
-                                                    <td data-label="Status"><?= $status ?></td>
-                                                    <td data-label="Tanggal Bayar"><?= $tgl ?></td>
-                                                    <td data-label="Jumlah"><?= $jml ?></td>
+                                                    <th style="width: 25%;">Bulan</th>
+                                                    <th style="width: 20%;">Status</th>
+                                                    <th style="width: 25%;">Tanggal Bayar</th>
+                                                    <th style="width: 30%;">Jumlah</th>
                                                 </tr>
-                                            <?php } ?>
-                                        </tbody>
-                                    <?php } else { 
-                                        // Tipe Cicilan / Bebas
-                                        $total_bayar = ambil_total_bayar_tersimpan($koneksi, $nisn, $d_jenis['id_jenis_bayar'], $tahun_ajaran_laporan);
-                                        $sisa = $d_jenis['nominal'] - $total_bayar;
-                                        $status_lunas = ($sisa <= 0) ? '<span class="badge badge-success">Lunas</span>' : '<span class="badge badge-warning">Belum Lunas</span>';
-                                    ?>
-                                        <tbody>
-                                            <tr><td class="w-[200px]">Total Tagihan</td><td>Rp. <?= number_format($d_jenis['nominal'], 0, ',', '.') ?></td></tr>
-                                            <tr><td>Total Dibayar</td><td>Rp. <?= number_format($total_bayar, 0, ',', '.') ?></td></tr>
-                                            <tr><td>Sisa Tagihan</td><td class="text-danger font-weight-bold">Rp. <?= number_format($sisa > 0 ? $sisa : 0, 0, ',', '.') ?></td></tr>
-                                            <tr><td>Status</td><td><?= $status_lunas ?></td></tr>
-                                            <tr>
-                                                <td colspan="2">
-                                                    <strong>Riwayat Pembayaran:</strong>
-                                                    <ul class="mt-2 pl-4">
-                                                        <?php
-                                                        $tahun_ajaran_laporan_esc = mysqli_real_escape_string($koneksi, $tahun_ajaran_laporan);
-                                                        $q_riwayat = mysqli_query($koneksi, "SELECT * FROM pembayaran WHERE nisn = '$nisn' AND id_jenis_bayar = '" . $d_jenis['id_jenis_bayar'] . "' AND tahun_ajaran = '$tahun_ajaran_laporan_esc' ORDER BY tgl_bayar ASC");
-                                                        if (mysqli_num_rows($q_riwayat) > 0) {
-                                                            while ($r = mysqli_fetch_assoc($q_riwayat)) {
-                                                                echo "<li>" . date('d/m/Y', strtotime($r['tgl_bayar'])) . " - Rp. " . number_format($r['jumlah_bayar'], 0, ',', '.') . "</li>";
+                                            </thead>
+                                            <tbody>
+                                                <?php
+                                                $bulan = ['Juli', 'Agustus', 'September', 'Oktober', 'November', 'Desember', 'Januari', 'Februari', 'Maret', 'April', 'Mei', 'Juni'];
+
+                                                $paid_by_month = bulanan_map_pembayaran_per_bulan($koneksi, $nisn, $d_jenis['id_jenis_bayar'], $tahun_ajaran_laporan);
+                                                
+                                                foreach ($bulan as $bln) {
+                                                    $d_bayar = $paid_by_month[$bln] ?? null;
+                                                    
+                                                    $status = $d_bayar ? '<span class="badge badge-success"><i class="fas fa-check-circle mr-1"></i>Lunas</span>' : '<span class="badge badge-danger"><i class="fas fa-times-circle mr-1"></i>Belum Bayar</span>';
+                                                    $tgl = $d_bayar ? date('d/m/Y', strtotime($d_bayar['tgl_bayar'])) : '-';
+                                                    $jml = $d_bayar ? 'Rp. ' . number_format($d_bayar['jumlah'], 0, ',', '.') : '-';
+                                                ?>
+                                                    <tr>
+                                                        <td data-label="Bulan" class="font-weight-600"><?= $bln ?></td>
+                                                        <td data-label="Status"><?= $status ?></td>
+                                                        <td data-label="Tanggal Bayar"><?= $tgl ?></td>
+                                                        <td data-label="Jumlah"><?= $jml ?></td>
+                                                    </tr>
+                                                <?php } ?>
+                                            </tbody>
+                                        </table>
+                                    </div>
+                                <?php } else { 
+                                    // Tipe Cicilan / Bebas
+                                    $total_bayar = ambil_total_bayar_tersimpan($koneksi, $nisn, $d_jenis['id_jenis_bayar'], $tahun_ajaran_laporan);
+                                    $sisa = $d_jenis['nominal'] - $total_bayar;
+                                    $status_lunas = ($sisa <= 0) ? '<span class="badge badge-success"><i class="fas fa-check-circle mr-1"></i>Lunas</span>' : '<span class="badge badge-warning"><i class="fas fa-clock mr-1"></i>Belum Lunas</span>';
+                                ?>
+                                    <div class="table-responsive">
+                                        <table class="table table-bordered mb-0 no-data-table">
+                                            <tbody>
+                                                <tr><td style="width: 200px;" class="font-weight-bold bg-light">Total Tagihan</td><td>Rp. <?= number_format($d_jenis['nominal'], 0, ',', '.') ?></td></tr>
+                                                <tr><td class="font-weight-bold bg-light">Total Dibayar</td><td>Rp. <?= number_format($total_bayar, 0, ',', '.') ?></td></tr>
+                                                <tr><td class="font-weight-bold bg-light">Sisa Tagihan</td><td class="text-danger font-weight-bold">Rp. <?= number_format($sisa > 0 ? $sisa : 0, 0, ',', '.') ?></td></tr>
+                                                <tr><td class="font-weight-bold bg-light">Status</td><td><?= $status_lunas ?></td></tr>
+                                                <tr>
+                                                    <td colspan="2">
+                                                        <strong>Riwayat Pembayaran:</strong>
+                                                        <ul class="mt-2 pl-4 mb-0">
+                                                            <?php
+                                                            $tahun_ajaran_laporan_esc = mysqli_real_escape_string($koneksi, $tahun_ajaran_laporan);
+                                                            $q_riwayat = mysqli_query($koneksi, "SELECT * FROM pembayaran WHERE nisn = '$nisn' AND id_jenis_bayar = '" . $d_jenis['id_jenis_bayar'] . "' AND tahun_ajaran = '$tahun_ajaran_laporan_esc' ORDER BY tgl_bayar ASC");
+                                                            if (mysqli_num_rows($q_riwayat) > 0) {
+                                                                while ($r = mysqli_fetch_assoc($q_riwayat)) {
+                                                                    echo "<li>" . date('d/m/Y', strtotime($r['tgl_bayar'])) . " - Rp. " . number_format($r['jumlah_bayar'], 0, ',', '.') . "</li>";
+                                                                }
+                                                            } else {
+                                                                echo "<li class=\"text-muted\">Belum ada pembayaran pada tahun ajaran ini</li>";
                                                             }
-                                                        } else {
-                                                            echo "<li>Belum ada pembayaran</li>";
-                                                        }
-                                                        ?>
-                                                    </ul>
-                                                </td>
-                                            </tr>
-                                        </tbody>
-                                    <?php } ?>
-                                </table>
+                                                            ?>
+                                                        </ul>
+                                                    </td>
+                                                </tr>
+                                            </tbody>
+                                        </table>
+                                    </div>
+                                <?php } ?>
                             </div>
                         </div>
                 <?php

@@ -79,20 +79,33 @@ if (isset($_POST['no_transaksi'])) {
                     <input type="hidden" name="payment[<?= $id_jb ?>][id_jenis_bayar]" value="<?= $id_jb ?>">
                     <input type="hidden" name="payment[<?= $id_jb ?>][id_pembayaran]" value="<?= $item['id_pembayaran'] ?>">
                     
-                    <?php if ($item['tipe_bayar'] == 'Bulanan'): ?>
+                    <?php if ($item['tipe_bayar'] == 'Bulanan'): 
+                        $months = ['Juli', 'Agustus', 'September', 'Oktober', 'November', 'Desember', 'Januari', 'Februari', 'Maret', 'April', 'Mei', 'Juni'];
+                        $selected_months = array_map('trim', explode(',', (string)$item['bulan_bayar']));
+                        $th_aktif = get_tahun_ajaran_aktif($koneksi);
+                        $all_paid = ambil_bulan_bayar_tersimpan($koneksi, $header['nisn'], $id_jb, $th_aktif);
+                        $paid_other = array_values(array_diff($all_paid, $selected_months));
+                    ?>
                         <div class="form-group">
-                            <label>Bulan Bayar</label>
+                            <label class="d-flex justify-content-between align-items-center">
+                                <span>Bulan Bayar</span>
+                                <?php if (!empty($paid_other)): ?>
+                                    <span class="badge badge-info" style="font-size:0.75rem;">Lunas di transaksi lain: <?= implode(', ', $paid_other) ?></span>
+                                <?php endif; ?>
+                            </label>
                             <select name="payment[<?= $id_jb ?>][bulan_bayar][]" class="form-control select2-edit-bulan" multiple="multiple" style="width: 100%;" required>
                                 <?php 
-                                $months = ['Juli', 'Agustus', 'September', 'Oktober', 'November', 'Desember', 'Januari', 'Februari', 'Maret', 'April', 'Mei', 'Juni'];
-                                $selected_months = explode(', ', $item['bulan_bayar']);
                                 foreach ($months as $m) {
-                                    $selected = in_array($m, $selected_months) ? 'selected' : '';
-                                    echo "<option value='$m' $selected>$m</option>";
+                                    $is_sel = in_array($m, $selected_months, true);
+                                    $is_dis = in_array($m, $paid_other, true);
+                                    $dis_attr = $is_dis ? 'disabled' : '';
+                                    $label_opt = $m . ($is_dis ? ' (Lunas Trx Lain)' : '');
+                                    $sel_attr = $is_sel ? 'selected' : '';
+                                    echo "<option value='$m' $sel_attr $dis_attr>$label_opt</option>";
                                 }
                                 ?>
                             </select>
-                            <small class="text-muted">* Nominal otomatis: Rp <?= number_format($item['nominal_asli'], 0, ',', '.') ?> / bulan</small>
+                            <small class="text-muted">* Nominal otomatis: Rp <?= number_format($item['nominal_asli'], 0, ',', '.') ?> / bulan. Bulan yang sudah lunas di transaksi lain dinonaktifkan.</small>
                         </div>
                     <?php else: ?>
                         <div class="row">

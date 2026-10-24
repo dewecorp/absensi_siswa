@@ -193,17 +193,72 @@ while ($r = mysqli_fetch_assoc($q_chart)) {
     gap: 12px;
     margin-bottom: 8px;
 }
-@media (min-width: 1200px) {
+@media (min-width: 992px) {
     .pembayaran-stat-grid {
         grid-template-columns: repeat(4, minmax(0, 1fr));
     }
 }
+.pembayaran-stat-grid .dash-stat-card {
+    padding: 14px 16px;
+    gap: 12px;
+    align-items: center;
+}
+.pembayaran-stat-grid .dash-stat-body {
+    min-width: 0;
+    flex: 1 1 0%;
+}
+.pembayaran-stat-grid .dash-stat-value {
+    white-space: nowrap !important;
+    word-break: keep-all !important;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    font-size: 1.25rem;
+    line-height: 1.2;
+}
+@media (min-width: 1200px) and (max-width: 1439.98px) {
+    .pembayaran-stat-grid .dash-stat-value {
+        font-size: 1.1rem;
+    }
+}
+@media (max-width: 575.98px) {
+    .pembayaran-stat-grid {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        gap: 10px;
+    }
+    .pembayaran-stat-grid .dash-stat-card {
+        padding: 10px 10px;
+        gap: 8px;
+    }
+    .pembayaran-stat-grid .dash-stat-ico {
+        width: 36px;
+        height: 36px;
+        border-radius: 10px;
+        font-size: .85rem;
+    }
+    .pembayaran-stat-grid .dash-stat-label {
+        font-size: .62rem;
+    }
+    .pembayaran-stat-grid .dash-stat-value {
+        font-size: 0.95rem !important;
+    }
+    .pembayaran-stat-grid .dash-stat-sub span {
+        font-size: .6rem;
+    }
+    .pembayaran-jenis-grid { gap: 10px; }
+    .pembayaran-jenis { padding: 11px 12px; gap: 10px; }
+    .pembayaran-jenis-ico { width: 36px; height: 36px; border-radius: 11px; font-size: .82rem; }
+    .pembayaran-jenis-total { font-size: .8rem; }
+}
+</style>
+<?php
+// Pembayaran Jenis Grid Styles
+?>
+<style>
 .pembayaran-class-grid {
     display: grid;
     grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
     gap: 12px;
 }
-/* ── Kartu jenis bayar (gaya mobile app) ───────────────────── */
 .pembayaran-jenis-grid {
     display: grid;
     grid-template-columns: repeat(auto-fit, minmax(230px, 1fr));
@@ -238,29 +293,6 @@ while ($r = mysqli_fetch_assoc($q_chart)) {
 .pembayaran-jenis.tint-green  { background: #f3fdf5; border-color: rgba(34,197,94,.18); }
 .pembayaran-jenis.tint-indigo { background: #f3f4ff; border-color: rgba(99,102,241,.18); }
 .pembayaran-jenis.tint-violet { background: #f7f5ff; border-color: rgba(167,139,250,.18); }
-@media (max-width: 575.98px) {
-    .pembayaran-stat-grid {
-        grid-template-columns: repeat(2, minmax(0, 1fr));
-        gap: 10px;
-    }
-    .pembayaran-stat-grid .dash-stat-card {
-        padding: 11px 12px;
-        gap: 10px;
-    }
-    .pembayaran-stat-grid .dash-stat-ico {
-        width: 40px;
-        height: 40px;
-        border-radius: 12px;
-        font-size: .95rem;
-    }
-    .pembayaran-stat-grid .dash-stat-value {
-        font-size: 1.15rem;
-    }
-    .pembayaran-jenis-grid { gap: 10px; }
-    .pembayaran-jenis { padding: 11px 12px; gap: 10px; }
-    .pembayaran-jenis-ico { width: 36px; height: 36px; border-radius: 11px; font-size: .82rem; }
-    .pembayaran-jenis-total { font-size: .8rem; }
-}
 </style>
 
 <div class="dash-section-head">
@@ -300,7 +332,6 @@ while ($r = mysqli_fetch_assoc($q_chart)) {
         ],
     ];
     foreach ($summary_cards as $card) :
-        $value_style = strlen((string) $card['value']) > 13 ? ' style="font-size:1.05rem;"' : '';
     ?>
     <div>
         <div class="dash-stat-card tint-<?= htmlspecialchars($card['tone'], ENT_QUOTES, 'UTF-8') ?>">
@@ -309,7 +340,7 @@ while ($r = mysqli_fetch_assoc($q_chart)) {
             </div>
             <div class="dash-stat-body">
                 <div class="dash-stat-label"><?= htmlspecialchars($card['label'], ENT_QUOTES, 'UTF-8') ?></div>
-                <div class="dash-stat-value"<?= $value_style ?>><?= htmlspecialchars($card['value'], ENT_QUOTES, 'UTF-8') ?></div>
+                <div class="dash-stat-value"><?= htmlspecialchars($card['value'], ENT_QUOTES, 'UTF-8') ?></div>
                 <div class="dash-stat-sub"><span><?= htmlspecialchars($card['sub'], ENT_QUOTES, 'UTF-8') ?></span></div>
             </div>
         </div>
