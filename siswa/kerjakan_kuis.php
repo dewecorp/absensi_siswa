@@ -81,9 +81,29 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && !$is_upcoming && (empty($submission
         $jwb = trim((string)$jwb);
         $detail_jawaban[$sId] = $jwb;
 
-        if ($soal['tipe_soal'] === 'Pilihan Ganda' || $soal['tipe_soal'] === 'Pilihan Ganda Kompleks') {
+        if ($soal['tipe_soal'] === 'Pilihan Ganda') {
             if ($jwb !== '' && strcasecmp($jwb, trim((string)$soal['kunci_jawaban'])) === 0) {
                 $total_skor += $bobot;
+            }
+        } elseif ($soal['tipe_soal'] === 'Pilihan Ganda Kompleks') {
+            // Kunci jawaban & jawaban siswa format koma, misal "A,C"
+            $kunci_arr = array_filter(array_map('strtoupper', array_map('trim', explode(',', (string)$soal['kunci_jawaban']))));
+            $jwb_arr   = array_filter(array_map('strtoupper', array_map('trim', explode(',', $jwb))));
+            $total_kunci = count($kunci_arr);
+            if ($total_kunci > 0 && $jwb !== '') {
+                $benar = count(array_intersect($kunci_arr, $jwb_arr));
+                $salah = count(array_diff($jwb_arr, $kunci_arr));
+                if ($benar === $total_kunci && $salah === 0) {
+                    // Semua benar, tidak ada jawaban salah → skor penuh
+                    $total_skor += $bobot;
+                } elseif ($benar > 0 && $salah === 0) {
+                    // Sebagian benar, tidak ada yang salah → setengah skor
+                    $total_skor += ($bobot * 0.5);
+                } elseif ($benar > 0 && $salah > 0) {
+                    // Ada yang benar ada yang salah (1 benar 1 salah) → setengah skor
+                    $total_skor += ($bobot * 0.5);
+                }
+                // Semua salah (benar = 0) → skor 0, tidak ditambah
             }
         } elseif ($soal['tipe_soal'] === 'Essay') {
             $kunci_essay = trim((string)$soal['kunci_jawaban']);

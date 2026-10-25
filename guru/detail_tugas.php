@@ -99,7 +99,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         }
     } elseif ($action === 'simpan_soal') {
             $soal_id = (int)($_POST['soal_id'] ?? 0);
-            $tipe_soal = in_array($_POST['tipe_soal'] ?? '', ['Pilihan Ganda', 'Essay'], true) ? $_POST['tipe_soal'] : 'Pilihan Ganda';
+            $tipe_soal = in_array($_POST['tipe_soal'] ?? '', ['Pilihan Ganda', 'Pilihan Ganda Kompleks', 'Essay'], true) ? $_POST['tipe_soal'] : 'Pilihan Ganda';
             $pertanyaan = trim((string)($_POST['pertanyaan'] ?? ''));
             $pilihan_a = trim((string)($_POST['pilihan_a'] ?? ''));
             $pilihan_b = trim((string)($_POST['pilihan_b'] ?? ''));

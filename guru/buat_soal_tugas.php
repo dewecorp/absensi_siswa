@@ -51,6 +51,13 @@ $pdo->exec("
     ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4
 ");
 
+// Pastikan kolom kunci_jawaban bertipe TEXT agar muat kunci jawaban Essay / uraian panjang
+try {
+    $pdo->exec("ALTER TABLE tb_tugas_soal MODIFY COLUMN kunci_jawaban TEXT NULL");
+} catch (Exception $e) {
+    // abaikan jika sudah TEXT
+}
+
 $bobot_jenis_defaults = ['Pilihan Ganda' => 10, 'Pilihan Ganda Kompleks' => 10, 'Essay' => 10];
 $bobot_jenis_map = $bobot_jenis_defaults;
 try {
@@ -132,6 +139,37 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && $can_crud) {
         } catch (Exception $e) {
             $message = ['type' => 'danger', 'text' => 'Gagal menghapus soal: ' . $e->getMessage()];
         }
+    } elseif ($action === 'bulk_hapus_soal') {
+        $soal_ids = $_POST['soal_ids'] ?? [];
+        if (!is_array($soal_ids)) {
+            $soal_ids = array_filter(array_map('intval', explode(',', (string)$soal_ids)));
+        } else {
+            $soal_ids = array_filter(array_map('intval', $soal_ids));
+        }
+
+        if (empty($soal_ids)) {
+            $message = ['type' => 'warning', 'text' => 'Pilih minimal satu butir soal untuk dihapus.'];
+        } else {
+            try {
+                $placeholders = implode(',', array_fill(0, count($soal_ids), '?'));
+                $params = array_merge([$id_tugas], $soal_ids);
+                $stBulk = $pdo->prepare("DELETE FROM tb_tugas_soal WHERE id_tugas = ? AND id IN ($placeholders)");
+                $stBulk->execute($params);
+                $deleted_count = $stBulk->rowCount();
+                $message = ['type' => 'success', 'text' => "Berhasil menghapus {$deleted_count} butir soal."];
+            } catch (Exception $e) {
+                $message = ['type' => 'danger', 'text' => 'Gagal menghapus soal massal: ' . $e->getMessage()];
+            }
+        }
+    } elseif ($action === 'hapus_semua_soal') {
+        try {
+            $stAll = $pdo->prepare("DELETE FROM tb_tugas_soal WHERE id_tugas = ?");
+            $stAll->execute([$id_tugas]);
+            $deleted_count = $stAll->rowCount();
+            $message = ['type' => 'success', 'text' => "Semua soal ({$deleted_count} butir) berhasil dihapus."];
+        } catch (Exception $e) {
+            $message = ['type' => 'danger', 'text' => 'Gagal menghapus semua soal: ' . $e->getMessage()];
+        }
     } elseif ($action === 'impor_soal' && isset($_FILES['file_impor'])) {
         $file = $_FILES['file_impor'];
         if ($file['error'] === UPLOAD_ERR_OK) {
@@ -160,67 +198,98 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && $can_crud) {
                             $is_kuis_docx = ($tugas['jenis_tugas'] === 'Kuis');
                             $skipped_uraian_docx = 0;
                             $ins_docx = $pdo->prepare("INSERT INTO tb_tugas_soal (id_tugas, tipe_soal, pertanyaan, pilihan_a, pilihan_b, pilihan_c, pilihan_d, pilihan_e, kunci_jawaban, bobot) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)");
-                            $save_docx = function () use ($ins_docx, $id_tugas, &$current_q, &$opts, &$kunci, &$tipe, &$imported_count, $bobot_jenis_map, $is_kuis_docx, &$skipped_uraian_docx) {
+                            $save_docx = function () use ($ins_docx, $id_tugas, &$current_q, &$opts, &$kunci, &$tipe, &$imported_count, $bobot_jenis_map, $is_kuis_docx, &$skipped_uraian_docx, &$mode_uraian) {
                                 if (trim($current_q) === '') return;
                                 $t = $tipe;
+                                if ($mode_uraian || $t === 'Essay') {
+                                    $t = 'Essay';
+                                } elseif ($t === 'Pilihan Ganda' && strpos($kunci, ',') !== false) {
+                                    $t = 'Pilihan Ganda Kompleks';
+                                }
                                 if ($t === 'Essay' && $is_kuis_docx) {
                                     $skipped_uraian_docx++;
                                     $current_q = '';
                                     $opts = [];
-                                    $kunci = 'A';
+                                    $kunci = '';
                                     $tipe = 'Pilihan Ganda';
                                     return;
-                                }
-                                if ($t === 'Pilihan Ganda' && strpos($kunci, ',') !== false) {
-                                    $t = 'Pilihan Ganda Kompleks';
                                 }
                                 $b = $bobot_jenis_map[$t] ?? 10;
                                 $ins_docx->execute([$id_tugas, $t, $current_q, $opts['A'] ?? '', $opts['B'] ?? '', $opts['C'] ?? '', $opts['D'] ?? '', $opts['E'] ?? '', $kunci, $b]);
                                 $imported_count++;
+                                $current_q = '';
+                                $opts = [];
+                                $kunci = '';
                             };
 
                             foreach ($paragraphs as $p) {
                                 $text = trim($p->textContent);
                                 if ($text === '') continue;
-                                if (preg_match('/^bagian\s+b\b/i', $text)) {
+
+                                // Abaikan header template & petunjuk
+                                if (stripos($text, 'TEMPLATE SOAL') === 0 || stripos($text, 'Catatan:') === 0) continue;
+
+                                // Deteksi pergantian bagian / section
+                                if (preg_match('/^bagian\s+b\b/i', $text) || preg_match('/^(uraian|essay)\b/i', $text)) {
                                     $save_docx();
                                     $mode_uraian = true;
-                                    $current_q = '';
-                                    $opts = [];
-                                    $kunci = '';
                                     $tipe = 'Essay';
                                     continue;
                                 }
-                                if (preg_match('/^bagian\s+a\b/i', $text)) {
+                                if (preg_match('/^bagian\s+a\b/i', $text) || preg_match('/^pilihan\s+ganda\b/i', $text)) {
                                     $save_docx();
                                     $mode_uraian = false;
-                                    $current_q = '';
-                                    $opts = [];
-                                    $kunci = 'A';
                                     $tipe = 'Pilihan Ganda';
                                     continue;
                                 }
-                                if (stripos($text, 'TEMPLATE SOAL') === 0 || stripos($text, 'Catatan:') === 0) continue;
-                                if (preg_match('/^(soal|no\.?)\s*\d+/i', $text) || strpos($text, '?') !== false || strlen($text) > 40) {
+
+                                // 1. KUNCI JAWABAN (dicek LEBIH DULU agar baris kunci tidak dianggap soal baru)
+                                if (preg_match('/^kunci(\s+uraian|\s+essay)?\s*:\s*(.+)$/i', $text, $m)) {
+                                    if ($mode_uraian) {
+                                        $kunci = trim($m[2]);
+                                        $tipe = 'Essay';
+                                    } else {
+                                        preg_match_all('/[A-E]/i', $m[2], $km);
+                                        $letters = array_unique(array_map('strtoupper', $km[0]));
+                                        if (!empty($letters)) {
+                                            $kunci = implode(',', $letters);
+                                            if (count($letters) > 1) {
+                                                $tipe = 'Pilihan Ganda Kompleks';
+                                            }
+                                        }
+                                    }
+                                    continue;
+                                }
+
+                                // 2. OPSI PILIHAN GANDA (A. ... B. ... dst)
+                                if (!$mode_uraian && preg_match('/^([A-E])[\.\)]\s*(.*)/i', $text, $m)) {
+                                    $opts[strtoupper($m[1])] = trim($m[2]);
+                                    continue;
+                                }
+
+                                // 3. SOAL BARU: nomor eksplisit ("Soal 1:", "No. 1", "1.", "1)")
+                                if (preg_match('/^(soal\s*\d+|no\.?\s*\d+|pertanyaan\s*\d+|\d+[\.\)])\s*[:.\-]?\s*(.*)/i', $text, $m)) {
                                     $save_docx();
-                                    $current_q = preg_replace('/^(soal|no\.?)\s*\d+\s*[:.\-]?\s*/i', '', $text);
+                                    $q_text = trim($m[2]);
+                                    $current_q = $q_text !== '' ? $q_text : $text;
                                     $opts = [];
                                     $kunci = $mode_uraian ? '' : 'A';
                                     $tipe = $mode_uraian ? 'Essay' : 'Pilihan Ganda';
-                                } elseif (!$mode_uraian && preg_match('/^([A-E])[\.\)]\s*(.*)/i', $text, $m)) {
-                                    $opts[strtoupper($m[1])] = trim($m[2]);
-                                } elseif (preg_match('/^kunci\s+uraian\s*:\s*(.+)$/i', $text, $m)) {
-                                    $kunci = trim($m[1]);
-                                    $tipe = 'Essay';
-                                } elseif (preg_match('/^kunci\s*:\s*(.+)$/i', $text, $m)) {
-                                    if ($mode_uraian) {
-                                        $kunci = trim($m[1]);
-                                        $tipe = 'Essay';
-                                    } else {
-                                        preg_match_all('/[A-E]/i', $m[1], $km);
-                                        $letters = array_unique(array_map('strtoupper', $km[0]));
-                                        if (!empty($letters)) $kunci = implode(',', $letters);
-                                    }
+                                    continue;
+                                }
+
+                                // 4. Pertanyaan pertama jika belum ada soal aktif
+                                if ($current_q === '') {
+                                    $current_q = $text;
+                                    $opts = [];
+                                    $kunci = $mode_uraian ? '' : 'A';
+                                    $tipe = $mode_uraian ? 'Essay' : 'Pilihan Ganda';
+                                    continue;
+                                }
+
+                                // 5. Pertanyaan multiline (lanjutan teks soal sebelum opsi pilihan atau sebelum kunci)
+                                if (empty($opts) && $kunci === '') {
+                                    $current_q .= "\n" . $text;
                                 }
                             }
                             $save_docx();
@@ -429,8 +498,18 @@ include '../templates/sidebar.php';
 
             <!-- Daftar Soal -->
             <div class="card shadow-sm">
-                <div class="card-header bg-light">
-                    <h4><i class="fas fa-list-alt mr-2"></i>Daftar Butir Soal</h4>
+                <div class="card-header bg-light d-flex justify-content-between align-items-center flex-wrap" style="gap:8px;">
+                    <h4 class="mb-0"><i class="fas fa-list-alt mr-2"></i>Daftar Butir Soal</h4>
+                    <?php if (!empty($soal_list) && $can_crud): ?>
+                    <div class="d-flex align-items-center flex-wrap" style="gap:8px;">
+                        <button type="button" class="btn btn-outline-danger btn-sm" id="btnHapusSemua">
+                            <i class="fas fa-trash-alt mr-1"></i> Hapus Semua Soal
+                        </button>
+                        <button type="button" class="btn btn-danger btn-sm" id="btnBulkHapus" disabled>
+                            <i class="fas fa-trash mr-1"></i> Hapus Terpilih (<span id="bulkCount">0</span>)
+                        </button>
+                    </div>
+                    <?php endif; ?>
                 </div>
                 <div class="card-body">
                     <?php if (empty($soal_list)): ?>
@@ -445,40 +524,61 @@ include '../templates/sidebar.php';
                             <?php endif; ?>
                         </div>
                     <?php else: ?>
-                        <div class="list-group">
-                            <?php foreach ($soal_list as $idx => $soal): ?>
-                                <div class="list-group-item list-group-item-action flex-column align-items-start mb-3 border rounded shadow-sm">
-                                    <div class="d-flex w-100 justify-content-between align-items-center mb-1">
-                                        <h6 class="mb-1 font-weight-bold text-dark">
-                                            <span class="badge badge-primary mr-2">Soal No. <?= $idx + 1 ?></span>
-                                            <span class="badge badge-info mr-2"><?= htmlspecialchars($soal['tipe_soal']) ?></span>
-                                            <span class="badge badge-secondary">Bobot: <?= (int)$soal['bobot'] ?></span>
-                                        </h6>
-                                        <?php if ($can_crud): ?>
-                                        <div>
-                                            <button type="button" class="btn btn-warning btn-sm py-0 px-2 btn-edit-soal" data-json='<?= htmlspecialchars(json_encode($soal), ENT_QUOTES, 'UTF-8') ?>' title="Edit Soal"><i class="fas fa-pencil-alt"></i></button>
-                                            <button type="button" class="btn btn-danger btn-sm py-0 px-2 btn-hapus-soal" data-id="<?= (int)$soal['id'] ?>" title="Hapus Soal"><i class="fas fa-times"></i></button>
+                        <?php if ($can_crud): ?>
+                        <div class="custom-control custom-checkbox mb-3 pb-2 border-bottom">
+                            <input type="checkbox" class="custom-control-input" id="checkAllSoal">
+                            <label class="custom-control-label font-weight-bold" for="checkAllSoal">Pilih Semua Soal (Check All)</label>
+                        </div>
+                        <?php endif; ?>
+                        <form method="POST" id="formBulkHapus">
+                            <input type="hidden" name="action" value="bulk_hapus_soal">
+                            <div class="list-group">
+                                <?php foreach ($soal_list as $idx => $soal): ?>
+                                    <div class="list-group-item list-group-item-action flex-column align-items-start mb-3 border rounded shadow-sm">
+                                        <div class="d-flex w-100 justify-content-between align-items-center mb-1">
+                                            <div class="d-flex align-items-center flex-wrap" style="gap:8px;">
+                                                <?php if ($can_crud): ?>
+                                                <div class="custom-control custom-checkbox mr-2">
+                                                    <input type="checkbox" name="soal_ids[]" value="<?= (int)$soal['id'] ?>" class="custom-control-input check-soal-item" id="chk_soal_<?= (int)$soal['id'] ?>">
+                                                    <label class="custom-control-label" for="chk_soal_<?= (int)$soal['id'] ?>"></label>
+                                                </div>
+                                                <?php endif; ?>
+                                                <h6 class="mb-0 font-weight-bold text-dark">
+                                                    <span class="badge badge-primary mr-1">Soal No. <?= $idx + 1 ?></span>
+                                                    <span class="badge badge-info mr-1"><?= htmlspecialchars($soal['tipe_soal']) ?></span>
+                                                    <span class="badge badge-secondary">Bobot: <?= (int)$soal['bobot'] ?></span>
+                                                </h6>
+                                            </div>
+                                            <?php if ($can_crud): ?>
+                                            <div>
+                                                <button type="button" class="btn btn-warning btn-sm py-0 px-2 btn-edit-soal" data-json='<?= htmlspecialchars(json_encode($soal), ENT_QUOTES, 'UTF-8') ?>' title="Edit Soal"><i class="fas fa-pencil-alt"></i></button>
+                                                <button type="button" class="btn btn-danger btn-sm py-0 px-2 btn-hapus-soal" data-id="<?= (int)$soal['id'] ?>" title="Hapus Soal"><i class="fas fa-times"></i></button>
+                                            </div>
+                                            <?php endif; ?>
                                         </div>
+                                        <p class="mb-2 font-weight-normal text-dark" style="font-size: 14.5px; line-height: 1.6;"><?= nl2br(htmlspecialchars($soal['pertanyaan'])) ?></p>
+                                        <?php if ($soal['tipe_soal'] === 'Pilihan Ganda' || $soal['tipe_soal'] === 'Pilihan Ganda Kompleks'): ?>
+                                            <?php $kunci_arr = array_map('trim', explode(',', (string)$soal['kunci_jawaban'])); ?>
+                                            <div class="row small text-muted pl-3 mb-2" style="font-size: 13.5px;">
+                                                <?php foreach (['A' => $soal['pilihan_a'], 'B' => $soal['pilihan_b'], 'C' => $soal['pilihan_c'], 'D' => $soal['pilihan_d'], 'E' => $soal['pilihan_e']] as $k => $opt): ?>
+                                                    <?php if (!empty($opt)): ?>
+                                                        <?php $is_kunci = in_array($k, $kunci_arr, true); ?>
+                                                        <div class="col-12 py-1 <?= $is_kunci ? 'text-success font-weight-bold bg-light rounded px-2' : '' ?>">
+                                                            <strong><?= $k ?>.</strong> <?= htmlspecialchars($opt) ?> <?= $is_kunci ? '<i class="fas fa-check-circle ml-2"></i> (Kunci Jawaban)' : '' ?>
+                                                        </div>
+                                                    <?php endif; ?>
+                                                <?php endforeach; ?>
+                                            </div>
+                                        <?php else: ?>
+                                            <div class="small text-muted font-italic mb-2">Soal Essay / Uraian (Koreksi manual oleh guru). <?= !empty($soal['kunci_jawaban']) ? '<br><strong class="text-success font-normal">Kunci Jawaban:</strong> ' . htmlspecialchars($soal['kunci_jawaban']) : '' ?></div>
                                         <?php endif; ?>
                                     </div>
-                                    <p class="mb-2 font-weight-normal text-dark" style="font-size: 14.5px; line-height: 1.6;"><?= nl2br(htmlspecialchars($soal['pertanyaan'])) ?></p>
-                                    <?php if ($soal['tipe_soal'] === 'Pilihan Ganda'): ?>
-                                        <div class="row small text-muted pl-3 mb-2" style="font-size: 13.5px;">
-                                            <?php foreach (['A' => $soal['pilihan_a'], 'B' => $soal['pilihan_b'], 'C' => $soal['pilihan_c'], 'D' => $soal['pilihan_d'], 'E' => $soal['pilihan_e']] as $k => $opt): ?>
-                                                <?php if (!empty($opt)): ?>
-                                                    <div class="col-12 py-1 <?= $soal['kunci_jawaban'] === $k ? 'text-success font-weight-bold bg-light rounded px-2' : '' ?>">
-                                                        <strong><?= $k ?>.</strong> <?= htmlspecialchars($opt) ?> <?= $soal['kunci_jawaban'] === $k ? '<i class="fas fa-check-circle ml-2"></i> (Kunci Jawaban)' : '' ?>
-                                                    </div>
-                                                <?php endif; ?>
-                                            <?php endforeach; ?>
-                                        </div>
-                                    <?php else: ?>
-                                        <div class="small text-muted font-italic mb-2">Soal Essay / Uraian (Koreksi manual oleh guru).</div>
-                                    <?php endif; ?>
-                                </div>
-                            <?php endforeach; ?>
-                        </div>
+                                <?php endforeach; ?>
+                            </div>
+                        </form>
                     <?php endif; ?>
+                </div>
+            </div>
                 </div>
             </div>
         </div>
@@ -708,6 +808,89 @@ $(document).ready(function() {
             }
         });
     });
+
+    // Bulk Delete Checkbox Logic
+    function updateBulkButton() {
+        var checkedCount = $(\'.check-soal-item:checked\').length;
+        var totalCount = $(\'.check-soal-item\').length;
+        $(\'#bulkCount\').text(checkedCount);
+        $(\'#btnBulkHapus\').prop(\'disabled\', checkedCount === 0);
+        if (totalCount > 0) {
+            $(\'#checkAllSoal\').prop(\'checked\', checkedCount === totalCount);
+        }
+    }
+
+    $(document).on(\'change\', \'#checkAllSoal\', function() {
+        var isChecked = $(this).is(\':checked\');
+        $(\'.check-soal-item\').prop(\'checked\', isChecked);
+        updateBulkButton();
+    });
+
+    $(document).on(\'change\', \'.check-soal-item\', function() {
+        updateBulkButton();
+    });
+
+    $(document).on(\'click\', \'#btnBulkHapus\', function() {
+        var count = $(\'.check-soal-item:checked\').length;
+        if (count === 0) return;
+        Swal.fire({
+            title: \'Hapus \' + count + \' Soal Terpilih?\',
+            text: \'Semua butir soal yang dicentang akan dihapus permanen.\',
+            icon: \'warning\',
+            showCancelButton: true,
+            confirmButtonColor: \'#d33\',
+            confirmButtonText: \'Ya, Hapus Terpilih\',
+            cancelButtonText: \'Batal\'
+        }).then(function(res) {
+            if (res.isConfirmed) {
+                $(\'#formBulkHapus\').submit();
+            }
+        });
+    });
+
+    $(document).on(\'click\', \'#btnHapusSemua\', function() {
+        Swal.fire({
+            title: \'Hapus SEMUA Soal?\',
+            text: \'Seluruh butir soal dalam tugas ini akan dihapus permanen. Tindakan ini tidak bisa dibatalkan!\',
+            icon: \'error\',
+            showCancelButton: true,
+            confirmButtonColor: \'#d33\',
+            confirmButtonText: \'Ya, Hapus Semua\',
+            cancelButtonText: \'Batal\'
+        }).then(function(res) {
+            if (res.isConfirmed) {
+                var f = document.createElement(\'form\');
+                f.method = \'POST\';
+                f.innerHTML = \'<input type=\"hidden\" name=\"action\" value=\"hapus_semua_soal\">\';
+                document.body.appendChild(f);
+                f.submit();
+            }
+        });
+    });
+
+    // Loading / Progress saat form impor disubmit
+    $(\'#formImporSoal\').on(\'submit\', function(e) {
+        var fileInp = $(this).find(\'input[type=\"file\"]\')[0];
+        if (!fileInp || !fileInp.files || fileInp.files.length === 0) {
+            return;
+        }
+        var fileName = fileInp.files[0].name;
+        $(\'#modalImpor\').modal(\'hide\');
+        Swal.fire({
+            title: \'Sedang Mengimpor Soal...\',
+            html: \'<div class=\"text-muted mb-2\">Membaca berkas: <strong>\' + fileName + \'</strong></div>\' +
+                  \'<div class=\"progress mb-3\" style=\"height: 18px;\">\' +
+                  \'  <div class=\"progress-bar progress-bar-striped progress-bar-animated bg-success\" role=\"progressbar\" style=\"width: 100%\">Memproses butir soal...</div>\' +
+                  \'</div>\' +
+                  \'<small class=\"text-muted\">Sistem sedang mengurai pertanyaan, pilihan jawaban, dan kunci jawaban. Mohon tunggu sebentar.</small>\',
+            allowOutsideClick: false,
+            allowEscapeKey: false,
+            showConfirmButton: false,
+            didOpen: function() {
+                Swal.showLoading();
+            }
+        });
+    });
 });
 ';
 ?>
@@ -716,7 +899,7 @@ $(document).ready(function() {
 <div class="modal fade" id="modalImpor" tabindex="-1" role="dialog" aria-hidden="true">
     <div class="modal-dialog modal-lg" role="document">
         <div class="modal-content">
-            <form method="POST" enctype="multipart/form-data">
+            <form method="POST" enctype="multipart/form-data" id="formImporSoal">
                 <input type="hidden" name="action" value="impor_soal">
                 <div class="modal-header">
                     <h5 class="modal-title"><i class="fas fa-file-excel mr-2"></i>Impor Soal dari Word (.docx) / Excel (.xls/.xlsx)</h5>
