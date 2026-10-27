@@ -626,10 +626,12 @@ switch ($user_level) {
                 'icon' => 'fas fa-tasks',
                 'submenu' => [
                     ['title' => 'Komponen Program Kerja', 'url' => '../kepala/komponen_program_kerja.php?session_type=admin', 'active' => $current_page === 'komponen_program_kerja.php'],
-                    ['title' => 'Program Kerja Kepala', 'url' => '../kepala/program_kerja.php?session_type=admin', 'active' => $current_page === 'program_kerja.php'],
+                    ['title' => 'Program Kerja Tahunan', 'url' => '../kepala/program_kerja.php?session_type=admin', 'active' => $current_page === 'program_kerja.php'],
+                    ['title' => 'Rencana Kerja Jangka Menengah (RKJM)', 'url' => '../kepala/rkjm.php', 'active' => in_array($current_page, ['rkjm.php', 'cetak_rkjm.php'], true)],
+                    ['title' => 'Kelola Template RKJM', 'url' => '../kepala/rkjm_template.php', 'active' => $current_page === 'rkjm_template.php'],
                     ['title' => 'Laporan Program Kerja', 'url' => '../kepala/laporan_program_kerja.php?session_type=admin', 'active' => $current_page === 'laporan_program_kerja.php'],
                 ],
-                'active' => in_array($current_page, ['program_kerja.php', 'komponen_program_kerja.php', 'laporan_program_kerja.php'])
+                'active' => in_array($current_page, ['program_kerja.php', 'komponen_program_kerja.php', 'laporan_program_kerja.php', 'rkjm.php', 'rkjm_template.php', 'cetak_rkjm.php'])
             ],
             [
                 'title' => 'Integrasi API',
@@ -774,10 +776,12 @@ switch ($user_level) {
                 'icon' => 'fas fa-tasks',
                 'submenu' => [
                     ['title' => 'Komponen Program Kerja', 'url' => '../kepala/komponen_program_kerja.php', 'active' => $current_page === 'komponen_program_kerja.php'],
-                    ['title' => 'Program Kerja Kepala', 'url' => '../kepala/program_kerja.php', 'active' => $current_page === 'program_kerja.php'],
+                    ['title' => 'Program Kerja Tahunan', 'url' => '../kepala/program_kerja.php', 'active' => $current_page === 'program_kerja.php'],
+                    ['title' => 'Rencana Kerja Jangka Menengah (RKJM)', 'url' => '../kepala/rkjm.php', 'active' => in_array($current_page, ['rkjm.php', 'cetak_rkjm.php'], true)],
+                    ['title' => 'Kelola Template RKJM', 'url' => '../kepala/rkjm_template.php', 'active' => $current_page === 'rkjm_template.php'],
                     ['title' => 'Laporan Program Kerja', 'url' => '../kepala/laporan_program_kerja.php', 'active' => $current_page === 'laporan_program_kerja.php'],
                 ],
-                'active' => in_array($current_page, ['program_kerja.php', 'komponen_program_kerja.php', 'laporan_program_kerja.php'])
+                'active' => in_array($current_page, ['program_kerja.php', 'komponen_program_kerja.php', 'laporan_program_kerja.php', 'rkjm.php', 'rkjm_template.php', 'cetak_rkjm.php'])
             ],
             [
                 'title' => 'Ekstrakurikuler',
