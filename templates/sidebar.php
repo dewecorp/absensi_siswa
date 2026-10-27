@@ -627,7 +627,7 @@ switch ($user_level) {
                 'submenu' => [
                     ['title' => 'Komponen Program Kerja', 'url' => '../kepala/komponen_program_kerja.php?session_type=admin', 'active' => $current_page === 'komponen_program_kerja.php'],
                     ['title' => 'Program Kerja Tahunan', 'url' => '../kepala/program_kerja.php?session_type=admin', 'active' => $current_page === 'program_kerja.php'],
-                    ['title' => 'Rencana Kerja Jangka Menengah (RKJM)', 'url' => '../kepala/rkjm.php', 'active' => in_array($current_page, ['rkjm.php', 'cetak_rkjm.php'], true)],
+                    ['title' => 'RKJM', 'url' => '../kepala/rkjm.php', 'active' => in_array($current_page, ['rkjm.php', 'cetak_rkjm.php'], true)],
                     ['title' => 'Kelola Template RKJM', 'url' => '../kepala/rkjm_template.php', 'active' => $current_page === 'rkjm_template.php'],
                     ['title' => 'Laporan Program Kerja', 'url' => '../kepala/laporan_program_kerja.php?session_type=admin', 'active' => $current_page === 'laporan_program_kerja.php'],
                 ],
@@ -777,7 +777,7 @@ switch ($user_level) {
                 'submenu' => [
                     ['title' => 'Komponen Program Kerja', 'url' => '../kepala/komponen_program_kerja.php', 'active' => $current_page === 'komponen_program_kerja.php'],
                     ['title' => 'Program Kerja Tahunan', 'url' => '../kepala/program_kerja.php', 'active' => $current_page === 'program_kerja.php'],
-                    ['title' => 'Rencana Kerja Jangka Menengah (RKJM)', 'url' => '../kepala/rkjm.php', 'active' => in_array($current_page, ['rkjm.php', 'cetak_rkjm.php'], true)],
+                    ['title' => 'RKJM', 'url' => '../kepala/rkjm.php', 'active' => in_array($current_page, ['rkjm.php', 'cetak_rkjm.php'], true)],
                     ['title' => 'Kelola Template RKJM', 'url' => '../kepala/rkjm_template.php', 'active' => $current_page === 'rkjm_template.php'],
                     ['title' => 'Laporan Program Kerja', 'url' => '../kepala/laporan_program_kerja.php', 'active' => $current_page === 'laporan_program_kerja.php'],
                 ],
