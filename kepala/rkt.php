@@ -72,9 +72,6 @@ if ($f_status !== '' && !isset($prog_status_opts[$f_status])) $f_status = '';
 $f_pj = trim((string)($_GET['pj'] ?? ''));
 $sort = (string)($_GET['sort'] ?? 'urutan');
 $dir = strtolower((string)($_GET['dir'] ?? 'asc')) === 'desc' ? 'DESC' : 'ASC';
-$page = max(1, (int)($_GET['page'] ?? 1));
-$per_page = (int)($_GET['per_page'] ?? 10);
-if (!in_array($per_page, [10, 25, 50, 100], true)) $per_page = 10;
 
 $sort_map = [
     'urutan' => 'p.urutan',
@@ -89,7 +86,6 @@ if (($sort_map[$sort] ?? '') === 'p.urutan') $dir = 'ASC';
 
 $rows = [];
 $total_rows = 0;
-$total_pages = 1;
 $pj_options = [];
 
 if ($doc) {
@@ -119,20 +115,14 @@ if ($doc) {
     }
     $where_sql = implode(' AND ', $where);
 
-    $count_stmt = $pdo->prepare("SELECT COUNT(*) FROM rkt_programs p WHERE $where_sql");
-    $count_stmt->execute($params);
-    $total_rows = (int)$count_stmt->fetchColumn();
-    $total_pages = max(1, (int)ceil($total_rows / $per_page));
-    if ($page > $total_pages) $page = $total_pages;
-    $offset = ($page - 1) * $per_page;
-
     $list_stmt = $pdo->prepare("SELECT p.*,
             COALESCE((SELECT MIN(COALESCE(a.jadwal_mulai, a.jadwal_selesai)) FROM rkt_activities a WHERE a.program_id = p.id), p.jadwal_mulai) AS jadwal_mulai,
             COALESCE((SELECT MAX(COALESCE(a.jadwal_selesai, a.jadwal_mulai)) FROM rkt_activities a WHERE a.program_id = p.id), p.jadwal_selesai) AS jadwal_selesai,
             (SELECT COUNT(*) FROM rkt_activities a WHERE a.program_id = p.id) AS activity_count
-        FROM rkt_programs p WHERE $where_sql ORDER BY $order_by $dir, p.id ASC LIMIT $per_page OFFSET $offset");
+        FROM rkt_programs p WHERE $where_sql ORDER BY $order_by $dir, p.id ASC");
     $list_stmt->execute($params);
     $rows = $list_stmt->fetchAll(PDO::FETCH_ASSOC);
+    $total_rows = count($rows);
 }
 
 $total_templates = (int)$pdo->query("SELECT COUNT(*) FROM rkt_template_programs")->fetchColumn();
@@ -436,18 +426,11 @@ include '../templates/sidebar.php';
                                     <?php endforeach; ?>
                                 </select>
                             </div>
-                            <div class="col-6 col-md-2 mb-2">
+                            <div class="col-6 col-md-3 mb-2">
                                 <select name="pj" class="form-control">
                                     <option value="">Semua PJ</option>
                                     <?php foreach ($pj_options as $pj): ?>
                                         <option value="<?= htmlspecialchars($pj) ?>" <?= $f_pj === $pj ? 'selected' : '' ?>><?= htmlspecialchars(rkt_excerpt($pj, 28)) ?></option>
-                                    <?php endforeach; ?>
-                                </select>
-                            </div>
-                            <div class="col-6 col-md-2 mb-2">
-                                <select name="per_page" class="form-control">
-                                    <?php foreach ([10, 25, 50, 100] as $pp): ?>
-                                        <option value="<?= $pp ?>" <?= $per_page === $pp ? 'selected' : '' ?>><?= $pp ?> / halaman</option>
                                     <?php endforeach; ?>
                                 </select>
                             </div>
@@ -466,7 +449,7 @@ include '../templates/sidebar.php';
                     </div>
                     <?php else: ?>
                     <div class="rkt-card-grid mb-3">
-                    <?php $no = ($page - 1) * $per_page; foreach ($rows as $r): $no++; ?>
+                    <?php $no = 0; foreach ($rows as $r): $no++; ?>
                     <div class="rkt-card">
                         <div class="rkt-card-head">
                             <div class="rkt-card-head-top">
@@ -541,18 +524,7 @@ include '../templates/sidebar.php';
                     <?php endif; ?>
 
                     <div class="d-flex flex-wrap justify-content-between align-items-center">
-                        <div class="text-muted small mb-2">Menampilkan <?= $total_rows ? (($page - 1) * $per_page + 1) : 0 ?>-<?= min($total_rows, $page * $per_page) ?> dari <?= $total_rows ?> program</div>
-                        <?php if ($total_pages > 1): ?>
-                        <nav class="mb-2">
-                            <ul class="pagination pagination-sm mb-0">
-                                <li class="page-item <?= $page <= 1 ? 'disabled' : '' ?>"><a class="page-link" href="<?= htmlspecialchars(rkt_qs(['page' => max(1, $page - 1)])) ?>">&laquo;</a></li>
-                                <?php for ($i = 1; $i <= $total_pages; $i++): ?>
-                                    <li class="page-item <?= $i === $page ? 'active' : '' ?>"><a class="page-link" href="<?= htmlspecialchars(rkt_qs(['page' => $i])) ?>"><?= $i ?></a></li>
-                                <?php endfor; ?>
-                                <li class="page-item <?= $page >= $total_pages ? 'disabled' : '' ?>"><a class="page-link" href="<?= htmlspecialchars(rkt_qs(['page' => min($total_pages, $page + 1)])) ?>">&raquo;</a></li>
-                            </ul>
-                        </nav>
-                        <?php endif; ?>
+                        <div class="text-muted small">Total <strong><?= $total_rows ?></strong> program</div>
                     </div>
                 </div>
             </div>
