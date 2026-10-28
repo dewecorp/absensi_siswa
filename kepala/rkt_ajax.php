@@ -249,6 +249,7 @@ try {
                 }
                 $params[] = $id;
                 $pdo->prepare("UPDATE rkt_programs SET " . implode(', ', $sets) . " WHERE id = ?")->execute($params);
+                rktSyncProgramSchedule($pdo, $id);
                 $msg = 'Program RKT diperbarui.';
             } else {
                 $cols = array_keys($data);
@@ -277,6 +278,7 @@ try {
         case 'get_program': {
             $doc = rktDocOrFail($pdo, $docId);
             $id = (int)($_POST['id'] ?? 0);
+            rktSyncProgramSchedule($pdo, $id);
             $stmt = $pdo->prepare("SELECT * FROM rkt_programs WHERE id = ? AND document_id = ?");
             $stmt->execute([$id, $docId]);
             $row = $stmt->fetch(PDO::FETCH_ASSOC);
@@ -447,6 +449,7 @@ try {
             }
 
             logActivity($pdo, $userId, 'Simpan Kegiatan RKT', $program['nama_program'] . ' - ' . $nama);
+            rktSyncProgramSchedule($pdo, $programId);
             rktJson(['success' => true, 'message' => $msg, 'id' => $id]);
         }
 
@@ -464,15 +467,18 @@ try {
 
         case 'delete_activity': {
             $id = (int)($_POST['id'] ?? 0);
-            $stmt = $pdo->prepare("SELECT a.nama_kegiatan FROM rkt_activities a INNER JOIN rkt_programs p ON p.id = a.program_id
+            $stmt = $pdo->prepare("SELECT a.nama_kegiatan, a.program_id FROM rkt_activities a INNER JOIN rkt_programs p ON p.id = a.program_id
                 WHERE a.id = ? AND p.document_id = ?");
             $stmt->execute([$id, $docId]);
-            $nama = $stmt->fetchColumn();
-            if (!$nama) rktJson(['success' => false, 'message' => 'Kegiatan tidak ditemukan.'], 404);
+            $actRow = $stmt->fetch(PDO::FETCH_ASSOC);
+            if (!$actRow) rktJson(['success' => false, 'message' => 'Kegiatan tidak ditemukan.'], 404);
+            $progId = (int)$actRow['program_id'];
+            $nama = $actRow['nama_kegiatan'];
             $pdo->beginTransaction();
             $pdo->prepare("DELETE FROM rkt_monitoring WHERE activity_id = ?")->execute([$id]);
             $pdo->prepare("DELETE FROM rkt_activities WHERE id = ?")->execute([$id]);
             $pdo->commit();
+            rktSyncProgramSchedule($pdo, $progId);
             logActivity($pdo, $userId, 'Hapus Kegiatan RKT', (string)$nama);
             rktJson(['success' => true, 'message' => 'Kegiatan beserta monitoringnya dihapus.']);
         }
@@ -566,6 +572,50 @@ try {
             if ($stmt->rowCount() === 0) rktJson(['success' => false, 'message' => 'Catatan monitoring tidak ditemukan.'], 404);
             logActivity($pdo, $userId, 'Hapus Monitoring RKT', 'Monitoring #' . $id);
             rktJson(['success' => true, 'message' => 'Catatan monitoring dihapus.']);
+        }
+
+        case 'sync_rkjm_budgets': {
+            $doc = rktDocOrFail($pdo, $docId);
+            $tahun = (int)$doc['tahun'];
+
+            // Ambil semua program RKT yang terhubung ke RKJM atau cocok berdasarkan nama di dokumen RKJM terkait
+            $stmt = $pdo->prepare("SELECT p.id, p.nama_program, p.rkjm_program_id, p.estimasi_anggaran, p.sumber_dana,
+                                          rk.id AS matched_rkjm_id, rk.estimasi_anggaran AS rkjm_anggaran, rk.sumber_dana AS rkjm_sumber
+                                   FROM rkt_programs p
+                                   LEFT JOIN rkjm_programs rk ON (rk.id = p.rkjm_program_id OR (p.rkjm_program_id IS NULL AND LOWER(rk.nama_program) = LOWER(p.nama_program)))
+                                   WHERE p.document_id = ? AND rk.id IS NOT NULL");
+            $stmt->execute([$docId]);
+            $programs = $stmt->fetchAll(PDO::FETCH_ASSOC);
+
+            if (!$programs) {
+                rktJson(['success' => false, 'message' => 'Tidak ada program RKT yang terhubung dengan program RKJM.']);
+            }
+
+            $upd = $pdo->prepare("UPDATE rkt_programs 
+                                  SET estimasi_anggaran = ?, 
+                                      sumber_dana = CASE WHEN COALESCE(sumber_dana,'') = '' THEN ? ELSE sumber_dana END,
+                                      rkjm_program_id = COALESCE(rkjm_program_id, ?)
+                                  WHERE id = ?");
+
+            $updatedCount = 0;
+            $pdo->beginTransaction();
+            foreach ($programs as $p) {
+                $targetRkjmId = (int)($p['rkjm_program_id'] ?: $p['matched_rkjm_id']);
+                $rkjmTotal = (float)$p['rkjm_anggaran'];
+                $calc = rktCalcAnnualBudget($pdo, $targetRkjmId, $rkjmTotal);
+                $sumber = trim((string)$p['rkjm_sumber']);
+
+                $upd->execute([$calc, $sumber, $targetRkjmId, (int)$p['id']]);
+                $updatedCount++;
+            }
+            $pdo->commit();
+
+            logActivity($pdo, $userId, 'Sinkron Anggaran RKT dari RKJM', $updatedCount . ' program disinkronkan');
+            rktJson([
+                'success' => true,
+                'message' => $updatedCount . ' program RKT berhasil disinkronkan anggarannya dengan RKJM.',
+                'count' => $updatedCount
+            ]);
         }
 
         case 'rkjm_programs': {
@@ -670,6 +720,9 @@ try {
                 $urutan++;
                 $ref = trim((string)$s['kode_program']);
                 $ref = ($ref !== '' ? $ref . ' - ' : '') . $s['nama_program'] . ' (RKJM ' . $periode . ')';
+                $anggaranTahunan = rktCalcAnnualBudget($pdo, (int)$s['id'], (float)($s['estimasi_anggaran'] ?? 0));
+                $sumberDana = trim((string)($s['sumber_dana'] ?? ''));
+
                 $ins->execute([
                     $docId,
                     (int)$s['id'],
@@ -685,11 +738,11 @@ try {
                     $s['indikator'] ?? '',
                     $s['target_tahunan'],
                     $s['penanggung_jawab'] ?? '',
-                    0, // Jangan salin anggaran empat tahunan RKJM sebagai anggaran tahunan.
-                    '',
+                    $anggaranTahunan,
+                    $sumberDana,
                     $s['kegiatan_utama'] ?? '',
                     $s['monitoring_evaluasi'] ?? '',
-                    'Disalin dari RKJM ' . $periode . '. Anggaran tahunan perlu disusun terpisah.',
+                    'Disinkronkan dari RKJM ' . $periode . '.',
                     $urutan,
                 ]);
                 $haveIds[(int)$s['id']] = true;
@@ -807,6 +860,9 @@ try {
                 if ($kode !== '') $haveCodes[$kode] = true;
                 $haveNames[$nama] = true;
                 $added++;
+                if ($i > 0) {
+                    rktSyncProgramSchedule($pdo, $pid);
+                }
             }
             $pdo->commit();
 

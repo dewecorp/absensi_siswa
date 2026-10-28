@@ -368,7 +368,64 @@ if (!function_exists('rktEnsureSchema')) {
             return '-';
         }
         $ts = strtotime($date);
-        return $ts ? date('d-m-Y', $ts) : '-';
+        return $ts ? date('d/m/Y', $ts) : '-';
+    }
+
+    /**
+     * Sinkronkan rentang jadwal program RKT dari jadwal kegiatan-kegiatan di dalamnya
+     * (MIN(jadwal_mulai) s.d. MAX(jadwal_selesai)).
+     */
+    function rktSyncProgramSchedule(PDO $pdo, int $programId): array
+    {
+        if ($programId <= 0) {
+            return ['jadwal_mulai' => null, 'jadwal_selesai' => null];
+        }
+
+        $stmt = $pdo->prepare("SELECT 
+                MIN(COALESCE(jadwal_mulai, jadwal_selesai)) AS min_mulai, 
+                MAX(COALESCE(jadwal_selesai, jadwal_mulai)) AS max_selesai,
+                COUNT(*) AS total_activities
+            FROM rkt_activities 
+            WHERE program_id = ?");
+        $stmt->execute([$programId]);
+        $row = $stmt->fetch(PDO::FETCH_ASSOC);
+
+        $totalAct = (int)($row['total_activities'] ?? 0);
+        $minMulai = !empty($row['min_mulai']) ? $row['min_mulai'] : null;
+        $maxSelesai = !empty($row['max_selesai']) ? $row['max_selesai'] : null;
+
+        if ($totalAct > 0) {
+            $upd = $pdo->prepare("UPDATE rkt_programs SET jadwal_mulai = ?, jadwal_selesai = ? WHERE id = ?");
+            $upd->execute([$minMulai, $maxSelesai, $programId]);
+        }
+
+        return ['jadwal_mulai' => $minMulai, 'jadwal_selesai' => $maxSelesai];
+    }
+
+    /**
+     * Sinkronkan seluruh jadwal program RKT dalam suatu dokumen berdasarkan kegiatan aktual.
+     */
+    function rktSyncAllProgramsSchedule(PDO $pdo, int $documentId = 0): int
+    {
+        $sql = "SELECT DISTINCT program_id FROM rkt_activities";
+        $params = [];
+        if ($documentId > 0) {
+            $sql = "SELECT DISTINCT a.program_id 
+                    FROM rkt_activities a 
+                    INNER JOIN rkt_programs p ON p.id = a.program_id 
+                    WHERE p.document_id = ?";
+            $params = [$documentId];
+        }
+        $stmt = $pdo->prepare($sql);
+        $stmt->execute($params);
+        $progIds = $stmt->fetchAll(PDO::FETCH_COLUMN);
+
+        $synced = 0;
+        foreach ($progIds as $pid) {
+            rktSyncProgramSchedule($pdo, (int)$pid);
+            $synced++;
+        }
+        return $synced;
     }
 
     /** Dokumen RKT berdasarkan id, tahun, atau terbaru. */
@@ -420,6 +477,19 @@ if (!function_exists('rktEnsureSchema')) {
         $stmt->execute([$rkjmProgramId, $tahun]);
         $val = $stmt->fetchColumn();
         return $val === false ? null : (string)$val;
+    }
+
+    /** Hitung alokasi estimasi anggaran tahunan dari program RKJM berdasarkan target aktif per tahun. */
+    function rktCalcAnnualBudget(PDO $pdo, int $rkjmProgramId, float $totalAnggaran): float
+    {
+        if ($totalAnggaran <= 0 || $rkjmProgramId <= 0) {
+            return 0.0;
+        }
+        $cnt = (int)$pdo->query("SELECT COUNT(*) FROM rkjm_program_targets WHERE program_id = " . (int)$rkjmProgramId . " AND COALESCE(target,'') <> ''")->fetchColumn();
+        if ($cnt <= 0) {
+            $cnt = 1;
+        }
+        return round($totalAnggaran / $cnt, 2);
     }
 
     /** Ringkasan dari data aktual. */

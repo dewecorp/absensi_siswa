@@ -132,19 +132,66 @@ include '../templates/header.php';
 include '../templates/sidebar.php';
 ?>
 <style>
-.rkjm-hero{background:linear-gradient(135deg,#4f5bd5 0%,#6a4fd8 55%,#8e54e9 100%);border-radius:14px;color:#fff;padding:22px}
-.rkjm-hero h1{color:#fff;font-size:1.45rem;margin-bottom:4px}
-.rkjm-hero p{color:rgba(255,255,255,.85);margin-bottom:14px}
-.rkjm-hero .badge-soft{background:rgba(255,255,255,.18);border:1px solid rgba(255,255,255,.32);color:#fff;font-weight:600;border-radius:999px;padding:5px 12px;font-size:.78rem}
-.rkjm-stat{border-radius:12px;border:1px solid #e5e8f0;background:#fff;height:100%}
-.rkjm-stat .rkjm-stat-icon{width:40px;height:40px;border-radius:10px;display:flex;align-items:center;justify-content:center;font-size:1rem}
-.rkjm-stat .rkjm-stat-value{font-size:1.15rem;font-weight:700;color:#2b3252}
-.rkjm-stat .rkjm-stat-label{font-size:.75rem;color:#7b839c;text-transform:uppercase;letter-spacing:.03em}
+.rkjm-hero{background:linear-gradient(135deg,#4f5bd5 0%,#6a4fd8 55%,#8e54e9 100%);border-radius:18px;color:#fff;padding:24px;box-shadow:0 10px 30px rgba(79,91,213,.25);position:relative;overflow:hidden}
+.rkjm-hero::after{content:'';position:absolute;right:-30px;top:-30px;width:180px;height:180px;border-radius:50%;background:rgba(255,255,255,.08);pointer-events:none}
+.rkjm-hero h1{color:#fff;font-size:1.45rem;font-weight:800;margin-bottom:6px;letter-spacing:-.01em}
+.rkjm-hero p{color:rgba(255,255,255,.88);margin-bottom:12px;font-size:.9rem}
+.rkjm-hero-badges{display:flex;flex-wrap:wrap;gap:8px;margin-bottom:18px}
+.rkjm-hero .badge-soft{background:rgba(255,255,255,.18);border:1px solid rgba(255,255,255,.3);color:#fff;font-weight:600;border-radius:999px;padding:5px 13px;font-size:.78rem;display:inline-flex;align-items:center}
+.rkjm-hero-toolbar{background:rgba(0,0,0,.15);border:1px solid rgba(255,255,255,.18);border-radius:14px;padding:12px 14px;display:flex;flex-wrap:wrap;align-items:center;gap:10px}
+.rkjm-hero-toolbar .btn{border-radius:10px;font-weight:600;font-size:.82rem;padding:7px 14px;display:inline-flex;align-items:center;gap:6px;border:none;box-shadow:0 2px 6px rgba(0,0,0,.12);transition:transform .15s,box-shadow .15s}
+.rkjm-hero-toolbar .btn:hover{transform:translateY(-1px);box-shadow:0 4px 12px rgba(0,0,0,.18)}
+.rkjm-hero-toolbar .form-control{border-radius:10px;height:36px;font-size:.82rem;font-weight:600;border:1px solid rgba(255,255,255,.3);background:#fff;color:#2b3252}
 .rkjm-chip{display:inline-flex;align-items:center;gap:6px;background:#eef1ff;border:1px solid #d9def8;color:#4b54a8;border-radius:999px;padding:4px 10px;font-size:.75rem;margin:0 6px 6px 0}
-.rkjm-table th{font-size:.75rem;text-transform:uppercase;letter-spacing:.02em;color:#6b7391;white-space:nowrap;vertical-align:middle}
-.rkjm-table td{font-size:.86rem;vertical-align:middle}
-.rkjm-table .rkjm-nama{font-weight:600;color:#2b3252;min-width:180px}
-.rkjm-table .rkjm-clip{max-width:200px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+/* Program cards – RKJM (3 kolom di desktop, 2 di tablet, 1 di mobile) */
+.rkjm-card-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:18px}
+.rkjm-card{background:#fff;border:none;border-radius:16px;overflow:hidden;display:flex;flex-direction:column;box-shadow:0 8px 24px rgba(15,23,42,.07),0 2px 6px rgba(15,23,42,.03);transition:transform .18s,box-shadow .18s;position:relative}
+.rkjm-card:hover{transform:translateY(-3px);box-shadow:0 14px 32px rgba(15,23,42,.12)}
+.rkjm-card-head{padding:14px 16px 12px;background:#f8faff;border-bottom:1px solid rgba(15,23,42,.05)}
+.rkjm-card-head-top{display:flex;align-items:center;justify-content:space-between;gap:8px;margin-bottom:6px}
+.rkjm-card-head .rkjm-kode{font-size:.72rem;font-weight:800;letter-spacing:.06em;text-transform:uppercase;color:#4f5bd5}
+.rkjm-card-head .rkjm-nama{font-weight:800;font-size:.95rem;color:#0f172a;line-height:1.35}
+.rkjm-card-head .rkjm-bidang{display:inline-block;margin-top:6px;font-size:.7rem;font-weight:700;background:rgba(79,91,213,.12);color:#4338ca;border-radius:999px;padding:3px 10px}
+.rkjm-status-pill{display:inline-flex;align-items:center;gap:5px;font-size:.7rem;font-weight:700;letter-spacing:.03em;text-transform:uppercase;padding:3px 10px;border-radius:999px;line-height:1.4}
+.rkjm-status-pill.status-belum_dimulai{background:#f1f5f9;color:#475569;border:1px solid #cbd5e1}
+.rkjm-status-pill.status-berjalan{background:#fef3c7;color:#b45309;border:1px solid #fde68a}
+.rkjm-status-pill.status-tercapai{background:#dcfce7;color:#15803d;border:1px solid #bbf7d0}
+.rkjm-status-pill.status-ditunda{background:#e0f2fe;color:#0369a1;border:1px solid #bae6fd}
+.rkjm-status-pill.status-tidak_tercapai{background:#fee2e2;color:#b91c1c;border:1px solid #fecaca}
+.rkjm-card-body{padding:14px 16px;flex:1;display:flex;flex-direction:column;gap:10px;font-size:.8rem}
+.rkjm-card-body .rkjm-field-row{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.rkjm-card-body .rkjm-field-label{font-size:.67rem;font-weight:700;text-transform:uppercase;letter-spacing:.05em;color:#64748b;margin-bottom:2px}
+.rkjm-card-body .rkjm-field-val{color:#1e293b;line-height:1.4;word-break:break-word}
+.rkjm-card-body .rkjm-field-val.ellipsis{display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
+.rkjm-card-foot{padding:12px 16px;background:#fafbfe;border-top:1px solid rgba(15,23,42,.05);display:flex;flex-direction:column;gap:10px}
+.rkjm-card-foot .rkjm-tahun-chip{font-size:.7rem;font-weight:700;background:#dcfce7;color:#15803d;border-radius:999px;padding:3px 9px;align-self:flex-start}
+.rkjm-card-foot .rkjm-actions{display:flex;gap:8px;align-items:center;width:100%}
+.rkjm-card-foot .rkjm-actions .btn{display:inline-flex;align-items:center;justify-content:center;gap:6px;font-size:.78rem;font-weight:600;white-space:nowrap;height:34px;padding:0 12px;border-radius:10px;border:none;box-shadow:0 1px 3px rgba(0,0,0,.08);transition:transform .12s,box-shadow .12s}
+.rkjm-card-foot .rkjm-actions .btn:hover{transform:translateY(-1px);box-shadow:0 3px 8px rgba(0,0,0,.15)}
+.rkjm-card-foot .rkjm-actions .btn-rkjm-detail{flex:1 1 0;background:#0ea5e9;color:#fff}
+.rkjm-card-foot .rkjm-actions .btn-rkjm-detail:hover{background:#0284c7;color:#fff}
+.rkjm-card-foot .rkjm-actions .btn-rkjm-edit{flex:1 1 0;background:#f59e0b;color:#fff}
+.rkjm-card-foot .rkjm-actions .btn-rkjm-edit:hover{background:#d97706;color:#fff}
+.rkjm-card-foot .rkjm-actions .btn-icon-only{flex:0 0 34px;width:34px;padding:0}
+.rkjm-card-foot .rkjm-actions .btn-rkjm-duplicate{background:#e2e8f0;color:#334155}
+.rkjm-card-foot .rkjm-actions .btn-rkjm-duplicate:hover{background:#cbd5e1;color:#1e293b}
+.rkjm-card-foot .rkjm-actions .btn-rkjm-delete{background:#ef4444;color:#fff}
+.rkjm-card-foot .rkjm-actions .btn-rkjm-delete:hover{background:#dc2626;color:#fff}
+.rkjm-card-foot .rkjm-actions .btn-text{display:inline}
+.rkjm-card-anggaran{font-weight:800;color:#0f172a;font-size:.88rem}
+.rkjm-card-sumber{font-size:.72rem;color:#64748b}
+@media(max-width:1199.98px){
+  .rkjm-card-grid{grid-template-columns:repeat(2,minmax(0,1fr))}
+}
+@media(max-width:767.98px){
+  .rkjm-card-grid{grid-template-columns:1fr}
+}
+@media(max-width:575.98px){
+  .rkjm-hero{padding:16px}
+  .rkjm-hero-toolbar{flex-direction:column;align-items:stretch;gap:8px}
+  .rkjm-hero-toolbar .btn{justify-content:center;width:100%}
+  .rkjm-card-body .rkjm-field-row{grid-template-columns:1fr}
+}
 .rkjm-section-title{font-weight:700;color:#3b4266;font-size:.85rem;text-transform:uppercase;letter-spacing:.04em;margin:18px 0 10px;padding-bottom:6px;border-bottom:1px solid #eceff7}
 .rkjm-modal textarea{min-height:70px;resize:vertical}
 /* TinyMCE: toolbar penuh, daftar bullet/numbering rapi, tampil di atas modal */
@@ -165,11 +212,6 @@ include '../templates/sidebar.php';
 .rkjm-tpl-item.is-selected strong{color:#3f49a8}
 .rkjm-tpl-item.is-selected .small{color:#5a63a8 !important}
 .rkjm-empty{border:2px dashed #dfe3f0;border-radius:14px;padding:36px;text-align:center;background:#fbfcff}
-@media (max-width:767.98px){
- .rkjm-hero{padding:16px}
- .rkjm-hero .btn{width:100%;margin-bottom:6px}
- .rkjm-hero .rkjm-hero-actions{display:flex;flex-direction:column}
-}
 </style>
 <div class="main-content">
 <section class="section">
@@ -184,24 +226,21 @@ include '../templates/sidebar.php';
 
     <div class="section-body">
         <div class="rkjm-hero mb-3">
-            <div class="d-flex flex-wrap justify-content-between align-items-start">
-                <div class="pr-3">
-                    <h1>Rencana Kerja Jangka Menengah (RKJM)</h1>
-                    <p class="mb-2">Menyusun, memantau, dan mengevaluasi rencana pengembangan madrasah dalam periode empat tahun.</p>
-                    <div class="mb-1">
-                        <?php if ($doc): ?>
-                            <span class="badge-soft mr-1"><i class="fas fa-calendar-alt mr-1"></i>Periode <?= (int)$doc['tahun_awal'] ?>–<?= (int)$doc['tahun_akhir'] ?> (<?= count($years) ?> tahun)</span>
-                            <span class="badge-soft mr-1"><i class="fas fa-file-signature mr-1"></i><?= htmlspecialchars($doc_status_opts[$doc['status']] ?? $doc['status']) ?></span>
-                            <?php if (!empty($doc['nomor_dokumen'])): ?><span class="badge-soft"><i class="fas fa-hashtag mr-1"></i><?= htmlspecialchars($doc['nomor_dokumen']) ?></span><?php endif; ?>
-                        <?php else: ?>
-                            <span class="badge-soft"><i class="fas fa-info-circle mr-1"></i>Dokumen RKJM belum dibuat</span>
-                        <?php endif; ?>
-                    </div>
-                </div>
-                <div class="rkjm-hero-actions mt-2 mt-md-0">
-                    <?php if (count($docs) > 1): ?>
-                    <div class="form-group mb-2">
-                        <select id="rkjm-doc-switch" class="form-control form-control-sm">
+            <h1>Rencana Kerja Jangka Menengah (RKJM)</h1>
+            <p>Menyusun, memantau, dan mengevaluasi rencana pengembangan madrasah dalam periode empat tahun.</p>
+            <div class="rkjm-hero-badges">
+                <?php if ($doc): ?>
+                    <span class="badge-soft"><i class="fas fa-calendar-alt mr-1"></i>Periode <?= (int)$doc['tahun_awal'] ?>–<?= (int)$doc['tahun_akhir'] ?> (<?= count($years) ?> tahun)</span>
+                    <span class="badge-soft"><i class="fas fa-file-signature mr-1"></i><?= htmlspecialchars($doc_status_opts[$doc['status']] ?? $doc['status']) ?></span>
+                    <?php if (!empty($doc['nomor_dokumen'])): ?><span class="badge-soft"><i class="fas fa-hashtag mr-1"></i><?= htmlspecialchars($doc['nomor_dokumen']) ?></span><?php endif; ?>
+                <?php else: ?>
+                    <span class="badge-soft"><i class="fas fa-info-circle mr-1"></i>Dokumen RKJM belum dibuat</span>
+                <?php endif; ?>
+            </div>
+            <div class="rkjm-hero-toolbar">
+                <?php if (count($docs) > 1): ?>
+                    <div style="min-width: 170px;">
+                        <select id="rkjm-doc-switch" class="form-control">
                             <?php foreach ($docs as $d): ?>
                                 <option value="<?= (int)$d['id'] ?>" <?= $doc && (int)$doc['id'] === (int)$d['id'] ? 'selected' : '' ?>>
                                     Periode <?= (int)$d['tahun_awal'] ?>–<?= (int)$d['tahun_akhir'] ?> (<?= htmlspecialchars($doc_status_opts[$d['status']] ?? $d['status']) ?>)
@@ -209,17 +248,16 @@ include '../templates/sidebar.php';
                             <?php endforeach; ?>
                         </select>
                     </div>
-                    <?php endif; ?>
-                    <button type="button" class="btn btn-light btn-sm mb-1" id="btn-doc-settings"><i class="fas fa-cog mr-1"></i><?= $doc ? 'Pengaturan RKJM' : 'Buat Dokumen RKJM' ?></button>
-                    <?php if ($doc): ?>
-                        <button type="button" class="btn btn-warning btn-sm mb-1" id="btn-add-program"><i class="fas fa-plus mr-1"></i>Tambah Program</button>
-                        <button type="button" class="btn btn-success btn-sm mb-1" id="btn-use-template"><i class="fas fa-copy mr-1"></i>Gunakan Template</button>
-                        <a href="rkjm_template.php" class="btn btn-info btn-sm mb-1"><i class="fas fa-layer-group mr-1"></i>Kelola Template</a>
-                        <a href="cetak_rkjm.php?doc=<?= (int)$doc['id'] ?>" target="_blank" class="btn btn-primary btn-sm mb-1"><i class="fas fa-print mr-1"></i>Cetak RKJM</a>
-                    <?php else: ?>
-                        <a href="rkjm_template.php" class="btn btn-info btn-sm mb-1"><i class="fas fa-layer-group mr-1"></i>Kelola Template</a>
-                    <?php endif; ?>
-                </div>
+                <?php endif; ?>
+                <button type="button" class="btn btn-light" id="btn-doc-settings"><i class="fas fa-cog"></i><?= $doc ? 'Pengaturan RKJM' : 'Buat Dokumen' ?></button>
+                <?php if ($doc): ?>
+                    <button type="button" class="btn btn-warning" id="btn-add-program"><i class="fas fa-plus"></i>Tambah Program</button>
+                    <button type="button" class="btn btn-success" id="btn-use-template"><i class="fas fa-copy"></i>Gunakan Template</button>
+                    <a href="rkjm_template.php" class="btn btn-info"><i class="fas fa-layer-group"></i>Kelola Template</a>
+                    <a href="cetak_rkjm.php?doc=<?= (int)$doc['id'] ?>" target="_blank" class="btn btn-primary"><i class="fas fa-print"></i>Cetak RKJM</a>
+                <?php else: ?>
+                    <a href="rkjm_template.php" class="btn btn-info"><i class="fas fa-layer-group"></i>Kelola Template</a>
+                <?php endif; ?>
             </div>
         </div>
 
@@ -231,52 +269,64 @@ include '../templates/sidebar.php';
                 <button type="button" class="btn btn-primary" id="btn-create-doc"><i class="fas fa-plus mr-1"></i>Buat Dokumen RKJM</button>
             </div>
         <?php else: ?>
-            <div class="row mb-2">
-                <div class="col-6 col-md-3 col-xl-2 mb-2">
-                    <div class="rkjm-stat p-3">
-                        <div class="d-flex align-items-center justify-content-between">
-                            <div><div class="rkjm-stat-value"><?= (int)$summary['total'] ?></div><div class="rkjm-stat-label">Total Program</div></div>
-                            <div class="rkjm-stat-icon" style="background:#eef1ff;color:#4f5bd5"><i class="fas fa-tasks"></i></div>
+            <div class="row dash-stat-row">
+                <div class="col-12 col-sm-6 col-lg-4 mb-3">
+                    <div class="dash-stat-card tint-blue">
+                        <div class="dash-stat-ico dsi-blue"><i class="fas fa-tasks"></i></div>
+                        <div class="dash-stat-body">
+                            <div class="dash-stat-label">Total Program</div>
+                            <div class="dash-stat-value"><?= (int)$summary['total'] ?></div>
+                            <div class="dash-stat-sub"><span><i class="fas fa-layer-group" style="color:#2563eb;"></i> Periode 4 tahun</span></div>
                         </div>
                     </div>
                 </div>
-                <div class="col-6 col-md-3 col-xl-2 mb-2">
-                    <div class="rkjm-stat p-3">
-                        <div class="d-flex align-items-center justify-content-between">
-                            <div><div class="rkjm-stat-value"><?= (int)$summary['terlaksana'] ?></div><div class="rkjm-stat-label">Terlaksana</div></div>
-                            <div class="rkjm-stat-icon" style="background:#e7f8ee;color:#1f9d55"><i class="fas fa-check-circle"></i></div>
+                <div class="col-12 col-sm-6 col-lg-4 mb-3">
+                    <div class="dash-stat-card tint-green">
+                        <div class="dash-stat-ico dsi-green"><i class="fas fa-check-circle"></i></div>
+                        <div class="dash-stat-body">
+                            <div class="dash-stat-label">Terlaksana</div>
+                            <div class="dash-stat-value"><?= (int)$summary['terlaksana'] ?></div>
+                            <div class="dash-stat-sub"><span style="color:#15803d;"><?= (int)$summary['total'] > 0 ? round((int)$summary['terlaksana'] / (int)$summary['total'] * 100) : 0 ?>% dari total</span></div>
                         </div>
                     </div>
                 </div>
-                <div class="col-6 col-md-3 col-xl-2 mb-2">
-                    <div class="rkjm-stat p-3">
-                        <div class="d-flex align-items-center justify-content-between">
-                            <div><div class="rkjm-stat-value"><?= (int)$summary['berjalan'] ?></div><div class="rkjm-stat-label">Berjalan</div></div>
-                            <div class="rkjm-stat-icon" style="background:#fff6e5;color:#d68a00"><i class="fas fa-sync"></i></div>
+                <div class="col-12 col-sm-6 col-lg-4 mb-3">
+                    <div class="dash-stat-card tint-amber">
+                        <div class="dash-stat-ico dsi-amber"><i class="fas fa-sync"></i></div>
+                        <div class="dash-stat-body">
+                            <div class="dash-stat-label">Sedang Berjalan</div>
+                            <div class="dash-stat-value"><?= (int)$summary['berjalan'] ?></div>
+                            <div class="dash-stat-sub"><span style="color:#d97706;">dalam pelaksanaan</span></div>
                         </div>
                     </div>
                 </div>
-                <div class="col-6 col-md-3 col-xl-2 mb-2">
-                    <div class="rkjm-stat p-3">
-                        <div class="d-flex align-items-center justify-content-between">
-                            <div><div class="rkjm-stat-value"><?= (int)$summary['belum'] ?></div><div class="rkjm-stat-label">Belum Dimulai</div></div>
-                            <div class="rkjm-stat-icon" style="background:#f1f2f6;color:#6b7391"><i class="fas fa-clock"></i></div>
+                <div class="col-12 col-sm-6 col-lg-4 mb-3">
+                    <div class="dash-stat-card tint-indigo">
+                        <div class="dash-stat-ico dsi-indigo"><i class="fas fa-clock"></i></div>
+                        <div class="dash-stat-body">
+                            <div class="dash-stat-label">Belum Dimulai</div>
+                            <div class="dash-stat-value"><?= (int)$summary['belum'] ?></div>
+                            <div class="dash-stat-sub"><span style="color:#4338ca;">rencana tindak lanjut</span></div>
                         </div>
                     </div>
                 </div>
-                <div class="col-12 col-md-6 col-xl-2 mb-2">
-                    <div class="rkjm-stat p-3">
-                        <div class="d-flex align-items-center justify-content-between">
-                            <div><div class="rkjm-stat-value" style="font-size:1rem"><?= rkjmRupiah($summary['anggaran']) ?></div><div class="rkjm-stat-label">Estimasi Anggaran</div></div>
-                            <div class="rkjm-stat-icon" style="background:#fdeef6;color:#c0327f"><i class="fas fa-money-bill-wave"></i></div>
+                <div class="col-12 col-sm-6 col-lg-4 mb-3">
+                    <div class="dash-stat-card tint-violet">
+                        <div class="dash-stat-ico dsi-violet"><i class="fas fa-money-bill-wave"></i></div>
+                        <div class="dash-stat-body">
+                            <div class="dash-stat-label">Estimasi Anggaran</div>
+                            <div class="dash-stat-value dash-stat-value-sm" style="font-size:1.15rem;"><?= rkjmRupiah($summary['anggaran']) ?></div>
+                            <div class="dash-stat-sub"><span style="color:#7c3aed;">pagu 4 tahun</span></div>
                         </div>
                     </div>
                 </div>
-                <div class="col-12 col-md-6 col-xl-2 mb-2">
-                    <div class="rkjm-stat p-3">
-                        <div class="d-flex align-items-center justify-content-between">
-                            <div><div class="rkjm-stat-value"><?= count($summary['per_bidang']) ?></div><div class="rkjm-stat-label">Bidang Terisi</div></div>
-                            <div class="rkjm-stat-icon" style="background:#e8f6fb;color:#1b87ab"><i class="fas fa-sitemap"></i></div>
+                <div class="col-12 col-sm-6 col-lg-4 mb-3">
+                    <div class="dash-stat-card tint-teal">
+                        <div class="dash-stat-ico dsi-teal"><i class="fas fa-sitemap"></i></div>
+                        <div class="dash-stat-body">
+                            <div class="dash-stat-label">Bidang Terisi</div>
+                            <div class="dash-stat-value"><?= count($summary['per_bidang']) ?></div>
+                            <div class="dash-stat-sub"><span style="color:#0891b2;">bidang pengembangan</span></div>
                         </div>
                     </div>
                 </div>
@@ -342,72 +392,88 @@ include '../templates/sidebar.php';
                         </div>
                     </form>
 
-                    <div class="table-responsive">
-                        <table class="table table-hover rkjm-table">
-                            <thead>
-                                <tr>
-                                    <th>No.</th>
-                                    <th><a href="<?= htmlspecialchars(rkjm_qs(['sort' => 'bidang', 'dir' => ($sort === 'bidang' && $dir === 'ASC') ? 'desc' : 'asc', 'page' => 1])) ?>">Bidang</a></th>
-                                    <th><a href="<?= htmlspecialchars(rkjm_qs(['sort' => 'nama', 'dir' => ($sort === 'nama' && $dir === 'ASC') ? 'desc' : 'asc', 'page' => 1])) ?>">Nama Program</a></th>
-                                    <th>Kondisi Awal</th>
-                                    <th>Tujuan</th>
-                                    <th>Indikator</th>
-                                    <th>Target Akhir</th>
-                                    <th>Tahun</th>
-                                    <th>PJ</th>
-                                    <th><a href="<?= htmlspecialchars(rkjm_qs(['sort' => 'anggaran', 'dir' => ($sort === 'anggaran' && $dir === 'ASC') ? 'desc' : 'asc', 'page' => 1])) ?>">Anggaran</a></th>
-                                    <th>Sumber</th>
-                                    <th><a href="<?= htmlspecialchars(rkjm_qs(['sort' => 'status', 'dir' => ($sort === 'status' && $dir === 'ASC') ? 'desc' : 'asc', 'page' => 1])) ?>">Status</a></th>
-                                    <th class="text-right">Aksi</th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                <?php if (!$rows): ?>
-                                    <tr><td colspan="13" class="text-center text-muted py-4"><i class="fas fa-inbox fa-2x d-block mb-2"></i>Belum ada program pada filter ini. Tambah program manual atau gunakan template.</td></tr>
-                                <?php endif; ?>
-                                <?php $no = ($page - 1) * $per_page; foreach ($rows as $r): $no++;
-                                    $rt = $targets_map[(int)$r['id']] ?? [];
-                                    $tahun_label = [];
-                                    foreach ($years as $tk => $th) {
-                                        if (!empty($rt[$tk]['target'])) $tahun_label[] = 'Y' . $tk;
-                                    }
-                                    $status_key = $r['status'];
-                                ?>
-                                    <tr>
-                                        <td><?= $no ?></td>
-                                        <td><span class="badge badge-light border"><?= htmlspecialchars(rkjm_excerpt($r['bidang_nama'], 28)) ?></span></td>
-                                        <td>
-                                            <div class="rkjm-nama"><?= htmlspecialchars($r['nama_program']) ?></div>
-                                            <small class="text-muted"><?= htmlspecialchars($r['kode_program'] ?: '-') ?></small>
-                                        </td>
-                                        <td><div class="rkjm-clip" title="<?= htmlspecialchars((string)$r['kondisi_awal']) ?>"><?= htmlspecialchars(rkjm_excerpt($r['kondisi_awal'], 50)) ?></div></td>
-                                        <td><div class="rkjm-clip" title="<?= htmlspecialchars((string)$r['tujuan']) ?>"><?= htmlspecialchars(rkjm_excerpt($r['tujuan'], 50)) ?></div></td>
-                                        <td><div class="rkjm-clip" title="<?= htmlspecialchars((string)$r['indikator']) ?>"><?= htmlspecialchars(rkjm_excerpt($r['indikator'], 50)) ?></div></td>
-                                        <td><div class="rkjm-clip" title="<?= htmlspecialchars((string)$r['target_akhir']) ?>"><?= htmlspecialchars(rkjm_excerpt($r['target_akhir'], 45)) ?></div></td>
-                                        <td><small><?= $tahun_label ? htmlspecialchars(implode(' ', $tahun_label)) : '-' ?></small></td>
-                                        <td><small><?= htmlspecialchars(rkjm_excerpt($r['penanggung_jawab'], 24)) ?></small></td>
-                                        <td class="text-nowrap"><?= rkjmRupiah($r['estimasi_anggaran']) ?></td>
-                                        <td><small><?= htmlspecialchars(rkjm_excerpt($r['sumber_dana'], 22)) ?></small></td>
-                                        <td>
-                                            <select class="form-control form-control-sm rkjm-status-sel" data-id="<?= (int)$r['id'] ?>" <?= $is_editable ? '' : 'disabled' ?> style="min-width:130px">
-                                                <?php foreach ($prog_status_opts as $k => $v): ?>
-                                                    <option value="<?= htmlspecialchars($k) ?>" <?= $status_key === $k ? 'selected' : '' ?>><?= htmlspecialchars($v) ?></option>
-                                                <?php endforeach; ?>
-                                            </select>
-                                        </td>
-                                        <td class="text-right text-nowrap">
-                                            <button type="button" class="btn btn-info btn-sm px-2 mr-1 btn-rkjm-detail" data-id="<?= (int)$r['id'] ?>" title="Lihat detail"><i class="fas fa-eye"></i></button>
-                                            <?php if ($is_editable): ?>
-                                                <button type="button" class="btn btn-warning btn-sm px-2 mr-1 btn-rkjm-edit" data-id="<?= (int)$r['id'] ?>" title="Edit"><i class="fas fa-edit"></i></button>
-                                                <button type="button" class="btn btn-secondary btn-sm px-2 mr-1 btn-rkjm-duplicate" data-id="<?= (int)$r['id'] ?>" title="Duplikasi"><i class="fas fa-clone"></i></button>
-                                                <button type="button" class="btn btn-danger btn-sm px-2 btn-rkjm-delete" data-id="<?= (int)$r['id'] ?>" data-name="<?= htmlspecialchars($r['nama_program'], ENT_QUOTES) ?>" title="Hapus"><i class="fas fa-trash"></i></button>
-                                            <?php endif; ?>
-                                        </td>
-                                    </tr>
-                                <?php endforeach; ?>
-                            </tbody>
-                        </table>
+
+                    <?php if (!$rows): ?>
+                    <div class="rkjm-empty my-2">
+                        <i class="fas fa-inbox fa-2x text-muted mb-2 d-block"></i>
+                        <div class="text-muted">Belum ada program pada filter ini. Tambah program manual atau gunakan template.</div>
                     </div>
+                    <?php else: ?>
+                    <div class="rkjm-card-grid mb-3">
+                    <?php $no = ($page - 1) * $per_page; foreach ($rows as $r): $no++;
+                        $rt = $targets_map[(int)$r['id']] ?? [];
+                        $tahun_label = [];
+                        foreach ($years as $tk => $th) {
+                            if (!empty($rt[$tk]['target'])) $tahun_label[] = 'Y'.$tk.'('.$th.')';
+                        }
+                        $status_key = $r['status'];
+                    ?>
+                    <div class="rkjm-card">
+                        <div class="rkjm-card-head">
+                            <div class="rkjm-card-head-top">
+                                <span class="rkjm-kode"><?= htmlspecialchars($r['kode_program'] ?: '—') ?></span>
+                                <span class="rkjm-status-pill status-<?= htmlspecialchars($r['status']) ?>">
+                                    <i class="fas fa-circle" style="font-size:.5rem;"></i>
+                                    <?= htmlspecialchars($prog_status_opts[$r['status']] ?? $r['status']) ?>
+                                </span>
+                            </div>
+                            <div class="rkjm-nama"><?= htmlspecialchars($r['nama_program']) ?></div>
+                            <span class="rkjm-bidang"><?= htmlspecialchars(rkjm_excerpt($r['bidang_nama'], 40)) ?></span>
+                        </div>
+                        <div class="rkjm-card-body">
+                            <div class="rkjm-field-row">
+                                <div>
+                                    <div class="rkjm-field-label">Kondisi Awal</div>
+                                    <div class="rkjm-field-val ellipsis" title="<?= htmlspecialchars((string)$r['kondisi_awal']) ?>"><?= htmlspecialchars(rkjm_excerpt($r['kondisi_awal'], 120)) ?></div>
+                                </div>
+                                <div>
+                                    <div class="rkjm-field-label">Tujuan</div>
+                                    <div class="rkjm-field-val ellipsis" title="<?= htmlspecialchars((string)$r['tujuan']) ?>"><?= htmlspecialchars(rkjm_excerpt($r['tujuan'], 120)) ?></div>
+                                </div>
+                            </div>
+                            <div>
+                                <div class="rkjm-field-label">Indikator Keberhasilan</div>
+                                <div class="rkjm-field-val ellipsis" title="<?= htmlspecialchars((string)$r['indikator']) ?>"><?= htmlspecialchars(rkjm_excerpt($r['indikator'], 160)) ?></div>
+                            </div>
+                            <div class="rkjm-field-row">
+                                <div>
+                                    <div class="rkjm-field-label">Penanggung Jawab</div>
+                                    <div class="rkjm-field-val"><?= htmlspecialchars(rkjm_excerpt($r['penanggung_jawab'], 36)) ?></div>
+                                </div>
+                                <div>
+                                    <div class="rkjm-field-label">Anggaran</div>
+                                    <div class="rkjm-card-anggaran"><?= rkjmRupiah($r['estimasi_anggaran']) ?></div>
+                                    <div class="rkjm-card-sumber"><?= htmlspecialchars(rkjm_excerpt($r['sumber_dana'], 30)) ?></div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="rkjm-card-foot">
+                            <?php if ($tahun_label): ?>
+                                <span class="rkjm-tahun-chip"><i class="fas fa-calendar-alt mr-1"></i><?= htmlspecialchars(implode(' · ', $tahun_label)) ?></span>
+                            <?php else: ?>
+                                <span class="rkjm-tahun-chip" style="background:#fdf0e6;border-color:#f4c07a;color:#9a5d0a"><i class="fas fa-exclamation-triangle mr-1"></i>Belum ada target</span>
+                            <?php endif; ?>
+                            <div class="rkjm-actions">
+                                <button type="button" class="btn btn-rkjm-detail btn-sm" data-id="<?= (int)$r['id'] ?>" title="Lihat detail">
+                                    <i class="fas fa-eye"></i><span class="btn-text"> Detail</span>
+                                </button>
+                                <?php if ($is_editable): ?>
+                                    <button type="button" class="btn btn-rkjm-edit btn-sm" data-id="<?= (int)$r['id'] ?>" title="Edit">
+                                        <i class="fas fa-edit"></i><span class="btn-text"> Edit</span>
+                                    </button>
+                                    <button type="button" class="btn btn-rkjm-duplicate btn-icon-only btn-sm" data-id="<?= (int)$r['id'] ?>" title="Duplikasi">
+                                        <i class="fas fa-clone"></i>
+                                    </button>
+                                    <button type="button" class="btn btn-rkjm-delete btn-icon-only btn-sm" data-id="<?= (int)$r['id'] ?>" data-name="<?= htmlspecialchars($r['nama_program'], ENT_QUOTES) ?>" title="Hapus">
+                                        <i class="fas fa-trash"></i>
+                                    </button>
+                                <?php endif; ?>
+                            </div>
+                        </div>
+                    </div>
+                    <?php endforeach; ?>
+                    </div>
+                    <?php endif; ?>
 
                     <div class="d-flex flex-wrap justify-content-between align-items-center">
                         <div class="text-muted small mb-2">Menampilkan <?= $total_rows ? (($page - 1) * $per_page + 1) : 0 ?>–<?= min($total_rows, $page * $per_page) ?> dari <?= $total_rows ?> program</div>

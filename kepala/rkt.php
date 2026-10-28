@@ -127,6 +127,8 @@ if ($doc) {
     $offset = ($page - 1) * $per_page;
 
     $list_stmt = $pdo->prepare("SELECT p.*,
+            COALESCE((SELECT MIN(COALESCE(a.jadwal_mulai, a.jadwal_selesai)) FROM rkt_activities a WHERE a.program_id = p.id), p.jadwal_mulai) AS jadwal_mulai,
+            COALESCE((SELECT MAX(COALESCE(a.jadwal_selesai, a.jadwal_mulai)) FROM rkt_activities a WHERE a.program_id = p.id), p.jadwal_selesai) AS jadwal_selesai,
             (SELECT COUNT(*) FROM rkt_activities a WHERE a.program_id = p.id) AS activity_count
         FROM rkt_programs p WHERE $where_sql ORDER BY $order_by $dir, p.id ASC LIMIT $per_page OFFSET $offset");
     $list_stmt->execute($params);
@@ -188,20 +190,63 @@ include '../templates/header.php';
 include '../templates/sidebar.php';
 ?>
 <style>
-.rkt-hero{background:linear-gradient(135deg,#1f6f5c 0%,#2d9a7a 55%,#4bbf95 100%);border-radius:14px;color:#fff;padding:22px}
-.rkt-hero h1{color:#fff;font-size:1.45rem;margin-bottom:4px}
-.rkt-hero p{color:rgba(255,255,255,.88);margin-bottom:14px}
-.rkt-hero .badge-soft{background:rgba(255,255,255,.18);border:1px solid rgba(255,255,255,.34);color:#fff;font-weight:600;border-radius:999px;padding:5px 12px;font-size:.78rem}
-.rkt-stat{border-radius:12px;border:1px solid #e5e8f0;background:#fff;height:100%}
-.rkt-stat .rkt-stat-icon{width:38px;height:38px;border-radius:10px;display:flex;align-items:center;justify-content:center;font-size:.95rem;flex:0 0 38px}
-.rkt-stat .rkt-stat-value{font-size:1.08rem;font-weight:700;color:#23302c;line-height:1.2}
-.rkt-stat .rkt-stat-label{font-size:.72rem;color:#7b839c;text-transform:uppercase;letter-spacing:.03em}
+.rkt-hero{background:linear-gradient(135deg,#1f6f5c 0%,#2d9a7a 55%,#4bbf95 100%);border-radius:18px;color:#fff;padding:24px;box-shadow:0 10px 30px rgba(31,111,92,.25);position:relative;overflow:hidden}
+.rkt-hero::after{content:'';position:absolute;right:-30px;top:-30px;width:180px;height:180px;border-radius:50%;background:rgba(255,255,255,.08);pointer-events:none}
+.rkt-hero h1{color:#fff;font-size:1.45rem;font-weight:800;margin-bottom:6px;letter-spacing:-.01em}
+.rkt-hero p{color:rgba(255,255,255,.88);margin-bottom:12px;font-size:.9rem}
+.rkt-hero-badges{display:flex;flex-wrap:wrap;gap:8px;margin-bottom:18px}
+.rkt-hero .badge-soft{background:rgba(255,255,255,.18);border:1px solid rgba(255,255,255,.3);color:#fff;font-weight:600;border-radius:999px;padding:5px 13px;font-size:.78rem;display:inline-flex;align-items:center}
+.rkt-hero-toolbar{background:rgba(0,0,0,.15);border:1px solid rgba(255,255,255,.18);border-radius:14px;padding:12px 14px;display:flex;flex-wrap:wrap;align-items:center;gap:10px}
+.rkt-hero-toolbar .btn{border-radius:10px;font-weight:600;font-size:.82rem;padding:7px 14px;display:inline-flex;align-items:center;gap:6px;border:none;box-shadow:0 2px 6px rgba(0,0,0,.12);transition:transform .15s,box-shadow .15s}
+.rkt-hero-toolbar .btn:hover{transform:translateY(-1px);box-shadow:0 4px 12px rgba(0,0,0,.18)}
+.rkt-hero-toolbar .form-control{border-radius:10px;height:36px;font-size:.82rem;font-weight:600;border:1px solid rgba(255,255,255,.3);background:#fff;color:#23302c}
 .rkt-chip{display:inline-flex;align-items:center;gap:6px;background:#eaf8f2;border:1px solid #c9ecdc;color:#1f6f5c;border-radius:999px;padding:4px 10px;font-size:.75rem;margin:0 6px 6px 0}
 .rkt-chip.warn{background:#fff6e5;border-color:#f4dcae;color:#a56a00}
-.rkt-table th{font-size:.73rem;text-transform:uppercase;letter-spacing:.02em;color:#6b7391;white-space:nowrap;vertical-align:middle}
-.rkt-table td{font-size:.84rem;vertical-align:middle}
-.rkt-table .rkt-nama{font-weight:600;color:#23302c;min-width:170px}
-.rkt-table .rkt-clip{max-width:190px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+/* Program cards – RKT (borderless modern, sama nuansa dashboard kepala) */
+.rkt-card-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(320px,1fr));gap:16px}
+.rkt-card{background:#fff;border:none;border-radius:16px;overflow:hidden;display:flex;flex-direction:column;box-shadow:0 8px 24px rgba(15,23,42,.07),0 2px 6px rgba(15,23,42,.03);transition:transform .18s,box-shadow .18s;position:relative}
+.rkt-card:hover{transform:translateY(-3px);box-shadow:0 14px 32px rgba(15,23,42,.12)}
+.rkt-card-head{padding:14px 16px 12px;background:#f7fdfb;border-bottom:1px solid rgba(15,23,42,.05)}
+.rkt-card-head-top{display:flex;align-items:center;justify-content:space-between;gap:8px;margin-bottom:6px}
+.rkt-card-head .rkt-kode{font-size:.72rem;font-weight:800;letter-spacing:.06em;text-transform:uppercase;color:#1f6f5c}
+.rkt-card-head .rkt-nama{font-weight:800;font-size:.95rem;color:#0f172a;line-height:1.35}
+.rkt-card-tags{display:flex;flex-wrap:wrap;align-items:center;gap:6px;margin-top:6px}
+.rkt-card-head .rkt-bidang{display:inline-block;font-size:.7rem;font-weight:700;background:rgba(31,111,92,.12);color:#1f6f5c;border-radius:999px;padding:3px 10px}
+.rkt-status-pill{display:inline-flex;align-items:center;gap:5px;font-size:.7rem;font-weight:700;letter-spacing:.03em;text-transform:uppercase;padding:3px 10px;border-radius:999px;line-height:1.4}
+.rkt-status-pill.status-belum_dimulai{background:#f1f5f9;color:#475569;border:1px solid #cbd5e1}
+.rkt-status-pill.status-berjalan{background:#fef3c7;color:#b45309;border:1px solid #fde68a}
+.rkt-status-pill.status-selesai{background:#dcfce7;color:#15803d;border:1px solid #bbf7d0}
+.rkt-status-pill.status-tertunda{background:#e0f2fe;color:#0369a1;border:1px solid #bae6fd}
+.rkt-status-pill.status-tidak_terlaksana{background:#fee2e2;color:#b91c1c;border:1px solid #fecaca}
+.rkt-card-body{padding:12px 16px;flex:1;display:grid;grid-template-columns:1fr 1fr;gap:8px 12px;font-size:.8rem}
+.rkt-card-body .rkt-field-label{font-size:.67rem;font-weight:700;text-transform:uppercase;letter-spacing:.05em;color:#64748b;margin-bottom:2px}
+.rkt-card-body .rkt-field-val{color:#1e293b;line-height:1.35;word-break:break-word}
+.rkt-card-body .rkt-field-val.ellipsis{display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
+.rkt-card-body .rkt-field-full{grid-column:1/-1}
+.rkt-card-foot{padding:12px 16px;background:#fafbfe;border-top:1px solid rgba(15,23,42,.05)}
+.rkt-card-foot .rkt-actions{display:flex;gap:8px;align-items:center;width:100%}
+.rkt-card-foot .rkt-actions .btn{display:inline-flex;align-items:center;justify-content:center;gap:6px;font-size:.78rem;font-weight:600;white-space:nowrap;height:34px;padding:0 12px;border-radius:10px;border:none;box-shadow:0 1px 3px rgba(0,0,0,.08);transition:transform .12s,box-shadow .12s}
+.rkt-card-foot .rkt-actions .btn:hover{transform:translateY(-1px);box-shadow:0 3px 8px rgba(0,0,0,.15)}
+.rkt-card-foot .rkt-actions .btn-rkt-detail{flex:1 1 0;background:#0ea5e9;color:#fff}
+.rkt-card-foot .rkt-actions .btn-rkt-detail:hover{background:#0284c7;color:#fff}
+.rkt-card-foot .rkt-actions .btn-rkt-edit{flex:1 1 0;background:#f59e0b;color:#fff}
+.rkt-card-foot .rkt-actions .btn-rkt-edit:hover{background:#d97706;color:#fff}
+.rkt-card-foot .rkt-actions .btn-icon-only{flex:0 0 34px;width:34px;padding:0}
+.rkt-card-foot .rkt-actions .btn-rkt-duplicate{background:#e2e8f0;color:#334155}
+.rkt-card-foot .rkt-actions .btn-rkt-duplicate:hover{background:#cbd5e1;color:#1e293b}
+.rkt-card-foot .rkt-actions .btn-rkt-delete{background:#ef4444;color:#fff}
+.rkt-card-foot .rkt-actions .btn-rkt-delete:hover{background:#dc2626;color:#fff}
+.rkt-card-foot .rkt-actions .btn-text{display:inline}
+.rkt-card-anggaran{font-weight:800;color:#0f172a;font-size:.85rem}
+.rkt-card-sumber{font-size:.72rem;color:#64748b}
+.rkt-card-ref{font-size:.7rem;margin-top:4px}
+@media(max-width:575.98px){
+  .rkt-hero{padding:16px}
+  .rkt-hero-toolbar{flex-direction:column;align-items:stretch;gap:8px}
+  .rkt-hero-toolbar .btn{justify-content:center;width:100%}
+  .rkt-card-grid{grid-template-columns:1fr}
+  .rkt-card-body{grid-template-columns:1fr}
+}
 .rkt-section-title{font-weight:700;color:#3b4266;font-size:.85rem;text-transform:uppercase;letter-spacing:.04em;margin:18px 0 10px;padding-bottom:6px;border-bottom:1px solid #eceff7}
 .rkt-modal textarea{min-height:68px;resize:vertical}
 .rkt-modal textarea[readonly],.rkt-modal input[readonly]{background:#f4f6fb;color:#5a6285;cursor:not-allowed}
@@ -215,11 +260,6 @@ include '../templates/sidebar.php';
 #rkt-rkjm-list{max-height:52vh;overflow:auto}
 .rkt-detail-table th{width:31%;vertical-align:top;background:#fafbfe}
 .rkt-detail-table td{white-space:pre-line}
-@media (max-width:767.98px){
- .rkt-hero{padding:16px}
- .rkt-hero .btn{width:100%;margin-bottom:6px}
- .rkt-hero .rkt-hero-actions{display:flex;flex-direction:column}
-}
 </style>
 <div class="main-content">
 <section class="section">
@@ -234,40 +274,37 @@ include '../templates/sidebar.php';
 
     <div class="section-body">
         <div class="rkt-hero mb-3">
-            <div class="d-flex flex-wrap justify-content-between align-items-start">
-                <div class="pr-3">
-                    <h1>Rencana Kerja Tahunan (RKT)</h1>
-                    <p class="mb-2">Menjabarkan prioritas RKJM menjadi rencana program dan kegiatan madrasah selama satu tahun pelaksanaan.</p>
-                    <div class="mb-1">
-                        <?php if ($doc): ?>
-                            <span class="badge-soft mr-1"><i class="fas fa-calendar-alt mr-1"></i>Tahun <?= (int)$doc['tahun'] ?></span>
-                            <span class="badge-soft mr-1"><i class="fas fa-file-signature mr-1"></i><?= htmlspecialchars($doc_status_opts[$doc['status']] ?? $doc['status']) ?></span>
-                            <?php if (!empty($doc['nomor_dokumen'])): ?><span class="badge-soft mr-1"><i class="fas fa-hashtag mr-1"></i><?= htmlspecialchars($doc['nomor_dokumen']) ?></span><?php endif; ?>
-                            <span class="badge-soft"><i class="fas fa-school mr-1"></i><?= htmlspecialchars($doc['nama_madrasah'] ?: ($school['nama_madrasah'] ?? 'Madrasah')) ?></span>
-                        <?php else: ?>
-                            <span class="badge-soft"><i class="fas fa-info-circle mr-1"></i>Belum ada dokumen RKT untuk tahun <?= (int)$activeYear ?></span>
-                        <?php endif; ?>
-                    </div>
+            <h1>Rencana Kerja Tahunan (RKT)</h1>
+            <p>Menjabarkan prioritas RKJM menjadi rencana program dan kegiatan madrasah selama satu tahun pelaksanaan.</p>
+            <div class="rkt-hero-badges">
+                <?php if ($doc): ?>
+                    <span class="badge-soft"><i class="fas fa-calendar-alt mr-1"></i>Tahun <?= (int)$doc['tahun'] ?></span>
+                    <span class="badge-soft"><i class="fas fa-file-signature mr-1"></i><?= htmlspecialchars($doc_status_opts[$doc['status']] ?? $doc['status']) ?></span>
+                    <?php if (!empty($doc['nomor_dokumen'])): ?><span class="badge-soft"><i class="fas fa-hashtag mr-1"></i><?= htmlspecialchars($doc['nomor_dokumen']) ?></span><?php endif; ?>
+                    <span class="badge-soft"><i class="fas fa-school mr-1"></i><?= htmlspecialchars($doc['nama_madrasah'] ?: ($school['nama_madrasah'] ?? 'Madrasah')) ?></span>
+                <?php else: ?>
+                    <span class="badge-soft"><i class="fas fa-info-circle mr-1"></i>Belum ada dokumen RKT untuk tahun <?= (int)$activeYear ?></span>
+                <?php endif; ?>
+            </div>
+            <div class="rkt-hero-toolbar">
+                <div style="min-width: 140px;">
+                    <select id="rkt-year-switch" class="form-control">
+                        <?php foreach ($yearsList as $th): ?>
+                            <option value="<?= (int)$th ?>" <?= $activeYear === (int)$th ? 'selected' : '' ?>>Tahun <?= (int)$th ?></option>
+                        <?php endforeach; ?>
+                    </select>
                 </div>
-                <div class="rkt-hero-actions mt-2 mt-md-0">
-                    <div class="form-group mb-2">
-                        <select id="rkt-year-switch" class="form-control form-control-sm">
-                            <?php foreach ($yearsList as $th): ?>
-                                <option value="<?= (int)$th ?>" <?= $activeYear === (int)$th ? 'selected' : '' ?>>Tahun <?= (int)$th ?></option>
-                            <?php endforeach; ?>
-                        </select>
-                    </div>
-                    <button type="button" class="btn btn-light btn-sm mb-1" id="btn-doc-form"><i class="fas fa-cog mr-1"></i><?= $doc ? 'Pengaturan RKT' : 'Buat RKT' ?></button>
-                    <?php if ($doc): ?>
-                        <button type="button" class="btn btn-warning btn-sm mb-1" id="btn-add-program"><i class="fas fa-plus mr-1"></i>Tambah Program</button>
-                        <button type="button" class="btn btn-success btn-sm mb-1" id="btn-use-template"><i class="fas fa-copy mr-1"></i>Gunakan Template</button>
-                        <button type="button" class="btn btn-info btn-sm mb-1" id="btn-import-rkjm"><i class="fas fa-project-diagram mr-1"></i>Ambil dari RKJM</button>
-                        <a href="rkt_template.php" class="btn btn-light btn-sm mb-1"><i class="fas fa-layer-group mr-1"></i>Kelola Template</a>
-                        <a href="cetak_rkt.php?doc=<?= (int)$doc['id'] ?>" target="_blank" class="btn btn-primary btn-sm mb-1"><i class="fas fa-print mr-1"></i>Cetak RKT</a>
-                    <?php else: ?>
-                        <a href="rkt_template.php" class="btn btn-light btn-sm mb-1"><i class="fas fa-layer-group mr-1"></i>Kelola Template</a>
-                    <?php endif; ?>
-                </div>
+                <button type="button" class="btn btn-light" id="btn-doc-form"><i class="fas fa-cog"></i><?= $doc ? 'Pengaturan RKT' : 'Buat RKT' ?></button>
+                <?php if ($doc): ?>
+                    <button type="button" class="btn btn-warning" id="btn-add-program"><i class="fas fa-plus"></i>Tambah Program</button>
+                    <button type="button" class="btn btn-success" id="btn-use-template"><i class="fas fa-copy"></i>Gunakan Template</button>
+                    <button type="button" class="btn btn-info" id="btn-import-rkjm"><i class="fas fa-project-diagram"></i>Ambil dari RKJM</button>
+                    <button type="button" class="btn btn-light" id="btn-sync-anggaran" title="Sinkronkan anggaran program dengan RKJM"><i class="fas fa-sync-alt"></i>Sinkron Anggaran</button>
+                    <a href="rkt_template.php" class="btn btn-light"><i class="fas fa-layer-group"></i>Kelola Template</a>
+                    <a href="cetak_rkt.php?doc=<?= (int)$doc['id'] ?>" target="_blank" class="btn btn-primary"><i class="fas fa-print"></i>Cetak RKT</a>
+                <?php else: ?>
+                    <a href="rkt_template.php" class="btn btn-light"><i class="fas fa-layer-group"></i>Kelola Template</a>
+                <?php endif; ?>
             </div>
         </div>
 
@@ -279,74 +316,84 @@ include '../templates/sidebar.php';
                 <button type="button" class="btn btn-primary" id="btn-create-doc"><i class="fas fa-plus mr-1"></i>Buat RKT Tahun <?= (int)$activeYear ?></button>
             </div>
         <?php else: ?>
-            <div class="row mb-2">
-                <div class="col-6 col-md-3 mb-2">
-                    <div class="rkt-stat p-3">
-                        <div class="d-flex align-items-center justify-content-between">
-                            <div><div class="rkt-stat-value"><?= (int)$summary['program'] ?></div><div class="rkt-stat-label">Total Program</div></div>
-                            <div class="rkt-stat-icon" style="background:#eaf8f2;color:#1f6f5c"><i class="fas fa-tasks"></i></div>
+            <div class="row dash-stat-row">
+                <div class="col-6 col-sm-4 col-xl-3 mb-3">
+                    <div class="dash-stat-card tint-teal">
+                        <div class="dash-stat-ico dsi-teal"><i class="fas fa-tasks"></i></div>
+                        <div class="dash-stat-body">
+                            <div class="dash-stat-label">Total Program</div>
+                            <div class="dash-stat-value"><?= (int)$summary['program'] ?></div>
+                            <div class="dash-stat-sub"><span style="color:#0891b2;">tahun <?= (int)$activeYear ?></span></div>
                         </div>
                     </div>
                 </div>
-                <div class="col-6 col-md-3 mb-2">
-                    <div class="rkt-stat p-3">
-                        <div class="d-flex align-items-center justify-content-between">
-                            <div><div class="rkt-stat-value"><?= (int)$summary['kegiatan'] ?></div><div class="rkt-stat-label">Total Kegiatan</div></div>
-                            <div class="rkt-stat-icon" style="background:#e8f6fb;color:#1b87ab"><i class="fas fa-list-check"></i></div>
+                <div class="col-6 col-sm-4 col-xl-3 mb-3">
+                    <div class="dash-stat-card tint-blue">
+                        <div class="dash-stat-ico dsi-blue"><i class="fas fa-list-check"></i></div>
+                        <div class="dash-stat-body">
+                            <div class="dash-stat-label">Total Kegiatan</div>
+                            <div class="dash-stat-value"><?= (int)$summary['kegiatan'] ?></div>
+                            <div class="dash-stat-sub"><span style="color:#2563eb;">rincian aktivitas</span></div>
                         </div>
                     </div>
                 </div>
-                <div class="col-6 col-md-3 mb-2">
-                    <div class="rkt-stat p-3">
-                        <div class="d-flex align-items-center justify-content-between">
-                            <div><div class="rkt-stat-value"><?= (int)$summary['belum'] ?></div><div class="rkt-stat-label">Belum Dimulai</div></div>
-                            <div class="rkt-stat-icon" style="background:#f1f2f6;color:#6b7391"><i class="fas fa-clock"></i></div>
+                <div class="col-6 col-sm-4 col-xl-3 mb-3">
+                    <div class="dash-stat-card tint-green">
+                        <div class="dash-stat-ico dsi-green"><i class="fas fa-check-circle"></i></div>
+                        <div class="dash-stat-body">
+                            <div class="dash-stat-label">Selesai</div>
+                            <div class="dash-stat-value"><?= (int)$summary['selesai'] ?></div>
+                            <div class="dash-stat-sub"><span style="color:#15803d;"><?= (int)$summary['program'] > 0 ? round((int)$summary['selesai'] / (int)$summary['program'] * 100) : 0 ?>% tercapai</span></div>
                         </div>
                     </div>
                 </div>
-                <div class="col-6 col-md-3 mb-2">
-                    <div class="rkt-stat p-3">
-                        <div class="d-flex align-items-center justify-content-between">
-                            <div><div class="rkt-stat-value"><?= (int)$summary['berjalan'] ?></div><div class="rkt-stat-label">Berjalan</div></div>
-                            <div class="rkt-stat-icon" style="background:#fff6e5;color:#d68a00"><i class="fas fa-sync"></i></div>
+                <div class="col-6 col-sm-4 col-xl-3 mb-3">
+                    <div class="dash-stat-card tint-amber">
+                        <div class="dash-stat-ico dsi-amber"><i class="fas fa-sync"></i></div>
+                        <div class="dash-stat-body">
+                            <div class="dash-stat-label">Berjalan</div>
+                            <div class="dash-stat-value"><?= (int)$summary['berjalan'] ?></div>
+                            <div class="dash-stat-sub"><span style="color:#d97706;">aktif</span></div>
                         </div>
                     </div>
                 </div>
-                <div class="col-6 col-md-3 mb-2">
-                    <div class="rkt-stat p-3">
-                        <div class="d-flex align-items-center justify-content-between">
-                            <div><div class="rkt-stat-value"><?= (int)$summary['selesai'] ?></div><div class="rkt-stat-label">Selesai</div></div>
-                            <div class="rkt-stat-icon" style="background:#e7f8ee;color:#1f9d55"><i class="fas fa-check-circle"></i></div>
+                <div class="col-6 col-sm-4 col-xl-3 mb-3">
+                    <div class="dash-stat-card tint-indigo">
+                        <div class="dash-stat-ico dsi-indigo"><i class="fas fa-clock"></i></div>
+                        <div class="dash-stat-body">
+                            <div class="dash-stat-label">Belum Mulai</div>
+                            <div class="dash-stat-value"><?= (int)$summary['belum'] ?></div>
+                            <div class="dash-stat-sub"><span style="color:#4338ca;">rencana</span></div>
                         </div>
                     </div>
                 </div>
-                <div class="col-6 col-md-3 mb-2">
-                    <div class="rkt-stat p-3">
-                        <div class="d-flex align-items-center justify-content-between">
-                            <div><div class="rkt-stat-value"><?= (int)$summary['tertunda'] + (int)$summary['tidak_terlaksana'] ?></div><div class="rkt-stat-label">Tertunda / Tidak Terlaksana</div></div>
-                            <div class="rkt-stat-icon" style="background:#fdecec;color:#c0392b"><i class="fas fa-pause-circle"></i></div>
+                <div class="col-6 col-sm-4 col-xl-3 mb-3">
+                    <div class="dash-stat-card tint-rose">
+                        <div class="dash-stat-ico dsi-rose"><i class="fas fa-pause-circle"></i></div>
+                        <div class="dash-stat-body">
+                            <div class="dash-stat-label">Tertunda / Batal</div>
+                            <div class="dash-stat-value"><?= (int)$summary['tertunda'] + (int)$summary['tidak_terlaksana'] ?></div>
+                            <div class="dash-stat-sub"><span style="color:#be123c;">perlu evaluasi</span></div>
                         </div>
                     </div>
                 </div>
-                <div class="col-12 col-md-6 mb-2">
-                    <div class="rkt-stat p-3">
-                        <div class="d-flex align-items-center justify-content-between">
-                            <div>
-                                <div class="rkt-stat-value" style="font-size:1rem"><?= rktRupiah($summary['anggaran']) ?></div>
-                                <div class="rkt-stat-label">Total Estimasi Anggaran (bukan realisasi)</div>
-                            </div>
-                            <div class="rkt-stat-icon" style="background:#fdeef6;color:#c0327f"><i class="fas fa-money-bill-wave"></i></div>
+                <div class="col-6 col-sm-4 col-xl-3 mb-3">
+                    <div class="dash-stat-card tint-violet">
+                        <div class="dash-stat-ico dsi-violet"><i class="fas fa-money-bill-wave"></i></div>
+                        <div class="dash-stat-body">
+                            <div class="dash-stat-label">Estimasi Anggaran</div>
+                            <div class="dash-stat-value dash-stat-value-sm" style="font-size:1.05rem;"><?= rktRupiah($summary['anggaran']) ?></div>
+                            <div class="dash-stat-sub"><span style="color:#7c3aed;">pagu tahunan</span></div>
                         </div>
                     </div>
                 </div>
-                <div class="col-12 col-md-6 mb-2">
-                    <div class="rkt-stat p-3">
-                        <div class="d-flex align-items-center justify-content-between">
-                            <div>
-                                <div class="rkt-stat-value" style="font-size:1rem"><?= rktRupiah($summary['realisasi']) ?></div>
-                                <div class="rkt-stat-label">Realisasi Anggaran Tercatat</div>
-                            </div>
-                            <div class="rkt-stat-icon" style="background:#eef1ff;color:#4b54a8"><i class="fas fa-receipt"></i></div>
+                <div class="col-6 col-sm-4 col-xl-3 mb-3">
+                    <div class="dash-stat-card tint-teal">
+                        <div class="dash-stat-ico dsi-teal"><i class="fas fa-receipt"></i></div>
+                        <div class="dash-stat-body">
+                            <div class="dash-stat-label">Realisasi Anggaran</div>
+                            <div class="dash-stat-value dash-stat-value-sm" style="font-size:1.05rem;"><?= rktRupiah($summary['realisasi']) ?></div>
+                            <div class="dash-stat-sub"><span style="color:#0891b2;">tercatat</span></div>
                         </div>
                     </div>
                 </div>
@@ -411,73 +458,87 @@ include '../templates/sidebar.php';
                         </div>
                     </form>
 
-                    <div class="table-responsive">
-                        <table class="table table-hover rkt-table">
-                            <thead>
-                                <tr>
-                                    <th>No.</th>
-                                    <th><a href="<?= htmlspecialchars(rkt_qs(['sort' => 'bidang', 'dir' => ($sort === 'bidang' && $dir === 'ASC') ? 'desc' : 'asc', 'page' => 1])) ?>">Bidang</a></th>
-                                    <th><a href="<?= htmlspecialchars(rkt_qs(['sort' => 'nama', 'dir' => ($sort === 'nama' && $dir === 'ASC') ? 'desc' : 'asc', 'page' => 1])) ?>">Nama Program</a></th>
-                                    <th>Referensi RKJM</th>
-                                    <th>Tujuan</th>
-                                    <th>Indikator</th>
-                                    <th><a href="<?= htmlspecialchars(rkt_qs(['sort' => 'target', 'dir' => ($sort === 'target' && $dir === 'ASC') ? 'desc' : 'asc', 'page' => 1])) ?>">Target Tahunan</a></th>
-                                    <th>Kegiatan</th>
-                                    <th>Jadwal</th>
-                                    <th>PJ</th>
-                                    <th><a href="<?= htmlspecialchars(rkt_qs(['sort' => 'anggaran', 'dir' => ($sort === 'anggaran' && $dir === 'ASC') ? 'desc' : 'asc', 'page' => 1])) ?>">Estimasi Anggaran</a></th>
-                                    <th>Sumber Dana</th>
-                                    <th><a href="<?= htmlspecialchars(rkt_qs(['sort' => 'status', 'dir' => ($sort === 'status' && $dir === 'ASC') ? 'desc' : 'asc', 'page' => 1])) ?>">Status</a></th>
-                                    <th class="text-right">Aksi</th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                <?php if (!$rows): ?>
-                                    <tr><td colspan="14" class="text-center text-muted py-4"><i class="fas fa-inbox fa-2x d-block mb-2"></i>Belum ada program pada filter ini. Tambah program, ambil dari RKJM, atau gunakan template.</td></tr>
-                                <?php endif; ?>
-                                <?php $no = ($page - 1) * $per_page; foreach ($rows as $r): $no++; ?>
-                                    <tr>
-                                        <td><?= $no ?></td>
-                                        <td><span class="badge badge-light border"><?= htmlspecialchars(rkt_excerpt($r['bidang_nama'], 30)) ?></span></td>
-                                        <td>
-                                            <div class="rkt-nama"><?= htmlspecialchars($r['nama_program']) ?></div>
-                                            <small class="text-muted"><?= htmlspecialchars($r['kode_program'] ?: '-') ?></small>
-                                        </td>
-                                        <td>
-                                            <?php if (!empty($r['rkjm_referensi'])): ?>
-                                                <span class="rkt-src-chip" title="<?= htmlspecialchars($r['rkjm_referensi']) ?>"><?= htmlspecialchars(rkt_excerpt($r['rkjm_referensi'], 34)) ?></span>
-                                            <?php else: ?>
-                                                <span class="rkt-unlinked">Belum Terhubung ke RKJM</span>
-                                            <?php endif; ?>
-                                        </td>
-                                        <td><div class="rkt-clip" title="<?= htmlspecialchars((string)$r['tujuan']) ?>"><?= htmlspecialchars(rkt_excerpt($r['tujuan'], 48)) ?></div></td>
-                                        <td><div class="rkt-clip" title="<?= htmlspecialchars((string)$r['indikator']) ?>"><?= htmlspecialchars(rkt_excerpt($r['indikator'], 48)) ?></div></td>
-                                        <td><div class="rkt-clip" title="<?= htmlspecialchars((string)$r['target_tahunan']) ?>"><?= htmlspecialchars(rkt_excerpt($r['target_tahunan'], 42)) ?></div></td>
-                                        <td class="text-center"><span class="badge badge-light border"><?= (int)$r['activity_count'] ?></span></td>
-                                        <td><small><?= htmlspecialchars(rkt_rentang($r['jadwal_mulai'], $r['jadwal_selesai'])) ?></small></td>
-                                        <td><small><?= htmlspecialchars(rkt_excerpt($r['penanggung_jawab'], 24)) ?></small></td>
-                                        <td class="text-nowrap"><?= rktRupiah($r['estimasi_anggaran']) ?></td>
-                                        <td><small><?= htmlspecialchars(rkt_excerpt($r['sumber_dana'], 22)) ?></small></td>
-                                        <td>
-                                            <select class="form-control form-control-sm rkt-status-sel" data-id="<?= (int)$r['id'] ?>" <?= $is_editable ? '' : 'disabled' ?> style="min-width:128px">
-                                                <?php foreach ($prog_status_opts as $k => $v): ?>
-                                                    <option value="<?= htmlspecialchars($k) ?>" <?= $r['status'] === $k ? 'selected' : '' ?>><?= htmlspecialchars($v) ?></option>
-                                                <?php endforeach; ?>
-                                            </select>
-                                        </td>
-                                        <td class="text-right text-nowrap">
-                                            <button type="button" class="btn btn-info btn-sm px-2 mr-1 btn-rkt-detail" data-id="<?= (int)$r['id'] ?>" title="Lihat detail"><i class="fas fa-eye"></i></button>
-                                            <?php if ($is_editable): ?>
-                                                <button type="button" class="btn btn-warning btn-sm px-2 mr-1 btn-rkt-edit" data-id="<?= (int)$r['id'] ?>" title="Edit"><i class="fas fa-edit"></i></button>
-                                                <button type="button" class="btn btn-secondary btn-sm px-2 mr-1 btn-rkt-duplicate" data-id="<?= (int)$r['id'] ?>" title="Duplikasi"><i class="fas fa-clone"></i></button>
-                                                <button type="button" class="btn btn-danger btn-sm px-2 btn-rkt-delete" data-id="<?= (int)$r['id'] ?>" data-name="<?= htmlspecialchars($r['nama_program'], ENT_QUOTES) ?>" title="Hapus"><i class="fas fa-trash"></i></button>
-                                            <?php endif; ?>
-                                        </td>
-                                    </tr>
-                                <?php endforeach; ?>
-                            </tbody>
-                        </table>
+
+                    <?php if (!$rows): ?>
+                    <div class="rkt-empty my-2">
+                        <i class="fas fa-inbox fa-2x text-muted mb-2 d-block"></i>
+                        <div class="text-muted">Belum ada program pada filter ini. Tambah program, ambil dari RKJM, atau gunakan template.</div>
                     </div>
+                    <?php else: ?>
+                    <div class="rkt-card-grid mb-3">
+                    <?php $no = ($page - 1) * $per_page; foreach ($rows as $r): $no++; ?>
+                    <div class="rkt-card">
+                        <div class="rkt-card-head">
+                            <div class="rkt-card-head-top">
+                                <span class="rkt-kode"><?= htmlspecialchars($r['kode_program'] ?: '—') ?></span>
+                                <span class="rkt-status-pill status-<?= htmlspecialchars($r['status']) ?>">
+                                    <i class="fas fa-circle" style="font-size:.5rem;"></i>
+                                    <?= htmlspecialchars($prog_status_opts[$r['status']] ?? $r['status']) ?>
+                                </span>
+                            </div>
+                            <div class="rkt-nama"><?= htmlspecialchars($r['nama_program']) ?></div>
+                            <div class="rkt-card-tags">
+                                <span class="rkt-bidang"><?= htmlspecialchars(rkt_excerpt($r['bidang_nama'], 40)) ?></span>
+                                <?php if (!empty($r['rkjm_referensi'])): ?>
+                                    <span class="rkt-src-chip"><i class="fas fa-link mr-1"></i><?= htmlspecialchars(rkt_excerpt($r['rkjm_referensi'], 46)) ?></span>
+                                <?php else: ?>
+                                    <span class="rkt-unlinked"><i class="fas fa-unlink mr-1"></i>Belum Terhubung ke RKJM</span>
+                                <?php endif; ?>
+                            </div>
+                        </div>
+                        <div class="rkt-card-body">
+                            <div>
+                                <div class="rkt-field-label">Tujuan</div>
+                                <div class="rkt-field-val ellipsis" title="<?= htmlspecialchars((string)$r['tujuan']) ?>"><?= htmlspecialchars(rkt_excerpt($r['tujuan'], 120)) ?></div>
+                            </div>
+                            <div>
+                                <div class="rkt-field-label">Target Tahunan</div>
+                                <div class="rkt-field-val ellipsis" title="<?= htmlspecialchars((string)$r['target_tahunan']) ?>"><?= htmlspecialchars(rkt_excerpt($r['target_tahunan'], 120)) ?></div>
+                            </div>
+                            <div class="rkt-field-full">
+                                <div class="rkt-field-label">Indikator Keberhasilan</div>
+                                <div class="rkt-field-val ellipsis" title="<?= htmlspecialchars((string)$r['indikator']) ?>"><?= htmlspecialchars(rkt_excerpt($r['indikator'], 160)) ?></div>
+                            </div>
+                            <div>
+                                <div class="rkt-field-label">Penanggung Jawab</div>
+                                <div class="rkt-field-val"><?= htmlspecialchars(rkt_excerpt($r['penanggung_jawab'], 36)) ?></div>
+                            </div>
+                            <div>
+                                <div class="rkt-field-label">Jadwal</div>
+                                <div class="rkt-field-val"><?= htmlspecialchars(rkt_rentang($r['jadwal_mulai'], $r['jadwal_selesai'])) ?></div>
+                            </div>
+                            <div>
+                                <div class="rkt-field-label">Anggaran</div>
+                                <div class="rkt-card-anggaran"><?= rktRupiah($r['estimasi_anggaran']) ?></div>
+                                <div class="rkt-card-sumber"><?= htmlspecialchars(rkt_excerpt($r['sumber_dana'], 30)) ?></div>
+                            </div>
+                            <div>
+                                <div class="rkt-field-label">Kegiatan</div>
+                                <div class="rkt-field-val"><span class="badge badge-light border"><?= (int)$r['activity_count'] ?> kegiatan</span></div>
+                            </div>
+                        </div>
+                        <div class="rkt-card-foot">
+                            <div class="rkt-actions">
+                                <button type="button" class="btn btn-rkt-detail btn-sm" data-id="<?= (int)$r['id'] ?>" title="Lihat detail">
+                                    <i class="fas fa-eye"></i><span class="btn-text"> Detail</span>
+                                </button>
+                                <?php if ($is_editable): ?>
+                                    <button type="button" class="btn btn-rkt-edit btn-sm" data-id="<?= (int)$r['id'] ?>" title="Edit">
+                                        <i class="fas fa-edit"></i><span class="btn-text"> Edit</span>
+                                    </button>
+                                    <button type="button" class="btn btn-rkt-duplicate btn-icon-only btn-sm" data-id="<?= (int)$r['id'] ?>" title="Duplikasi">
+                                        <i class="fas fa-clone"></i>
+                                    </button>
+                                    <button type="button" class="btn btn-rkt-delete btn-icon-only btn-sm" data-id="<?= (int)$r['id'] ?>" data-name="<?= htmlspecialchars($r['nama_program'], ENT_QUOTES) ?>" title="Hapus">
+                                        <i class="fas fa-trash"></i>
+                                    </button>
+                                <?php endif; ?>
+                            </div>
+                        </div>
+                    </div>
+                    <?php endforeach; ?>
+                    </div>
+                    <?php endif; ?>
 
                     <div class="d-flex flex-wrap justify-content-between align-items-center">
                         <div class="text-muted small mb-2">Menampilkan <?= $total_rows ? (($page - 1) * $per_page + 1) : 0 ?>-<?= min($total_rows, $page * $per_page) ?> dari <?= $total_rows ?> program</div>
@@ -980,7 +1041,7 @@ include '../templates/sidebar.php';
             </div>
             <div class="modal-body">
                 <div class="alert alert-light border py-2">
-                    Hanya program RKJM yang memiliki target pada tahun <strong><?= (int)$doc['tahun'] ?></strong> yang ditampilkan. Anggaran empat tahunan RKJM tidak disalin; anggaran tahunan RKT diisi terpisah.
+                    Program RKJM yang memiliki target pada tahun <strong><?= (int)$doc['tahun'] ?></strong> akan disalin ke RKT, beserta estimasi anggaran tahunan dan sumber dana yang disinkronkan dari RKJM.
                 </div>
                 <div class="form-group">
                     <label>Dokumen RKJM Sumber</label>
@@ -1079,6 +1140,19 @@ include '../templates/sidebar.php';
         if (!isFinite(n)) n = 0;
         n = Math.round(n);
         return n ? String(n).replace(/\B(?=(\d{3})+(?!\d))/g,'.') : '0';
+    }
+    function fmtDateIndo(s){
+        if (!s) return '';
+        var parts = String(s).split('-');
+        if (parts.length === 3) return parts[2] + '/' + parts[1] + '/' + parts[0];
+        return s;
+    }
+    function fmtRentangIndo(m, s){
+        var fm = fmtDateIndo(m);
+        var fs = fmtDateIndo(s);
+        if (fm && fs) return fm + ' s.d. ' + fs;
+        if (fm || fs) return fm || fs;
+        return '-';
     }
     $(document).on('input', 'input.rkt-rupiah', function(){ this.value = fmtRupiah(this.value); });
 
@@ -1250,7 +1324,7 @@ include '../templates/sidebar.php';
         html += row('Sasaran', d.sasaran);
         html += row('Indikator Keberhasilan', d.indikator);
         html += row('Target Tahunan', d.target_tahunan);
-        html += row('Jadwal', (d.jadwal_mulai || d.jadwal_selesai) ? (d.jadwal_mulai || '-') + ' s.d. ' + (d.jadwal_selesai || '-') : '-');
+        html += row('Jadwal', fmtRentangIndo(d.jadwal_mulai, d.jadwal_selesai));
         html += row('Penanggung Jawab', d.penanggung_jawab);
         html += row('Estimasi Anggaran', 'Rp ' + fmtRupiahValue(d.estimasi_anggaran || 0));
         html += row('Sumber Dana', d.sumber_dana);
@@ -1278,7 +1352,7 @@ include '../templates/sidebar.php';
             html += '<td>'+(idx+1)+'</td>';
             html += '<td>'+esc(a.nama_kegiatan)+'</td>';
             html += '<td>'+esc((a.target_volume || '-') + (a.satuan ? ' ' + a.satuan : ''))+'</td>';
-            html += '<td><small>'+esc((a.jadwal_mulai || '-') + ' s.d. ' + (a.jadwal_selesai || '-'))+'</small></td>';
+            html += '<td><small>'+esc(fmtRentangIndo(a.jadwal_mulai, a.jadwal_selesai))+'</small></td>';
             html += '<td><small>'+esc(a.penanggung_jawab || '-')+'</small></td>';
             html += '<td class="text-nowrap">'+ (a.estimasi_biaya ? 'Rp ' + fmtRupiahValue(a.estimasi_biaya) : '-') +'</td>';
             html += '<td><small>'+esc(a.sumber_dana || '-')+'</small></td>';
@@ -1304,7 +1378,7 @@ include '../templates/sidebar.php';
         (d.monitoring || []).forEach(function(m){
             var cap = (m.persentase_capaian !== null && m.persentase_capaian !== undefined && m.persentase_capaian !== '') ? (m.persentase_capaian + '%') : (m.penilaian_kualitatif || '-');
             html += '<tr>';
-            html += '<td><small>'+esc(m.tanggal_pelaksanaan || '-')+'</small></td>';
+            html += '<td><small>'+esc(fmtDateIndo(m.tanggal_pelaksanaan) || '-')+'</small></td>';
             html += '<td><small>'+esc(m.activity_id ? (m.nama_kegiatan || 'Kegiatan') : 'Program')+'</small></td>';
             html += '<td><small>'+esc(m.status_label || '-')+'</small></td>';
             html += '<td style="white-space:pre-line">'+esc(m.target || '-')+'</td>';
@@ -1559,6 +1633,32 @@ include '../templates/sidebar.php';
             renderRkjmRows(res.data || []);
         }).fail(function(xhr){ $('#rkt-rkjm-list').html('<div class="text-danger">'+esc((xhr.responseJSON && xhr.responseJSON.message) || 'Gagal memuat program RKJM')+'</div>'); });
     }
+    $('#btn-sync-anggaran').on('click', function(){
+        Swal.fire({
+            title: 'Sinkronkan Anggaran dari RKJM?',
+            text: 'Estimasi anggaran dan sumber dana program RKT akan dihitung dan disinkronkan dengan dokumen RKJM terkait.',
+            icon: 'question',
+            showCancelButton: true,
+            confirmButtonText: 'Ya, Sinkronkan',
+            cancelButtonText: 'Batal'
+        }).then(function(r){
+            if (!r.isConfirmed) return;
+            var $btn = $('#btn-sync-anggaran').prop('disabled', true);
+            post('sync_rkjm_budgets', {}).done(function(res){
+                $btn.prop('disabled', false);
+                if (res.success) {
+                    swalOk(res.message || 'Anggaran berhasil disinkronkan');
+                    reload();
+                } else {
+                    swalErr(res.message);
+                }
+            }).fail(function(xhr){
+                $btn.prop('disabled', false);
+                swalErr((xhr.responseJSON && xhr.responseJSON.message) || 'Gagal sinkron anggaran');
+            });
+        });
+    });
+
     $('#btn-import-rkjm').on('click', function(){ $('#rkjmModal').modal('show'); loadRkjmPrograms(); });
     $('#rkjm-doc-select').on('change', loadRkjmPrograms);
     $(document).on('change', '.rkjm-check', updateRkjmCount);
@@ -1566,7 +1666,7 @@ include '../templates/sidebar.php';
     $('#rkjm-apply').on('click', function(){
         var ids = $('.rkjm-check:checked').map(function(){ return $(this).val(); }).get();
         if (!ids.length) { swalWarn('Belum ada pilihan', 'Pilih minimal satu program RKJM.'); return; }
-        Swal.fire({title:'Ambil program RKJM?', text:ids.length + ' program akan disalin ke RKT tahun ' + RKT.tahun + '. Anggaran tahunan tidak disalin otomatis.', icon:'question', showCancelButton:true, confirmButtonText:'Ya, Ambil', cancelButtonText:'Batal'}).then(function(r){
+        Swal.fire({title:'Ambil program RKJM?', text:ids.length + ' program beserta estimasi anggaran dan sumber dana akan disalin ke RKT tahun ' + RKT.tahun + '.', icon:'question', showCancelButton:true, confirmButtonText:'Ya, Ambil', cancelButtonText:'Batal'}).then(function(r){
             if (!r.isConfirmed) return;
             var $btn = $('#rkjm-apply').prop('disabled', true);
             post('apply_rkjm', {rkjm_document_id: $('#rkjm-doc-select').val() || 0, rkjm_program_ids: ids}).done(function(res){
