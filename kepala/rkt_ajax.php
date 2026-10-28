@@ -100,9 +100,9 @@ try {
             }
 
             $school = getSchoolProfile($pdo);
-            $namaMadrasah = trim((string)($_POST['nama_madrasah'] ?? ''));
+            $namaMadrasah = trim((string)($school['nama_madrasah'] ?? ''));
             if ($namaMadrasah === '') {
-                $namaMadrasah = trim((string)($school['nama_madrasah'] ?? ''));
+                $namaMadrasah = trim((string)($_POST['nama_madrasah'] ?? ''));
             }
             if ($namaMadrasah === '') {
                 rktJson(['success' => false, 'message' => 'Nama madrasah wajib diisi.']);
@@ -121,20 +121,22 @@ try {
             $status = (string)($_POST['status'] ?? 'draf');
             if (!isset($statusOpts[$status])) $status = 'draf';
 
+            // Visi, misi, tujuan, dan dasar penyusunan selalu mengikuti Pengaturan RKJM
+            // bila dokumen RKT terhubung ke RKJM, supaya tidak ada duplikasi data.
             $visi = trim((string)($_POST['visi'] ?? ''));
             $misi = trim((string)($_POST['misi'] ?? ''));
             $tujuan = trim((string)($_POST['tujuan_pengembangan'] ?? ''));
+            $dasarPenyusunan = trim((string)($_POST['dasar_penyusunan'] ?? ''));
             if ($rkjmDoc) {
-                if ($visi === '') $visi = richTextToPlain($rkjmDoc['visi'] ?? '');
-                if ($misi === '') $misi = richTextToPlain($rkjmDoc['misi'] ?? '');
-                if ($tujuan === '') $tujuan = richTextToPlain($rkjmDoc['tujuan_pengembangan'] ?? '');
+                $visi = richTextToPlain($rkjmDoc['visi'] ?? '');
+                $misi = richTextToPlain($rkjmDoc['misi'] ?? '');
+                $tujuan = richTextToPlain($rkjmDoc['tujuan_pengembangan'] ?? '');
+                $dasarPenyusunan = richTextToPlain($rkjmDoc['dasar_penyusunan'] ?? '');
             }
 
-            $namaKepala = trim((string)($_POST['nama_kepala'] ?? ''));
-            if ($namaKepala === '') {
-                $namaKepala = trim((string)($school['nama_kepala'] ?? ''));
-                if ($namaKepala === '') $namaKepala = trim((string)($school['kepala_madrasah'] ?? ''));
-            }
+            $namaKepala = trim((string)($school['nama_kepala'] ?? ''));
+            if ($namaKepala === '') $namaKepala = trim((string)($school['kepala_madrasah'] ?? ''));
+            if ($namaKepala === '') $namaKepala = trim((string)($_POST['nama_kepala'] ?? ''));
 
             $tanggal = rktDateField($_POST, 'tanggal_penyusunan');
 
@@ -147,7 +149,7 @@ try {
                 'misi' => $misi,
                 'tujuan_pengembangan' => $tujuan,
                 'prioritas' => trim((string)($_POST['prioritas'] ?? '')),
-                'dasar_penyusunan' => trim((string)($_POST['dasar_penyusunan'] ?? '')),
+                'dasar_penyusunan' => $dasarPenyusunan,
                 'tanggal_penyusunan' => $tanggal,
                 'nama_kepala' => $namaKepala,
                 'status' => $status,

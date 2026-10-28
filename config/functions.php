@@ -4260,11 +4260,11 @@ if (!function_exists('sanitizeRichText')) {
         }
 
         $allowed = [
-            'p' => [], 'br' => [], 'strong' => [], 'b' => [], 'em' => [], 'i' => [], 'u' => [], 's' => [],
-            'ul' => [], 'ol' => [], 'li' => [], 'blockquote' => [], 'h1' => [], 'h2' => [], 'h3' => [],
-            'h4' => [], 'h5' => [], 'h6' => [], 'hr' => [], 'sub' => [], 'sup' => [], 'span' => [],
+            'p' => ['style'], 'br' => [], 'strong' => [], 'b' => [], 'em' => [], 'i' => [], 'u' => [], 's' => [],
+            'ul' => [], 'ol' => [], 'li' => ['style'], 'blockquote' => ['style'], 'h1' => ['style'], 'h2' => ['style'], 'h3' => ['style'],
+            'h4' => ['style'], 'h5' => ['style'], 'h6' => ['style'], 'hr' => [], 'sub' => [], 'sup' => [], 'span' => [],
             'a' => ['href', 'title', 'target', 'rel'],
-            'table' => [], 'thead' => [], 'tbody' => [], 'tr' => [], 'th' => [], 'td' => [],
+            'table' => [], 'thead' => [], 'tbody' => [], 'tr' => [], 'th' => ['style'], 'td' => ['style'],
         ];
         $drop = ['script', 'style', 'iframe', 'object', 'embed', 'form', 'input', 'button', 'link', 'meta', 'svg', 'math'];
 
@@ -4326,6 +4326,20 @@ if (!function_exists('sanitizeRichText')) {
                         $href = trim((string)$child->getAttribute('href'));
                         if ($href !== '' && !preg_match('#^(https?:|mailto:|tel:|/|\#|\?|\.{0,2}/)#i', $href)) {
                             $child->removeAttribute('href');
+                        }
+                    }
+                    if ($lower === 'style') {
+                        $style = (string)$child->getAttribute('style');
+                        $safe = [];
+                        if (preg_match_all('/(text-align)\s*:\s*(left|right|center|justify)/i', $style, $sm, PREG_SET_ORDER)) {
+                            foreach ($sm as $hit) {
+                                $safe['text-align'] = strtolower($hit[2]);
+                            }
+                        }
+                        if ($safe) {
+                            $child->setAttribute('style', 'text-align:' . $safe['text-align'] . ';');
+                        } else {
+                            $child->removeAttribute('style');
                         }
                     }
                 }

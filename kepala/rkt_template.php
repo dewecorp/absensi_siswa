@@ -172,12 +172,12 @@ include '../templates/sidebar.php';
                                         <?php endif; ?>
                                     </td>
                                     <td class="text-right text-nowrap">
-                                        <button type="button" class="btn btn-sm btn-light btn-tpl-edit" data-id="<?= (int)$r['id'] ?>" title="Edit"><i class="fas fa-edit"></i></button>
+                                        <button type="button" class="btn btn-warning btn-sm px-2 mr-1 btn-tpl-edit" data-id="<?= (int)$r['id'] ?>" title="Edit"><i class="fas fa-edit"></i></button>
                                         <?php if ($is_editable): ?>
-                                            <button type="button" class="btn btn-sm btn-light btn-tpl-toggle" data-id="<?= (int)$r['id'] ?>" data-active="<?= (int)$r['is_active'] ?>" title="<?= (int)$r['is_active'] === 1 ? 'Nonaktifkan' : 'Aktifkan' ?>">
+                                            <button type="button" class="btn btn-secondary btn-sm px-2 mr-1 btn-tpl-toggle" data-id="<?= (int)$r['id'] ?>" data-active="<?= (int)$r['is_active'] ?>" title="<?= (int)$r['is_active'] === 1 ? 'Nonaktifkan' : 'Aktifkan' ?>">
                                                 <i class="fas <?= (int)$r['is_active'] === 1 ? 'fa-toggle-on text-success' : 'fa-toggle-off text-muted' ?>"></i>
                                             </button>
-                                            <button type="button" class="btn btn-sm btn-light text-danger btn-tpl-delete" data-id="<?= (int)$r['id'] ?>" data-name="<?= htmlspecialchars($r['nama_program'], ENT_QUOTES) ?>" data-used="<?= (int)$r['used_count'] ?>" title="Hapus"><i class="fas fa-trash"></i></button>
+                                            <button type="button" class="btn btn-danger btn-sm px-2 btn-tpl-delete" data-id="<?= (int)$r['id'] ?>" data-name="<?= htmlspecialchars($r['nama_program'], ENT_QUOTES) ?>" data-used="<?= (int)$r['used_count'] ?>" title="Hapus"><i class="fas fa-trash"></i></button>
                                         <?php endif; ?>
                                     </td>
                                 </tr>
@@ -342,8 +342,29 @@ include '../templates/sidebar.php';
         ajax: 'rkt_ajax.php'
     };
 
+    // Ubah hasil $(form).serialize() menjadi objek agar tidak dipecah per karakter oleh Object.assign.
+    function serializeToObject(str){
+        var out = {};
+        (str || '').split('&').forEach(function(pair){
+            if (!pair) return;
+            var idx = pair.indexOf('=');
+            var key = idx < 0 ? pair : pair.slice(0, idx);
+            var val = idx < 0 ? '' : pair.slice(idx + 1);
+            key = decodeURIComponent(key.replace(/\+/g, ' '));
+            val = decodeURIComponent(val.replace(/\+/g, ' '));
+            if (!Object.prototype.hasOwnProperty.call(out, key)) {
+                out[key] = val;
+            } else {
+                if (!Array.isArray(out[key])) out[key] = [out[key]];
+                out[key].push(val);
+            }
+        });
+        return out;
+    }
+
     function post(action, data){
-        var payload = Object.assign({action: action, csrf_token: TPL.csrf}, data || {});
+        var extra = typeof data === 'string' ? serializeToObject(data) : (data || {});
+        var payload = $.extend({action: action, csrf_token: TPL.csrf}, extra);
         return $.ajax({
             url: TPL.ajax,
             type: 'POST',

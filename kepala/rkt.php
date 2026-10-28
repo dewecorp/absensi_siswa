@@ -35,12 +35,23 @@ $yearsList[(int)date('Y')] = (int)date('Y');
 if ($activeYear > 0) $yearsList[$activeYear] = $activeYear;
 krsort($yearsList);
 
-$rkjmDocs = $pdo->query("SELECT id, nomor_dokumen, tahun_awal, tahun_akhir, status FROM rkjm_documents ORDER BY tahun_awal DESC, id DESC")->fetchAll(PDO::FETCH_ASSOC);
+$rkjmDocs = $pdo->query("SELECT id, nomor_dokumen, tahun_awal, tahun_akhir, status,
+        visi, misi, tujuan_pengembangan, dasar_penyusunan
+    FROM rkjm_documents ORDER BY tahun_awal DESC, id DESC")->fetchAll(PDO::FETCH_ASSOC);
 $rkjmMap = [];
+$rkjmSync = [];
 foreach ($rkjmDocs as $rd) {
     $rkjmMap[(int)$rd['id']] = [
         'tahun_awal' => (int)$rd['tahun_awal'],
         'tahun_akhir' => (int)$rd['tahun_akhir'],
+    ];
+    // Nilai sinkron dari Pengaturan RKJM (teks polos, RKT tidak menyimpan HTML).
+    $rkjmSync[(int)$rd['id']] = [
+        'visi' => richTextToPlain($rd['visi'] ?? ''),
+        'misi' => richTextToPlain($rd['misi'] ?? ''),
+        'tujuan_pengembangan' => richTextToPlain($rd['tujuan_pengembangan'] ?? ''),
+        'dasar_penyusunan' => richTextToPlain($rd['dasar_penyusunan'] ?? ''),
+        'label' => (int)$rd['tahun_awal'] . '-' . (int)$rd['tahun_akhir'],
     ];
 }
 $defaultRkjm = rktFindRkjmDocForYear($pdo, $activeYear);
@@ -191,9 +202,10 @@ include '../templates/sidebar.php';
 .rkt-table td{font-size:.84rem;vertical-align:middle}
 .rkt-table .rkt-nama{font-weight:600;color:#23302c;min-width:170px}
 .rkt-table .rkt-clip{max-width:190px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-.rkt-table .btn-icon{width:31px;height:31px;padding:0;line-height:31px;border-radius:8px}
 .rkt-section-title{font-weight:700;color:#3b4266;font-size:.85rem;text-transform:uppercase;letter-spacing:.04em;margin:18px 0 10px;padding-bottom:6px;border-bottom:1px solid #eceff7}
 .rkt-modal textarea{min-height:68px;resize:vertical}
+.rkt-modal textarea[readonly],.rkt-modal input[readonly]{background:#f4f6fb;color:#5a6285;cursor:not-allowed}
+.rkt-modal textarea[readonly]:focus,.rkt-modal input[readonly]:focus{background:#f4f6fb;border-color:#dfe3f0;box-shadow:none}
 .rkt-empty{border:2px dashed #dfe3f0;border-radius:14px;padding:36px;text-align:center;background:#fbfcff}
 .rkt-src-chip{display:inline-block;background:#eef1ff;border:1px solid #d9def8;color:#4b54a8;border-radius:6px;padding:1px 6px;font-size:.72rem}
 .rkt-unlinked{display:inline-block;background:#f4f5f9;border:1px dashed #cfd4e3;color:#7b839c;border-radius:6px;padding:1px 6px;font-size:.72rem}
@@ -454,11 +466,11 @@ include '../templates/sidebar.php';
                                             </select>
                                         </td>
                                         <td class="text-right text-nowrap">
-                                            <button type="button" class="btn btn-sm btn-light btn-icon btn-rkt-detail" data-id="<?= (int)$r['id'] ?>" title="Lihat detail"><i class="fas fa-eye"></i></button>
+                                            <button type="button" class="btn btn-info btn-sm px-2 mr-1 btn-rkt-detail" data-id="<?= (int)$r['id'] ?>" title="Lihat detail"><i class="fas fa-eye"></i></button>
                                             <?php if ($is_editable): ?>
-                                                <button type="button" class="btn btn-sm btn-light btn-icon btn-rkt-edit" data-id="<?= (int)$r['id'] ?>" title="Edit"><i class="fas fa-edit"></i></button>
-                                                <button type="button" class="btn btn-sm btn-light btn-icon btn-rkt-duplicate" data-id="<?= (int)$r['id'] ?>" title="Duplikasi"><i class="fas fa-clone"></i></button>
-                                                <button type="button" class="btn btn-sm btn-light btn-icon text-danger btn-rkt-delete" data-id="<?= (int)$r['id'] ?>" data-name="<?= htmlspecialchars($r['nama_program'], ENT_QUOTES) ?>" title="Hapus"><i class="fas fa-trash"></i></button>
+                                                <button type="button" class="btn btn-warning btn-sm px-2 mr-1 btn-rkt-edit" data-id="<?= (int)$r['id'] ?>" title="Edit"><i class="fas fa-edit"></i></button>
+                                                <button type="button" class="btn btn-secondary btn-sm px-2 mr-1 btn-rkt-duplicate" data-id="<?= (int)$r['id'] ?>" title="Duplikasi"><i class="fas fa-clone"></i></button>
+                                                <button type="button" class="btn btn-danger btn-sm px-2 btn-rkt-delete" data-id="<?= (int)$r['id'] ?>" data-name="<?= htmlspecialchars($r['nama_program'], ENT_QUOTES) ?>" title="Hapus"><i class="fas fa-trash"></i></button>
                                             <?php endif; ?>
                                         </td>
                                     </tr>
@@ -502,7 +514,8 @@ include '../templates/sidebar.php';
                     <div class="row">
                         <div class="col-md-7 form-group">
                             <label>Nama Madrasah</label>
-                            <input type="text" name="nama_madrasah" class="form-control" value="<?= htmlspecialchars($docDefaults['nama_madrasah']) ?>" required>
+                            <input type="text" name="nama_madrasah" class="form-control" value="<?= htmlspecialchars($docDefaults['nama_madrasah']) ?>" readonly>
+                            <small class="text-muted">Mengikuti pengaturan madrasah.</small>
                         </div>
                         <div class="col-md-5 form-group">
                             <label>Tahun Pelaksanaan</label>
@@ -533,19 +546,22 @@ include '../templates/sidebar.php';
                                 </option>
                             <?php endforeach; ?>
                         </select>
-                        <small class="text-muted">Visi, misi, dan tujuan yang kosong akan diambil dari RKJM saat disimpan, tanpa mengubah RKJM.</small>
+                        <small class="text-muted">Visi, misi, tujuan, dan dasar penyusunan otomatis mengikuti dokumen RKJM yang dipilih. Ubah data tersebut melalui menu <strong>Pengaturan RKJM</strong> agar tidak terjadi duplikasi data.</small>
+                    </div>
+                    <div class="alert alert-light border py-2 small d-none" id="rkt-sync-note">
+                        <i class="fas fa-link mr-1"></i>Data berikut tersinkron dari Pengaturan RKJM dan hanya dapat diubah di sana.
                     </div>
                     <div class="form-group">
                         <label>Visi Madrasah</label>
-                        <textarea name="visi" class="form-control" rows="2"><?= htmlspecialchars($docDefaults['visi']) ?></textarea>
+                        <textarea name="visi" class="form-control rkt-sync-field" rows="2" readonly><?= htmlspecialchars($docDefaults['visi']) ?></textarea>
                     </div>
                     <div class="form-group">
                         <label>Misi Madrasah</label>
-                        <textarea name="misi" class="form-control" rows="3"><?= htmlspecialchars($docDefaults['misi']) ?></textarea>
+                        <textarea name="misi" class="form-control rkt-sync-field" rows="3" readonly><?= htmlspecialchars($docDefaults['misi']) ?></textarea>
                     </div>
                     <div class="form-group">
                         <label>Tujuan Pengembangan</label>
-                        <textarea name="tujuan_pengembangan" class="form-control" rows="2"><?= htmlspecialchars($docDefaults['tujuan_pengembangan']) ?></textarea>
+                        <textarea name="tujuan_pengembangan" class="form-control rkt-sync-field" rows="2" readonly><?= htmlspecialchars($docDefaults['tujuan_pengembangan']) ?></textarea>
                     </div>
                     <div class="form-group">
                         <label>Prioritas Pengembangan Tahun Berjalan</label>
@@ -553,7 +569,7 @@ include '../templates/sidebar.php';
                     </div>
                     <div class="form-group">
                         <label>Dasar Penyusunan</label>
-                        <textarea name="dasar_penyusunan" class="form-control" rows="2"><?= htmlspecialchars($docDefaults['dasar_penyusunan']) ?></textarea>
+                        <textarea name="dasar_penyusunan" class="form-control rkt-sync-field" rows="2" readonly><?= htmlspecialchars($docDefaults['dasar_penyusunan']) ?></textarea>
                     </div>
                     <div class="row">
                         <div class="col-md-4 form-group">
@@ -562,7 +578,8 @@ include '../templates/sidebar.php';
                         </div>
                         <div class="col-md-4 form-group">
                             <label>Nama Kepala Madrasah</label>
-                            <input type="text" name="nama_kepala" class="form-control" value="<?= htmlspecialchars($docDefaults['nama_kepala']) ?>">
+                            <input type="text" name="nama_kepala" class="form-control" value="<?= htmlspecialchars($docDefaults['nama_kepala']) ?>" readonly>
+                            <small class="text-muted">Mengikuti pengaturan madrasah.</small>
                         </div>
                         <div class="col-md-4 form-group">
                             <label>Catatan Tambahan</label>
@@ -1005,6 +1022,7 @@ include '../templates/sidebar.php';
         ajax: 'rkt_ajax.php',
         doc: <?= json_encode($doc, JSON_UNESCAPED_UNICODE | JSON_HEX_TAG | JSON_HEX_APOS | JSON_HEX_QUOT | JSON_HEX_AMP) ?>,
         defaults: <?= json_encode($docDefaults, JSON_UNESCAPED_UNICODE | JSON_HEX_TAG | JSON_HEX_APOS | JSON_HEX_QUOT | JSON_HEX_AMP) ?>,
+        rkjmSync: <?= json_encode($rkjmSync, JSON_UNESCAPED_UNICODE | JSON_HEX_TAG | JSON_HEX_APOS | JSON_HEX_QUOT | JSON_HEX_AMP) ?>,
         school: {
             nama_madrasah: <?= json_encode((string)($school['nama_madrasah'] ?? '')) ?>,
             nama_kepala: <?= json_encode((string)($school['nama_kepala'] ?: ($school['kepala_madrasah'] ?? ''))) ?>
@@ -1012,8 +1030,29 @@ include '../templates/sidebar.php';
     };
     window.RKT = RKT;
 
+    // Ubah hasil $(form).serialize() menjadi objek agar tidak dipecah per karakter oleh Object.assign.
+    function serializeToObject(str){
+        var out = {};
+        (str || '').split('&').forEach(function(pair){
+            if (!pair) return;
+            var idx = pair.indexOf('=');
+            var key = idx < 0 ? pair : pair.slice(0, idx);
+            var val = idx < 0 ? '' : pair.slice(idx + 1);
+            key = decodeURIComponent(key.replace(/\+/g, ' '));
+            val = decodeURIComponent(val.replace(/\+/g, ' '));
+            if (!Object.prototype.hasOwnProperty.call(out, key)) {
+                out[key] = val;
+            } else {
+                if (!Array.isArray(out[key])) out[key] = [out[key]];
+                out[key].push(val);
+            }
+        });
+        return out;
+    }
+
     function post(action, data){
-        var payload = Object.assign({action: action, csrf_token: RKT.csrf, document_id: RKT.docId}, data || {});
+        var extra = typeof data === 'string' ? serializeToObject(data) : (data || {});
+        var payload = $.extend({action: action, csrf_token: RKT.csrf, document_id: RKT.docId}, extra);
         return $.ajax({
             url: RKT.ajax,
             type: 'POST',
@@ -1034,9 +1073,32 @@ include '../templates/sidebar.php';
         var s=(v+'').trim().replace(/[^0-9]/g,'').replace(/^0+(?=\d)/,'');
         return s ? s.replace(/\B(?=(\d{3})+(?!\d))/g,'.') : '';
     }
+    // Format nilai numerik dari database (mis. 3000000.00) tanpa mencampur bagian desimal.
+    function fmtRupiahValue(v){
+        var n = parseFloat(v);
+        if (!isFinite(n)) n = 0;
+        n = Math.round(n);
+        return n ? String(n).replace(/\B(?=(\d{3})+(?!\d))/g,'.') : '0';
+    }
     $(document).on('input', 'input.rkt-rupiah', function(){ this.value = fmtRupiah(this.value); });
 
     $('#rkt-year-switch').on('change', function(){ location.href = 'rkt.php?tahun=' + $(this).val(); });
+
+    // Sinkronisasi field dokumen RKT dari Pengaturan RKJM (visi, misi, tujuan, dasar penyusunan).
+    function syncDocFromRkjm(){
+        var id = $('#doc-rkjm-select').val();
+        var src = id && RKT.rkjmSync ? RKT.rkjmSync[id] : null;
+        $('#docForm').find('.rkt-sync-field').each(function(){
+            var name = this.name;
+            if (src) {
+                $(this).val(src[name] || '').prop('readonly', true).addClass('bg-light');
+            } else {
+                $(this).prop('readonly', false).removeClass('bg-light');
+            }
+        });
+        $('#rkt-sync-note').toggleClass('d-none', !src);
+    }
+    $('#doc-rkjm-select').on('change', syncDocFromRkjm);
 
     function openDocForm(isNew){
         var d = RKT.doc || {};
@@ -1056,6 +1118,7 @@ include '../templates/sidebar.php';
         f.find('[name=nama_kepala]').val(isNew ? (RKT.defaults.nama_kepala || RKT.school.nama_kepala) : (d.nama_kepala || ''));
         f.find('[name=status]').val(isNew ? 'draf' : (d.status || 'draf'));
         f.find('[name=catatan]').val(isNew ? '' : (d.catatan || ''));
+        syncDocFromRkjm();
         $('#docModalTitle').text(isNew ? 'Buat Dokumen RKT' : 'Pengaturan Dokumen RKT');
         $('#docModal').modal('show');
     }
@@ -1092,7 +1155,7 @@ include '../templates/sidebar.php';
         f.find('[name=status]').val(r.status || 'belum_dimulai');
         f.find('[name=jadwal_mulai]').val(r.jadwal_mulai || '');
         f.find('[name=jadwal_selesai]').val(r.jadwal_selesai || '');
-        f.find('[name=estimasi_anggaran]').val(r.estimasi_anggaran ? fmtRupiah(r.estimasi_anggaran) : '');
+        f.find('[name=estimasi_anggaran]').val(r.estimasi_anggaran ? fmtRupiahValue(r.estimasi_anggaran) : '');
 
         var info = '';
         if (r.rkjm_program_id) {
@@ -1189,7 +1252,7 @@ include '../templates/sidebar.php';
         html += row('Target Tahunan', d.target_tahunan);
         html += row('Jadwal', (d.jadwal_mulai || d.jadwal_selesai) ? (d.jadwal_mulai || '-') + ' s.d. ' + (d.jadwal_selesai || '-') : '-');
         html += row('Penanggung Jawab', d.penanggung_jawab);
-        html += row('Estimasi Anggaran', 'Rp ' + fmtRupiah(d.estimasi_anggaran || 0));
+        html += row('Estimasi Anggaran', 'Rp ' + fmtRupiahValue(d.estimasi_anggaran || 0));
         html += row('Sumber Dana', d.sumber_dana);
         html += row('Output', d.output);
         html += row('Monitoring dan Evaluasi', d.monitoring_evaluasi);
@@ -1217,13 +1280,13 @@ include '../templates/sidebar.php';
             html += '<td>'+esc((a.target_volume || '-') + (a.satuan ? ' ' + a.satuan : ''))+'</td>';
             html += '<td><small>'+esc((a.jadwal_mulai || '-') + ' s.d. ' + (a.jadwal_selesai || '-'))+'</small></td>';
             html += '<td><small>'+esc(a.penanggung_jawab || '-')+'</small></td>';
-            html += '<td class="text-nowrap">'+ (a.estimasi_biaya ? 'Rp ' + fmtRupiah(a.estimasi_biaya) : '-') +'</td>';
+            html += '<td class="text-nowrap">'+ (a.estimasi_biaya ? 'Rp ' + fmtRupiahValue(a.estimasi_biaya) : '-') +'</td>';
             html += '<td><small>'+esc(a.sumber_dana || '-')+'</small></td>';
             html += '<td><span class="badge badge-light border">'+esc(a.status_label)+'</span></td>';
             html += '<td class="text-nowrap">';
-            html += '<button type="button" class="btn btn-sm btn-light btn-act-edit" data-id="'+a.id+'" title="Edit"><i class="fas fa-edit"></i></button> ';
-            html += '<button type="button" class="btn btn-sm btn-light btn-act-delete" data-id="'+a.id+'" data-name="'+esc(a.nama_kegiatan)+'" title="Hapus"><i class="fas fa-trash text-danger"></i></button> ';
-            html += '<button type="button" class="btn btn-sm btn-light btn-act-monitor" data-id="'+a.id+'" data-name="'+esc(a.nama_kegiatan)+'" title="Monitoring"><i class="fas fa-clipboard-check"></i></button>';
+            html += '<button type="button" class="btn btn-warning btn-sm px-2 mr-1 btn-act-edit" data-id="'+a.id+'" title="Edit"><i class="fas fa-edit"></i></button>';
+            html += '<button type="button" class="btn btn-danger btn-sm px-2 mr-1 btn-act-delete" data-id="'+a.id+'" data-name="'+esc(a.nama_kegiatan)+'" title="Hapus"><i class="fas fa-trash"></i></button>';
+            html += '<button type="button" class="btn btn-info btn-sm px-2 btn-act-monitor" data-id="'+a.id+'" data-name="'+esc(a.nama_kegiatan)+'" title="Monitoring"><i class="fas fa-clipboard-check"></i></button>';
             html += '</td></tr>';
         });
         html += '</tbody></table></div>';
@@ -1247,12 +1310,12 @@ include '../templates/sidebar.php';
             html += '<td style="white-space:pre-line">'+esc(m.target || '-')+'</td>';
             html += '<td style="white-space:pre-line">'+esc(m.realisasi || '-')+'</td>';
             html += '<td>'+esc(cap)+'</td>';
-            html += '<td class="text-nowrap">'+ (m.realisasi_biaya ? 'Rp ' + fmtRupiah(m.realisasi_biaya) : '-') +'</td>';
+            html += '<td class="text-nowrap">'+ (m.realisasi_biaya ? 'Rp ' + fmtRupiahValue(m.realisasi_biaya) : '-') +'</td>';
             html += '<td style="white-space:pre-line">'+esc(m.kendala || '-')+'</td>';
             html += '<td style="white-space:pre-line">'+esc(m.tindak_lanjut || '-')+'</td>';
             html += '<td class="text-nowrap">';
-            html += '<button type="button" class="btn btn-sm btn-light btn-mon-edit" data-id="'+m.id+'" title="Edit"><i class="fas fa-edit"></i></button> ';
-            html += '<button type="button" class="btn btn-sm btn-light btn-mon-delete" data-id="'+m.id+'" title="Hapus"><i class="fas fa-trash text-danger"></i></button>';
+            html += '<button type="button" class="btn btn-warning btn-sm px-2 mr-1 btn-mon-edit" data-id="'+m.id+'" title="Edit"><i class="fas fa-edit"></i></button>';
+            html += '<button type="button" class="btn btn-danger btn-sm px-2 btn-mon-delete" data-id="'+m.id+'" title="Hapus"><i class="fas fa-trash"></i></button>';
             html += '</td></tr>';
         });
         html += '</tbody></table></div>';
@@ -1293,7 +1356,7 @@ include '../templates/sidebar.php';
             f.find('[name='+k+']').val(a[k] || '');
         });
         f.find('[name=status]').val(a.status || 'belum_dimulai');
-        f.find('[name=estimasi_biaya]').val(a.estimasi_biaya ? fmtRupiah(a.estimasi_biaya) : '');
+        f.find('[name=estimasi_biaya]').val(a.estimasi_biaya ? fmtRupiahValue(a.estimasi_biaya) : '');
         $('#activityModalTitle').text(a.id ? 'Edit Kegiatan' : 'Tambah Kegiatan');
     }
 
@@ -1354,7 +1417,7 @@ include '../templates/sidebar.php';
         f.find('[name=status_pelaksanaan]').val(m.status_pelaksanaan || 'belum_dimulai');
         f.find('[name=tanggal_pelaksanaan]').val(m.tanggal_pelaksanaan || '');
         ['kendala','tindak_lanjut','output_aktual','bukti','catatan_evaluasi','petugas_evaluasi'].forEach(function(k){ f.find('[name='+k+']').val(m[k] || ''); });
-        f.find('[name=realisasi_biaya]').val(m.realisasi_biaya ? fmtRupiah(m.realisasi_biaya) : '');
+        f.find('[name=realisasi_biaya]').val(m.realisasi_biaya ? fmtRupiahValue(m.realisasi_biaya) : '');
         $('#monitoring-scope').html('<i class="fas fa-info-circle mr-1"></i>Cakupan: <strong>'+esc(scopeLabel)+'</strong>. Persentase hanya diisi jika indikator kuantitatif dan target jelas.');
         $('#monitoringModalTitle').text(m.id ? 'Edit Monitoring' : 'Catat Monitoring');
     }

@@ -151,9 +151,9 @@ include '../templates/sidebar.php';
                                     </td>
                                     <td class="text-right text-nowrap">
                                         <?php if ($is_editable): ?>
-                                            <button type="button" class="btn btn-sm btn-light btn-tpl-edit" data-id="<?= (int)$r['id'] ?>" title="Edit"><i class="fas fa-edit"></i></button>
-                                            <button type="button" class="btn btn-sm btn-light btn-tpl-toggle" data-id="<?= (int)$r['id'] ?>" data-active="<?= (int)$r['is_active'] ?>" title="<?= $r['is_active'] ? 'Nonaktifkan' : 'Aktifkan' ?>"><i class="fas <?= $r['is_active'] ? 'fa-toggle-on text-success' : 'fa-toggle-off text-muted' ?>"></i></button>
-                                            <button type="button" class="btn btn-sm btn-light text-danger btn-tpl-delete" data-id="<?= (int)$r['id'] ?>" data-name="<?= htmlspecialchars($r['nama_program'], ENT_QUOTES) ?>" data-used="<?= (int)$r['used_count'] ?>" title="Hapus"><i class="fas fa-trash"></i></button>
+                                            <button type="button" class="btn btn-warning btn-sm px-2 mr-1 btn-tpl-edit" data-id="<?= (int)$r['id'] ?>" title="Edit"><i class="fas fa-edit"></i></button>
+                                            <button type="button" class="btn btn-secondary btn-sm px-2 mr-1 btn-tpl-toggle" data-id="<?= (int)$r['id'] ?>" data-active="<?= (int)$r['is_active'] ?>" title="<?= $r['is_active'] ? 'Nonaktifkan' : 'Aktifkan' ?>"><i class="fas <?= $r['is_active'] ? 'fa-toggle-on text-success' : 'fa-toggle-off text-muted' ?>"></i></button>
+                                            <button type="button" class="btn btn-danger btn-sm px-2 btn-tpl-delete" data-id="<?= (int)$r['id'] ?>" data-name="<?= htmlspecialchars($r['nama_program'], ENT_QUOTES) ?>" data-used="<?= (int)$r['used_count'] ?>" title="Hapus"><i class="fas fa-trash"></i></button>
                                         <?php endif; ?>
                                     </td>
                                 </tr>

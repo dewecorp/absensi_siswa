@@ -101,7 +101,11 @@ th { background:#eee; text-align:center; }
 .toolbar .primary { background:#3b5bdb; border-color:#3b5bdb; color:#fff; }
 .summary-table td { border:none; padding:2px 4px; }
 .rich-text p { margin:0 0 6px; }
-.rich-text ul, .rich-text ol { margin:0 0 6px 20px; padding-left:0; }
+.rich-text ul { list-style:disc outside; margin:0 0 6px; padding-left:20px; }
+.rich-text ol { list-style:decimal outside; margin:0 0 6px; padding-left:22px; }
+.rich-text ul ul { list-style:circle outside; }
+.rich-text ol ol { list-style:lower-alpha outside; }
+.rich-text li { margin-bottom:2px; }
 .rich-text h1, .rich-text h2, .rich-text h3, .rich-text h4 { font-size:12pt; border:none; margin:6px 0; }
 .rich-text a { color:#111; text-decoration:underline; }
 @media print {

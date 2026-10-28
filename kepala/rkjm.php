@@ -123,12 +123,9 @@ function rkjm_qs(array $override = []): string
     return $qs !== '' ? '?' . $qs : '';
 }
 
-// Editor kaya teks (Summernote) untuk Visi, Misi, Tujuan, Profil Singkat, dan Dasar Penyusunan.
-$css_libs = [
-    'https://cdn.jsdelivr.net/npm/summernote@0.8.18/dist/summernote-bs4.min.css',
-];
+// Editor kaya teks (TinyMCE) untuk Visi, Misi, Tujuan, Profil Singkat, dan Dasar Penyusunan.
 $js_libs = [
-    'https://cdn.jsdelivr.net/npm/summernote@0.8.18/dist/summernote-bs4.min.js',
+    'https://cdn.jsdelivr.net/npm/tinymce@6/tinymce.min.js',
 ];
 
 include '../templates/header.php';
@@ -148,9 +145,25 @@ include '../templates/sidebar.php';
 .rkjm-table td{font-size:.86rem;vertical-align:middle}
 .rkjm-table .rkjm-nama{font-weight:600;color:#2b3252;min-width:180px}
 .rkjm-table .rkjm-clip{max-width:200px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-.rkjm-table .btn-icon{width:32px;height:32px;padding:0;line-height:32px;border-radius:8px}
 .rkjm-section-title{font-weight:700;color:#3b4266;font-size:.85rem;text-transform:uppercase;letter-spacing:.04em;margin:18px 0 10px;padding-bottom:6px;border-bottom:1px solid #eceff7}
 .rkjm-modal textarea{min-height:70px;resize:vertical}
+/* TinyMCE: toolbar penuh, daftar bullet/numbering rapi, tampil di atas modal */
+.rkjm-modal .tox-tinymce{border-radius:8px;border-color:#dfe3f0}
+.rkjm-modal .tox .tox-toolbar__group{padding:0 4px}
+.rkjm-modal .tox .tox-toolbar-overlord{background:#f7f8fc}
+.rkjm-modal .tox .tox-edit-area__iframe{background:#fff}
+.tox .tox-dialog-wrap{z-index:2070}
+.tox-fullscreen{z-index:2075 !important}
+/* Pemilih template: kartu berubah warna saat dipilih */
+.rkjm-tpl-item{background:#fff;cursor:pointer;transition:background .15s ease,border-color .15s ease,box-shadow .15s ease;padding:.55rem .85rem .55rem 2.4rem !important}
+.rkjm-tpl-item:hover{background:#f6f8ff;border-color:#c9d2f2 !important}
+.rkjm-tpl-item .custom-control-label{padding-left:0;cursor:pointer}
+.rkjm-tpl-item .custom-control-label::before{left:-1.65rem;top:.15rem;width:1.15rem;height:1.15rem;border:2px solid #b9c2dc;background:#fff;border-radius:4px}
+.rkjm-tpl-item .custom-control-label::after{left:-1.65rem;top:.15rem;width:1.15rem;height:1.15rem}
+.rkjm-tpl-item.is-selected{background:#e9eeff;border-color:#6777ef !important;box-shadow:0 0 0 3px rgba(103,119,239,.16)}
+.rkjm-tpl-item.is-selected .custom-control-label::before{background-color:#6777ef;border-color:#6777ef}
+.rkjm-tpl-item.is-selected strong{color:#3f49a8}
+.rkjm-tpl-item.is-selected .small{color:#5a63a8 !important}
 .rkjm-empty{border:2px dashed #dfe3f0;border-radius:14px;padding:36px;text-align:center;background:#fbfcff}
 @media (max-width:767.98px){
  .rkjm-hero{padding:16px}
@@ -383,11 +396,11 @@ include '../templates/sidebar.php';
                                             </select>
                                         </td>
                                         <td class="text-right text-nowrap">
-                                            <button type="button" class="btn btn-sm btn-light btn-icon btn-rkjm-detail" data-id="<?= (int)$r['id'] ?>" title="Lihat detail"><i class="fas fa-eye"></i></button>
+                                            <button type="button" class="btn btn-info btn-sm px-2 mr-1 btn-rkjm-detail" data-id="<?= (int)$r['id'] ?>" title="Lihat detail"><i class="fas fa-eye"></i></button>
                                             <?php if ($is_editable): ?>
-                                                <button type="button" class="btn btn-sm btn-light btn-icon btn-rkjm-edit" data-id="<?= (int)$r['id'] ?>" title="Edit"><i class="fas fa-edit"></i></button>
-                                                <button type="button" class="btn btn-sm btn-light btn-icon btn-rkjm-duplicate" data-id="<?= (int)$r['id'] ?>" title="Duplikasi"><i class="fas fa-clone"></i></button>
-                                                <button type="button" class="btn btn-sm btn-light btn-icon text-danger btn-rkjm-delete" data-id="<?= (int)$r['id'] ?>" data-name="<?= htmlspecialchars($r['nama_program'], ENT_QUOTES) ?>" title="Hapus"><i class="fas fa-trash"></i></button>
+                                                <button type="button" class="btn btn-warning btn-sm px-2 mr-1 btn-rkjm-edit" data-id="<?= (int)$r['id'] ?>" title="Edit"><i class="fas fa-edit"></i></button>
+                                                <button type="button" class="btn btn-secondary btn-sm px-2 mr-1 btn-rkjm-duplicate" data-id="<?= (int)$r['id'] ?>" title="Duplikasi"><i class="fas fa-clone"></i></button>
+                                                <button type="button" class="btn btn-danger btn-sm px-2 btn-rkjm-delete" data-id="<?= (int)$r['id'] ?>" data-name="<?= htmlspecialchars($r['nama_program'], ENT_QUOTES) ?>" title="Hapus"><i class="fas fa-trash"></i></button>
                                             <?php endif; ?>
                                         </td>
                                     </tr>
@@ -419,7 +432,7 @@ include '../templates/sidebar.php';
 
 <!-- Modal Pengaturan Dokumen -->
 <div class="modal fade" id="docModal" tabindex="-1" role="dialog" aria-hidden="true">
-    <div class="modal-dialog modal-lg modal-dialog-scrollable" role="document">
+    <div class="modal-dialog modal-xl" role="document">
         <div class="modal-content rkjm-modal">
             <form id="docForm">
                 <div class="modal-header">
@@ -688,8 +701,29 @@ include '../templates/sidebar.php';
     };
     window.RKJM = RKJM;
 
+    // Ubah hasil $(form).serialize() menjadi objek agar tidak dipecah per karakter oleh Object.assign.
+    function serializeToObject(str){
+        var out = {};
+        (str || '').split('&').forEach(function(pair){
+            if (!pair) return;
+            var idx = pair.indexOf('=');
+            var key = idx < 0 ? pair : pair.slice(0, idx);
+            var val = idx < 0 ? '' : pair.slice(idx + 1);
+            key = decodeURIComponent(key.replace(/\+/g, ' '));
+            val = decodeURIComponent(val.replace(/\+/g, ' '));
+            if (!Object.prototype.hasOwnProperty.call(out, key)) {
+                out[key] = val;
+            } else {
+                if (!Array.isArray(out[key])) out[key] = [out[key]];
+                out[key].push(val);
+            }
+        });
+        return out;
+    }
+
     function post(action, data){
-        var payload = Object.assign({action: action, csrf_token: RKJM.csrf, document_id: RKJM.docId}, data || {});
+        var extra = typeof data === 'string' ? serializeToObject(data) : (data || {});
+        var payload = $.extend({action: action, csrf_token: RKJM.csrf, document_id: RKJM.docId}, extra);
         return $.ajax({
             url: RKJM.ajax,
             type: 'POST',
@@ -709,38 +743,59 @@ include '../templates/sidebar.php';
         s=s.replace(/\D/g,'').replace(/^0+(?=\d)/,'');
         return s ? s.replace(/\B(?=(\d{3})+(?!\d))/g,'.') : '';
     }
+    // Format nilai numerik dari database (mis. 3000000.00) tanpa mencampur bagian desimal.
+    function fmtRupiahValue(v){
+        var n = parseFloat(v);
+        if (!isFinite(n)) n = 0;
+        n = Math.round(n);
+        return n ? String(n).replace(/\B(?=(\d{3})+(?!\d))/g,'.') : '0';
+    }
     $(document).on('input', 'input.rkjm-rupiah', function(){ this.value = fmtRupiah(this.value); });
 
     $('#rkjm-doc-switch').on('change', function(){ location.href = 'rkjm.php?doc=' + $(this).val(); });
 
     $('#btn-create-doc, #btn-doc-settings').on('click', function(){ $('#docModal').modal('show'); });
 
-    // Editor kaya teks untuk Visi, Misi, Tujuan, Profil Singkat, dan Dasar Penyusunan.
+    // Editor kaya teks (TinyMCE) untuk Visi, Misi, Tujuan, Profil Singkat, dan Dasar Penyusunan.
+    var rkjmEditorsReady = false;
     function initRkjmEditors(){
-        if (!$.fn || !$.fn.summernote) return;
-        $('.rkjm-editor').each(function(){
-            var $t = $(this);
-            if ($t.next('.note-editor').length) return;
-            $t.summernote({
-                height: 150,
-                placeholder: $t.attr('placeholder') || '',
-                toolbar: [
-                    ['style', ['bold', 'italic', 'underline', 'clear']],
-                    ['para', ['ul', 'ol', 'paragraph']],
-                    ['insert', ['link', 'hr']],
-                    ['view', ['codeview']]
-                ]
-            });
+        if (rkjmEditorsReady || typeof tinymce === 'undefined') return;
+        rkjmEditorsReady = true;
+        tinymce.init({
+            selector: '.rkjm-editor',
+            height: 220,
+            menubar: false,
+            branding: false,
+            promotion: false,
+            license_key: 'gpl',
+            plugins: 'lists link code fullscreen',
+            toolbar: 'undo redo | blocks | bold italic underline strikethrough | bullist numlist | alignleft aligncenter alignright alignjustify | link hr | removeformat | code fullscreen',
+            block_formats: 'Paragraf=p; Heading 3=h3; Heading 4=h4; Kutipan=blockquote',
+            formats: {
+                underline: { inline: 'u', exact: true },
+                strikethrough: { inline: 's', exact: true }
+            },
+            content_style: "body{font-family:system-ui,-apple-system,'Segoe UI',Roboto,Arial,sans-serif;font-size:14px;line-height:1.55;margin:10px 12px;color:#2b3252}"
+                + " p{margin:0 0 8px}"
+                + " ul{list-style:disc outside;padding-left:24px;margin:0 0 8px}"
+                + " ol{list-style:decimal outside;padding-left:24px;margin:0 0 8px}"
+                + " ul ul{list-style:circle outside} ul ul ul{list-style:square outside}"
+                + " ol ol{list-style:lower-alpha outside}"
+                + " li{margin-bottom:2px}"
+                + " blockquote{border-left:3px solid #d9def8;margin:0 0 8px;padding:4px 12px;color:#4b54a6}",
+            setup: function(editor){
+                editor.on('change keyup', function(){
+                    editor.save();
+                });
+            }
         });
     }
     function syncRkjmEditors(){
-        if (!$.fn || !$.fn.summernote) return;
-        $('.rkjm-editor').each(function(){
-            var $t = $(this);
-            if ($t.next('.note-editor').length) $t.val($t.summernote('code'));
-        });
+        if (typeof tinymce === 'undefined') return;
+        tinymce.triggerSave();
     }
-    initRkjmEditors();
+    // Inisialisasi saat modal benar-benar tampil supaya lebar toolbar terhitung benar.
+    $('#docModal').on('shown.bs.modal', initRkjmEditors);
 
     if (RKJM.editable) {
         // Simpan dokumen
@@ -769,7 +824,7 @@ include '../templates/sidebar.php';
             f.find('[name=penanggung_jawab]').val(r.penanggung_jawab || '');
             f.find('[name=urutan]').val(r.urutan || 0);
             ['kondisi_awal','permasalahan','tujuan','sasaran','indikator','target_akhir','kegiatan_utama','sumber_dana','dokumen_bukti','monitoring_evaluasi','catatan'].forEach(function(k){ f.find('[name='+k+']').val(r[k] || ''); });
-            f.find('[name=estimasi_anggaran]').val(fmtRupiah(r.estimasi_anggaran || 0));
+            f.find('[name=estimasi_anggaran]').val(fmtRupiahValue(r.estimasi_anggaran || 0));
             [1,2,3,4].forEach(function(i){
                 var t = (r.targets && r.targets[i]) ? r.targets[i].target : '';
                 f.find('[name=target_tahun'+i+']').val(t || '');
@@ -857,7 +912,7 @@ include '../templates/sidebar.php';
             html += row('Target Akhir', d.target_akhir);
             html += row('Kegiatan Utama', d.kegiatan_utama);
             html += row('Penanggung Jawab', d.penanggung_jawab);
-            html += row('Estimasi Anggaran', 'Rp ' + fmtRupiah(d.estimasi_anggaran||0));
+            html += row('Estimasi Anggaran', 'Rp ' + fmtRupiahValue(d.estimasi_anggaran || 0));
             html += row('Sumber Dana', d.sumber_dana);
             html += row('Dokumen/Bukti', d.dokumen_bukti);
             html += row('Monev', d.monitoring_evaluasi);
@@ -879,7 +934,7 @@ include '../templates/sidebar.php';
             if (!d.monitoring || !d.monitoring.length) { html += '<tr><td colspan="7" class="text-center text-muted">Belum ada catatan monitoring.</td></tr>'; }
             (d.monitoring||[]).forEach(function(m){
                 var cap = m.persentase_capaian !== null && m.persentase_capaian !== undefined && m.persentase_capaian !== '' ? (m.persentase_capaian+'%') : (m.penilaian_kualitatif || '-');
-                html += '<tr><td>'+esc(m.tahun_kalender||'-')+'</td><td>'+esc(m.status_label||'-')+'</td><td>'+esc(cap)+'</td><td style="white-space:pre-line">'+esc(m.realisasi||'-')+'</td><td style="white-space:pre-line">'+esc(m.kendala||'-')+'</td><td style="white-space:pre-line">'+esc(m.tindak_lanjut||'-')+'</td><td class="text-nowrap">'+(RKJM.editable ? '<button type="button" class="btn btn-sm btn-light btn-mon-edit" data-id="'+esc(m.id)+'" title="Edit"><i class="fas fa-edit"></i></button> <button type="button" class="btn btn-sm btn-light text-danger btn-mon-delete" data-id="'+esc(m.id)+'" title="Hapus"><i class="fas fa-trash"></i></button>' : '')+'</td></tr>';
+                html += '<tr><td>'+esc(m.tahun_kalender||'-')+'</td><td>'+esc(m.status_label||'-')+'</td><td>'+esc(cap)+'</td><td style="white-space:pre-line">'+esc(m.realisasi||'-')+'</td><td style="white-space:pre-line">'+esc(m.kendala||'-')+'</td><td style="white-space:pre-line">'+esc(m.tindak_lanjut||'-')+'</td><td class="text-nowrap">'+(RKJM.editable ? '<button type="button" class="btn btn-warning btn-sm px-2 mr-1 btn-mon-edit" data-id="'+esc(m.id)+'" title="Edit"><i class="fas fa-edit"></i></button> <button type="button" class="btn btn-danger btn-sm px-2 btn-mon-delete" data-id="'+esc(m.id)+'" title="Hapus"><i class="fas fa-trash"></i></button>' : '')+'</td></tr>';
             });
             html += '</tbody></table></div>';
             $('#detailBody').html(html);
@@ -936,9 +991,19 @@ include '../templates/sidebar.php';
         function refreshTplCount(){
             var n = $('.rkjm-tpl-check:checked').length;
             $('#tpl-selected-count').text(n);
+            $('.rkjm-tpl-item').each(function(){
+                $(this).toggleClass('is-selected', $(this).find('.rkjm-tpl-check').prop('checked'));
+            });
         }
         $(document).on('change', '.rkjm-tpl-check', refreshTplCount);
+        // Klik di area kartu (selain kotak centang/label/tautan) ikut memilih.
+        $(document).on('click', '.rkjm-tpl-item', function(e){
+            if ($(e.target).closest('input, label, a').length) return;
+            var $c = $(this).find('.rkjm-tpl-check');
+            $c.prop('checked', !$c.prop('checked')).trigger('change');
+        });
         $('#tpl-clear').on('click', function(){ $('.rkjm-tpl-check').prop('checked', false); refreshTplCount(); });
+        $('#templateModal').on('shown.bs.modal', refreshTplCount);
         function filterTemplates(){
             var q = ($('#tpl-search').val()||'').toLowerCase(), f = $('#tpl-filter-field').val();
             $('.rkjm-tpl-item').each(function(){
