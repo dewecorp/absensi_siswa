@@ -4240,3 +4240,130 @@ if (!function_exists('simadNotifKehadiranLesSiswa')) {
         }
     }
 }
+
+// Sanitasi HTML dari editor kaya teks (whitelist tag/atribut).
+if (!function_exists('sanitizeRichText')) {
+    function sanitizeRichText(?string $html): string
+    {
+        $html = trim((string)$html);
+        if ($html === '') {
+            return '';
+        }
+
+        $text = trim(html_entity_decode(strip_tags($html), ENT_QUOTES | ENT_HTML5, 'UTF-8'));
+        if ($text === '' && stripos($html, '<hr') === false) {
+            return '';
+        }
+
+        if (!class_exists('DOMDocument')) {
+            return nl2br(htmlspecialchars($text, ENT_QUOTES, 'UTF-8'));
+        }
+
+        $allowed = [
+            'p' => [], 'br' => [], 'strong' => [], 'b' => [], 'em' => [], 'i' => [], 'u' => [], 's' => [],
+            'ul' => [], 'ol' => [], 'li' => [], 'blockquote' => [], 'h1' => [], 'h2' => [], 'h3' => [],
+            'h4' => [], 'h5' => [], 'h6' => [], 'hr' => [], 'sub' => [], 'sup' => [], 'span' => [],
+            'a' => ['href', 'title', 'target', 'rel'],
+            'table' => [], 'thead' => [], 'tbody' => [], 'tr' => [], 'th' => [], 'td' => [],
+        ];
+        $drop = ['script', 'style', 'iframe', 'object', 'embed', 'form', 'input', 'button', 'link', 'meta', 'svg', 'math'];
+
+        $prev = libxml_use_internal_errors(true);
+        $doc = new DOMDocument('1.0', 'UTF-8');
+        $wrapped = '<?xml encoding="UTF-8"><div data-rich-root="1">' . $html . '</div>';
+        $loaded = $doc->loadHTML($wrapped, LIBXML_HTML_NODEFDTD);
+        libxml_clear_errors();
+        libxml_use_internal_errors($prev);
+
+        if (!$loaded) {
+            return nl2br(htmlspecialchars($text, ENT_QUOTES, 'UTF-8'));
+        }
+
+        $xp = new DOMXPath($doc);
+        $root = $xp->query('//div[@data-rich-root="1"]')->item(0);
+        if (!$root) {
+            return nl2br(htmlspecialchars($text, ENT_QUOTES, 'UTF-8'));
+        }
+
+        $walk = function (DOMNode $node) use (&$walk, $allowed, $drop) {
+            $children = [];
+            foreach ($node->childNodes as $child) {
+                $children[] = $child;
+            }
+            foreach ($children as $child) {
+                if ($child instanceof DOMComment) {
+                    $node->removeChild($child);
+                    continue;
+                }
+                if (!$child instanceof DOMElement) {
+                    continue;
+                }
+                $tag = strtolower($child->nodeName);
+                if (in_array($tag, $drop, true)) {
+                    $node->removeChild($child);
+                    continue;
+                }
+                if (!isset($allowed[$tag])) {
+                    $walk($child);
+                    while ($child->firstChild) {
+                        $node->insertBefore($child->firstChild, $child);
+                    }
+                    $node->removeChild($child);
+                    continue;
+                }
+
+                $names = [];
+                foreach ($child->attributes as $attr) {
+                    $names[] = $attr->nodeName;
+                }
+                foreach ($names as $name) {
+                    $lower = strtolower($name);
+                    if (!in_array($lower, $allowed[$tag], true)) {
+                        $child->removeAttribute($name);
+                        continue;
+                    }
+                    if ($lower === 'href') {
+                        $href = trim((string)$child->getAttribute('href'));
+                        if ($href !== '' && !preg_match('#^(https?:|mailto:|tel:|/|\#|\?|\.{0,2}/)#i', $href)) {
+                            $child->removeAttribute('href');
+                        }
+                    }
+                }
+                if ($tag === 'a' && $child->getAttribute('target') === '_blank') {
+                    $child->setAttribute('rel', 'noopener noreferrer');
+                }
+                $walk($child);
+            }
+        };
+        $walk($root);
+
+        $out = '';
+        foreach ($root->childNodes as $child) {
+            $out .= $doc->saveHTML($child);
+        }
+        $out = trim($out);
+        $blankP = '<p>(?:\s|&nbsp;|<br\s*/?>)*</p>';
+        $out = preg_replace('#^(?:\s*' . $blankP . ')+#i', '', $out);
+        $out = preg_replace('#(?:\s*' . $blankP . ')+\s*$#i', '', $out);
+        return trim((string)$out);
+    }
+}
+
+// Ubah HTML editor menjadi teks polos (untuk cetak/ekspor yang tidak mendukung HTML).
+if (!function_exists('richTextToPlain')) {
+    function richTextToPlain(?string $html): string
+    {
+        $html = (string)$html;
+        if ($html === '') {
+            return '';
+        }
+        $text = preg_replace('/<\s*br\s*\/?>/i', "\n", $html);
+        $text = preg_replace('/<\/(p|div|li|h[1-6]|blockquote|tr)>/i', "\n", $text);
+        $text = strip_tags($text);
+        $text = html_entity_decode($text, ENT_QUOTES | ENT_HTML5, 'UTF-8');
+        $text = str_replace(["\r\n", "\r"], "\n", $text);
+        $text = preg_replace('/[ \t]+\n/', "\n", $text);
+        $text = preg_replace('/\n{3,}/', "\n\n", $text);
+        return trim($text);
+    }
+}

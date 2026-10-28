@@ -629,9 +629,11 @@ switch ($user_level) {
                     ['title' => 'Program Kerja Tahunan', 'url' => '../kepala/program_kerja.php?session_type=admin', 'active' => $current_page === 'program_kerja.php'],
                     ['title' => 'RKJM', 'url' => '../kepala/rkjm.php', 'active' => in_array($current_page, ['rkjm.php', 'cetak_rkjm.php'], true)],
                     ['title' => 'Kelola Template RKJM', 'url' => '../kepala/rkjm_template.php', 'active' => $current_page === 'rkjm_template.php'],
+                    ['title' => 'RKT', 'url' => '../kepala/rkt.php', 'active' => in_array($current_page, ['rkt.php', 'cetak_rkt.php'], true)],
+                    ['title' => 'Kelola Template RKT', 'url' => '../kepala/rkt_template.php', 'active' => $current_page === 'rkt_template.php'],
                     ['title' => 'Laporan Program Kerja', 'url' => '../kepala/laporan_program_kerja.php?session_type=admin', 'active' => $current_page === 'laporan_program_kerja.php'],
                 ],
-                'active' => in_array($current_page, ['program_kerja.php', 'komponen_program_kerja.php', 'laporan_program_kerja.php', 'rkjm.php', 'rkjm_template.php', 'cetak_rkjm.php'])
+                'active' => in_array($current_page, ['program_kerja.php', 'komponen_program_kerja.php', 'laporan_program_kerja.php', 'rkjm.php', 'rkjm_template.php', 'cetak_rkjm.php', 'rkt.php', 'rkt_template.php', 'cetak_rkt.php'])
             ],
             [
                 'title' => 'Integrasi API',
@@ -779,9 +781,11 @@ switch ($user_level) {
                     ['title' => 'Program Kerja Tahunan', 'url' => '../kepala/program_kerja.php', 'active' => $current_page === 'program_kerja.php'],
                     ['title' => 'RKJM', 'url' => '../kepala/rkjm.php', 'active' => in_array($current_page, ['rkjm.php', 'cetak_rkjm.php'], true)],
                     ['title' => 'Kelola Template RKJM', 'url' => '../kepala/rkjm_template.php', 'active' => $current_page === 'rkjm_template.php'],
+                    ['title' => 'RKT', 'url' => '../kepala/rkt.php', 'active' => in_array($current_page, ['rkt.php', 'cetak_rkt.php'], true)],
+                    ['title' => 'Kelola Template RKT', 'url' => '../kepala/rkt_template.php', 'active' => $current_page === 'rkt_template.php'],
                     ['title' => 'Laporan Program Kerja', 'url' => '../kepala/laporan_program_kerja.php', 'active' => $current_page === 'laporan_program_kerja.php'],
                 ],
-                'active' => in_array($current_page, ['program_kerja.php', 'komponen_program_kerja.php', 'laporan_program_kerja.php', 'rkjm.php', 'rkjm_template.php', 'cetak_rkjm.php'])
+                'active' => in_array($current_page, ['program_kerja.php', 'komponen_program_kerja.php', 'laporan_program_kerja.php', 'rkjm.php', 'rkjm_template.php', 'cetak_rkjm.php', 'rkt.php', 'rkt_template.php', 'cetak_rkt.php'])
             ],
             [
                 'title' => 'Ekstrakurikuler',

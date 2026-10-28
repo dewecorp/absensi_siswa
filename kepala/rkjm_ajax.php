@@ -87,6 +87,27 @@ try {
             if (isset($data['tahun_awal'])) $data['tahun_awal'] = $tahunAwal;
             if (isset($data['tahun_akhir'])) $data['tahun_akhir'] = $tahunAkhir;
 
+            // Identitas madrasah dan kepala madrasah selalu mengikuti Pengaturan Admin.
+            $schoolProfile = getSchoolProfile($pdo);
+            $namaMadrasah = trim((string)($schoolProfile['nama_madrasah'] ?? ''));
+            if ($namaMadrasah !== '') {
+                $data['nama_madrasah'] = $namaMadrasah;
+            }
+            $namaKepala = trim((string)($schoolProfile['nama_kepala'] ?? ''));
+            if ($namaKepala === '') {
+                $namaKepala = trim((string)($schoolProfile['kepala_madrasah'] ?? ''));
+            }
+            if ($namaKepala !== '') {
+                $data['nama_kepala'] = $namaKepala;
+            }
+
+            // Visi, misi, tujuan, profil singkat, dan dasar penyusunan berupa HTML dari editor.
+            foreach (['visi', 'misi', 'tujuan_pengembangan', 'kondisi_awal', 'dasar_penyusunan'] as $richKey) {
+                if (array_key_exists($richKey, $data)) {
+                    $data[$richKey] = sanitizeRichText((string)$data[$richKey]);
+                }
+            }
+
             if ($id > 0) {
                 $doc = rkjmDocOrFail($pdo, $id);
                 if (!$data) {

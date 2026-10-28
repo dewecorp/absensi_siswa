@@ -100,6 +100,10 @@ th { background:#eee; text-align:center; }
 .toolbar button, .toolbar a { font-family:Arial, sans-serif; font-size:12px; padding:7px 14px; border-radius:6px; border:1px solid #333; background:#fff; cursor:pointer; text-decoration:none; color:#111; }
 .toolbar .primary { background:#3b5bdb; border-color:#3b5bdb; color:#fff; }
 .summary-table td { border:none; padding:2px 4px; }
+.rich-text p { margin:0 0 6px; }
+.rich-text ul, .rich-text ol { margin:0 0 6px 20px; padding-left:0; }
+.rich-text h1, .rich-text h2, .rich-text h3, .rich-text h4 { font-size:12pt; border:none; margin:6px 0; }
+.rich-text a { color:#111; text-decoration:underline; }
 @media print {
     body { background:#fff; }
     .sheet { box-shadow:none; max-width:none; padding:0; margin:0; }
@@ -111,6 +115,22 @@ th { background:#eee; text-align:center; }
 </style>
 </head>
 <body>
+<?php
+if (!function_exists('cetak_rkjm_rich')) {
+    function cetak_rkjm_rich(?string $value, string $fallback = '-'): string
+    {
+        $value = (string)$value;
+        if (trim($value) === '') {
+            return htmlspecialchars($fallback, ENT_QUOTES, 'UTF-8');
+        }
+        if (strpos($value, '<') === false) {
+            return nl2br(htmlspecialchars($value, ENT_QUOTES, 'UTF-8'));
+        }
+        $html = sanitizeRichText($value);
+        return $html !== '' ? $html : htmlspecialchars($fallback, ENT_QUOTES, 'UTF-8');
+    }
+}
+?>
 <?php $logo = trim((string)($school['logo'] ?? '')); $logoPath = $logo !== '' ? '../assets/img/' . basename($logo) : ''; ?>
 <div class="toolbar">
     <form method="GET" class="d-flex flex-wrap" style="gap:6px;align-items:center">
@@ -164,21 +184,21 @@ th { background:#eee; text-align:center; }
     <p>Rencana Kerja Jangka Menengah (RKJM) ini disusun sebagai arah pengembangan <?= htmlspecialchars($doc['nama_madrasah'] ?: 'madrasah') ?> untuk periode <?= (int)$doc['tahun_awal'] ?>–<?= (int)$doc['tahun_akhir'] ?>. Dokumen ini memuat program prioritas, target tahunan, kebutuhan pembiayaan, serta mekanisme monitoring dan evaluasi yang digunakan sebagai dasar penyusunan rencana kerja tahunan.</p>
     <?php if (!empty($doc['dasar_penyusunan'])): ?>
         <h3>Dasar Penyusunan</h3>
-        <p style="white-space:pre-line"><?= htmlspecialchars($doc['dasar_penyusunan']) ?></p>
+        <div class="rich-text"><?= cetak_rkjm_rich($doc['dasar_penyusunan']) ?></div>
     <?php endif; ?>
 
     <!-- 4. Profil -->
     <h2>Profil dan Kondisi Awal Madrasah</h2>
-    <p style="white-space:pre-line"><?= htmlspecialchars($doc['kondisi_awal'] ?: 'Belum diisi. Lengkapi melalui menu Pengaturan RKJM.') ?></p>
+    <div class="rich-text"><?= cetak_rkjm_rich($doc['kondisi_awal'] ?? '', 'Belum diisi. Lengkapi melalui menu Pengaturan RKJM.') ?></div>
 
     <!-- 5. Visi Misi Tujuan -->
     <h2>Visi, Misi, dan Tujuan Madrasah</h2>
     <h3>Visi</h3>
-    <p style="white-space:pre-line"><?= htmlspecialchars($doc['visi'] ?: '-') ?></p>
+    <div class="rich-text"><?= cetak_rkjm_rich($doc['visi'] ?? '') ?></div>
     <h3>Misi</h3>
-    <p style="white-space:pre-line"><?= htmlspecialchars($doc['misi'] ?: '-') ?></p>
+    <div class="rich-text"><?= cetak_rkjm_rich($doc['misi'] ?? '') ?></div>
     <h3>Tujuan Pengembangan</h3>
-    <p style="white-space:pre-line"><?= htmlspecialchars($doc['tujuan_pengembangan'] ?: '-') ?></p>
+    <div class="rich-text"><?= cetak_rkjm_rich($doc['tujuan_pengembangan'] ?? '') ?></div>
 
     <!-- 6. Analisis kebutuhan -->
     <h2>Analisis Kebutuhan dan Prioritas Pengembangan</h2>

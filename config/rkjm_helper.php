@@ -150,9 +150,32 @@ if (!function_exists('rkjmEnsureSchema')) {
             return;
         }
 
+        rkjmEnsureColumns($pdo);
         rkjmSeedFields($pdo);
         rkjmSeedTemplates($pdo);
         rkjmEnsureForeignKeys($pdo);
+    }
+
+    /** Tambahkan kolom baru pada instalasi lama tanpa mereset data. */
+    function rkjmEnsureColumns(PDO $pdo): void
+    {
+        $columns = [
+            ['kondisi_awal', 'TEXT NULL'],
+            ['dasar_penyusunan', 'TEXT NULL'],
+        ];
+        foreach ($columns as [$column, $definition]) {
+            try {
+                $check = $pdo->prepare("SELECT COUNT(*) FROM information_schema.COLUMNS
+                    WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'rkjm_documents' AND COLUMN_NAME = ?");
+                $check->execute([$column]);
+                if ((int)$check->fetchColumn() > 0) {
+                    continue;
+                }
+                $pdo->exec("ALTER TABLE `rkjm_documents` ADD COLUMN `$column` $definition");
+            } catch (PDOException $e) {
+                error_log('RKJM column skip (' . $column . '): ' . $e->getMessage());
+            }
+        }
     }
 
     /** Tambahkan foreign key bila belum ada (aman untuk database berjalan). */

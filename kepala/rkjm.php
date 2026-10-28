@@ -15,6 +15,12 @@ rkjmEnsureSchema($pdo);
 $school_profile = getSchoolProfile($pdo);
 $fields = rkjmFields($pdo);
 
+$profil_madrasah = trim((string)($school_profile['nama_madrasah'] ?? ''));
+$profil_kepala = trim((string)($school_profile['nama_kepala'] ?? ''));
+if ($profil_kepala === '') {
+    $profil_kepala = trim((string)($school_profile['kepala_madrasah'] ?? ''));
+}
+
 $docId = (int)($_GET['doc'] ?? 0);
 $doc = rkjmGetDocument($pdo, $docId);
 $docs = $pdo->query("SELECT id, tahun_awal, tahun_akhir, status FROM rkjm_documents ORDER BY tahun_awal DESC, id DESC")->fetchAll(PDO::FETCH_ASSOC);
@@ -116,6 +122,14 @@ function rkjm_qs(array $override = []): string
     $qs = http_build_query($params);
     return $qs !== '' ? '?' . $qs : '';
 }
+
+// Editor kaya teks (Summernote) untuk Visi, Misi, Tujuan, Profil Singkat, dan Dasar Penyusunan.
+$css_libs = [
+    'https://cdn.jsdelivr.net/npm/summernote@0.8.18/dist/summernote-bs4.min.css',
+];
+$js_libs = [
+    'https://cdn.jsdelivr.net/npm/summernote@0.8.18/dist/summernote-bs4.min.js',
+];
 
 include '../templates/header.php';
 include '../templates/sidebar.php';
@@ -416,7 +430,11 @@ include '../templates/sidebar.php';
                     <input type="hidden" name="id" value="<?= $doc ? (int)$doc['id'] : 0 ?>">
                     <div class="rkjm-section-title">Identitas Dokumen</div>
                     <div class="row">
-                        <div class="col-md-8 mb-2"><label>Nama Madrasah</label><input type="text" class="form-control" name="nama_madrasah" value="<?= htmlspecialchars($doc['nama_madrasah'] ?? ($school_profile['nama_madrasah'] ?? '')) ?>" placeholder="Nama madrasah"></div>
+                        <div class="col-md-8 mb-2">
+                            <label>Nama Madrasah</label>
+                            <input type="text" class="form-control" name="nama_madrasah" value="<?= htmlspecialchars($profil_madrasah !== '' ? $profil_madrasah : ($doc['nama_madrasah'] ?? '')) ?>" readonly>
+                            <small class="text-muted"><i class="fas fa-lock mr-1"></i>Diambil dari Pengaturan Admin (Profil Madrasah).</small>
+                        </div>
                         <div class="col-md-4 mb-2"><label>Nomor Dokumen</label><input type="text" class="form-control" name="nomor_dokumen" value="<?= htmlspecialchars($doc['nomor_dokumen'] ?? '') ?>" placeholder="Opsional"></div>
                         <div class="col-md-3 mb-2"><label>Tahun Awal</label><input type="number" class="form-control" name="tahun_awal" min="1901" max="2155" value="<?= (int)($doc['tahun_awal'] ?? date('Y')) ?>" required></div>
                         <div class="col-md-3 mb-2"><label>Tahun Akhir</label><input type="number" class="form-control" name="tahun_akhir" min="1901" max="2155" value="<?= (int)($doc['tahun_akhir'] ?? (date('Y') + 3)) ?>" required><small class="text-muted">Periode 4 tahun: tahun akhir = tahun awal + 3.</small></div>
@@ -428,17 +446,21 @@ include '../templates/sidebar.php';
                                 <?php endforeach; ?>
                             </select>
                         </div>
-                        <div class="col-md-12 mb-2"><label>Nama Kepala Madrasah</label><input type="text" class="form-control" name="nama_kepala" value="<?= htmlspecialchars($doc['nama_kepala'] ?? '') ?>"></div>
+                        <div class="col-md-12 mb-2">
+                            <label>Nama Kepala Madrasah</label>
+                            <input type="text" class="form-control" name="nama_kepala" value="<?= htmlspecialchars($profil_kepala !== '' ? $profil_kepala : ($doc['nama_kepala'] ?? '')) ?>" readonly>
+                            <small class="text-muted"><i class="fas fa-lock mr-1"></i>Diambil dari Pengaturan Admin (Profil Madrasah).</small>
+                        </div>
                     </div>
 
                     <div class="rkjm-section-title">Visi, Misi, dan Tujuan</div>
-                    <div class="mb-2"><label>Visi Madrasah</label><textarea class="form-control" name="visi" rows="2"><?= htmlspecialchars($doc['visi'] ?? '') ?></textarea></div>
-                    <div class="mb-2"><label>Misi Madrasah</label><textarea class="form-control" name="misi" rows="3"><?= htmlspecialchars($doc['misi'] ?? '') ?></textarea></div>
-                    <div class="mb-2"><label>Tujuan Pengembangan Madrasah</label><textarea class="form-control" name="tujuan_pengembangan" rows="2"><?= htmlspecialchars($doc['tujuan_pengembangan'] ?? '') ?></textarea></div>
+                    <div class="mb-2"><label>Visi Madrasah</label><textarea class="form-control rkjm-editor" name="visi" rows="3" placeholder="Tuliskan visi madrasah..."><?= htmlspecialchars($doc['visi'] ?? '') ?></textarea></div>
+                    <div class="mb-2"><label>Misi Madrasah</label><textarea class="form-control rkjm-editor" name="misi" rows="4" placeholder="Tuliskan misi madrasah..."><?= htmlspecialchars($doc['misi'] ?? '') ?></textarea></div>
+                    <div class="mb-2"><label>Tujuan Pengembangan Madrasah</label><textarea class="form-control rkjm-editor" name="tujuan_pengembangan" rows="3" placeholder="Tuliskan tujuan pengembangan..."><?= htmlspecialchars($doc['tujuan_pengembangan'] ?? '') ?></textarea></div>
 
                     <div class="rkjm-section-title">Profil dan Dasar Penyusunan</div>
-                    <div class="mb-2"><label>Kondisi Awal / Profil Singkat Madrasah</label><textarea class="form-control" name="kondisi_awal" rows="3"><?= htmlspecialchars($doc['kondisi_awal'] ?? '') ?></textarea></div>
-                    <div class="mb-2"><label>Dasar Penyusunan RKJM</label><textarea class="form-control" name="dasar_penyusunan" rows="2" placeholder="Contoh: regulasi, hasil evaluasi diri, rapat kerja madrasah"><?= htmlspecialchars($doc['dasar_penyusunan'] ?? '') ?></textarea></div>
+                    <div class="mb-2"><label>Kondisi Awal / Profil Singkat Madrasah</label><textarea class="form-control rkjm-editor" name="kondisi_awal" rows="4" placeholder="Gambaran singkat kondisi madrasah..."><?= htmlspecialchars($doc['kondisi_awal'] ?? '') ?></textarea></div>
+                    <div class="mb-2"><label>Dasar Penyusunan RKJM</label><textarea class="form-control rkjm-editor" name="dasar_penyusunan" rows="3" placeholder="Contoh: regulasi, hasil evaluasi diri, rapat kerja madrasah"><?= htmlspecialchars($doc['dasar_penyusunan'] ?? '') ?></textarea></div>
                     <input type="hidden" name="existing_created_by" value="<?= htmlspecialchars($doc['created_by'] ?? '') ?>">
                 </div>
                 <div class="modal-footer">
@@ -693,10 +715,38 @@ include '../templates/sidebar.php';
 
     $('#btn-create-doc, #btn-doc-settings').on('click', function(){ $('#docModal').modal('show'); });
 
+    // Editor kaya teks untuk Visi, Misi, Tujuan, Profil Singkat, dan Dasar Penyusunan.
+    function initRkjmEditors(){
+        if (!$.fn || !$.fn.summernote) return;
+        $('.rkjm-editor').each(function(){
+            var $t = $(this);
+            if ($t.next('.note-editor').length) return;
+            $t.summernote({
+                height: 150,
+                placeholder: $t.attr('placeholder') || '',
+                toolbar: [
+                    ['style', ['bold', 'italic', 'underline', 'clear']],
+                    ['para', ['ul', 'ol', 'paragraph']],
+                    ['insert', ['link', 'hr']],
+                    ['view', ['codeview']]
+                ]
+            });
+        });
+    }
+    function syncRkjmEditors(){
+        if (!$.fn || !$.fn.summernote) return;
+        $('.rkjm-editor').each(function(){
+            var $t = $(this);
+            if ($t.next('.note-editor').length) $t.val($t.summernote('code'));
+        });
+    }
+    initRkjmEditors();
+
     if (RKJM.editable) {
         // Simpan dokumen
         $('#docForm').on('submit', function(e){
             e.preventDefault();
+            syncRkjmEditors();
             var $btn = $(this).find('button[type=submit]').prop('disabled', true);
             post('save_document', $(this).serialize()).done(function(res){
                 if (res.success) { swalOk(res.message || 'Dokumen disimpan'); setTimeout(function(){ var id = res.document_id || RKJM.docId; location.href = 'rkjm.php?doc=' + id; }, 700); }
