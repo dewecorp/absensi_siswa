@@ -184,6 +184,7 @@ if (!function_exists('rktEnsureSchema')) {
         }
 
         rktSeedTemplates($pdo);
+        rktSeedMonitoringExamples($pdo);
         rktEnsureForeignKeys($pdo);
     }
 
@@ -320,6 +321,177 @@ if (!function_exists('rktEnsureSchema')) {
             $catalog = is_file($path) ? (require $path) : [];
         }
         return $catalog;
+    }
+
+    /**
+     * Seed data contoh monitoring & evaluasi untuk kegiatan RKT yang belum punya catatan monitoring.
+     * Bersifat referensi / draf awal; Kepala Madrasah dapat mengubah, melengkapi, atau menghapus kapan saja.
+     */
+    function rktSeedMonitoringExamples(PDO $pdo): int
+    {
+        try {
+            $monevByBidang = [
+                'Pengembangan Kurikulum dan Pembelajaran' => [
+                    'target'              => 'Terlaksana sesuai jadwal dan indikator program',
+                    'realisasi'           => '(Isi realisasi setelah kegiatan berlangsung)',
+                    'penilaian_kualitatif'=> 'Baik',
+                    'kendala'             => '(Isi kendala jika ada)',
+                    'tindak_lanjut'       => 'Lakukan evaluasi dan penyesuaian pada semester berikutnya',
+                    'catatan_evaluasi'    => 'Data contoh/referensi. Perbarui setelah pelaksanaan kegiatan.',
+                ],
+                'Pengembangan Kompetensi Pendidik dan Tenaga Kependidikan' => [
+                    'target'              => 'Minimal 80% peserta mengikuti kegiatan pengembangan kompetensi',
+                    'realisasi'           => '(Isi realisasi setelah kegiatan berlangsung)',
+                    'penilaian_kualitatif'=> 'Cukup Baik',
+                    'kendala'             => '(Isi kendala jika ada)',
+                    'tindak_lanjut'       => 'Tindak lanjuti dengan pendampingan dan observasi pasca-pelatihan',
+                    'catatan_evaluasi'    => 'Data contoh/referensi. Perbarui setelah pelaksanaan kegiatan.',
+                ],
+                'Pengembangan Peserta Didik' => [
+                    'target'              => 'Peserta didik mencapai perkembangan sesuai indikator yang ditetapkan',
+                    'realisasi'           => '(Isi realisasi setelah kegiatan berlangsung)',
+                    'penilaian_kualitatif'=> 'Baik',
+                    'kendala'             => '(Isi kendala jika ada)',
+                    'tindak_lanjut'       => 'Berikan pendampingan lanjutan bagi peserta didik yang belum mencapai target',
+                    'catatan_evaluasi'    => 'Data contoh/referensi. Perbarui setelah pelaksanaan kegiatan.',
+                ],
+                'Pengembangan Sarana dan Prasarana' => [
+                    'target'              => 'Sarana/prasarana dalam kondisi layak dan terpelihara',
+                    'realisasi'           => '(Isi realisasi setelah kegiatan berlangsung)',
+                    'penilaian_kualitatif'=> 'Cukup',
+                    'kendala'             => '(Isi kendala jika ada)',
+                    'tindak_lanjut'       => 'Lakukan pemeliharaan berkala dan evaluasi kondisi fisik tiap semester',
+                    'catatan_evaluasi'    => 'Data contoh/referensi. Perbarui setelah pelaksanaan kegiatan.',
+                ],
+                'Pengembangan Tata Kelola dan Manajemen Madrasah' => [
+                    'target'              => 'Administrasi tertib dan laporan tersedia tepat waktu',
+                    'realisasi'           => '(Isi realisasi setelah kegiatan berlangsung)',
+                    'penilaian_kualitatif'=> 'Baik',
+                    'kendala'             => '(Isi kendala jika ada)',
+                    'tindak_lanjut'       => 'Evaluasi sistem administrasi dan perbaiki prosedur yang belum optimal',
+                    'catatan_evaluasi'    => 'Data contoh/referensi. Perbarui setelah pelaksanaan kegiatan.',
+                ],
+                'Pengembangan Keuangan dan Pembiayaan' => [
+                    'target'              => 'Realisasi anggaran sesuai RAB dengan deviasi maksimal 10%',
+                    'realisasi'           => '(Isi realisasi setelah kegiatan berlangsung)',
+                    'penilaian_kualitatif'=> 'Baik',
+                    'kendala'             => '(Isi kendala jika ada)',
+                    'tindak_lanjut'       => 'Lakukan reviu anggaran dan pertanggungjawaban secara berkala',
+                    'catatan_evaluasi'    => 'Data contoh/referensi. Perbarui setelah pelaksanaan kegiatan.',
+                ],
+                'Pengembangan Budaya dan Lingkungan Madrasah' => [
+                    'target'              => 'Pembiasaan berjalan rutin; nilai observasi minimal 80',
+                    'realisasi'           => '(Isi realisasi setelah kegiatan berlangsung)',
+                    'penilaian_kualitatif'=> 'Cukup Baik',
+                    'kendala'             => '(Isi kendala jika ada)',
+                    'tindak_lanjut'       => 'Perkuat pembiasaan melalui keteladanan guru dan apresiasi warga madrasah',
+                    'catatan_evaluasi'    => 'Data contoh/referensi. Perbarui setelah pelaksanaan kegiatan.',
+                ],
+                'Pengembangan Hubungan Masyarakat dan Kemitraan' => [
+                    'target'              => 'Komunikasi berjalan rutin; minimal 2 pertemuan per tahun',
+                    'realisasi'           => '(Isi realisasi setelah kegiatan berlangsung)',
+                    'penilaian_kualitatif'=> 'Baik',
+                    'kendala'             => '(Isi kendala jika ada)',
+                    'tindak_lanjut'       => 'Tingkatkan keterlibatan mitra melalui kanal komunikasi yang konsisten',
+                    'catatan_evaluasi'    => 'Data contoh/referensi. Perbarui setelah pelaksanaan kegiatan.',
+                ],
+                'default' => [
+                    'target'              => 'Kegiatan terlaksana sesuai rencana',
+                    'realisasi'           => '(Isi realisasi setelah kegiatan berlangsung)',
+                    'penilaian_kualitatif'=> 'Cukup',
+                    'kendala'             => '(Isi kendala jika ada)',
+                    'tindak_lanjut'       => 'Evaluasi dan tindak lanjuti temuan pada siklus berikutnya',
+                    'catatan_evaluasi'    => 'Data contoh/referensi. Perbarui setelah pelaksanaan kegiatan.',
+                ],
+            ];
+
+            // 1. Kegiatan yang belum punya monitoring
+            $stmtAct = $pdo->query("
+                SELECT a.id AS act_id, a.program_id, a.nama_kegiatan, a.jadwal_mulai, a.jadwal_selesai,
+                       a.target_volume, a.satuan, a.penanggung_jawab,
+                       p.bidang_nama, p.nama_program
+                FROM rkt_activities a
+                JOIN rkt_programs p ON p.id = a.program_id
+                WHERE (SELECT COUNT(*) FROM rkt_monitoring m WHERE m.activity_id = a.id) = 0
+            ");
+            $activities = $stmtAct->fetchAll(PDO::FETCH_ASSOC);
+
+            // 2. Program yang belum punya monitoring level-program
+            $stmtProg = $pdo->query("
+                SELECT p.id AS prog_id, p.bidang_nama, p.nama_program, p.penanggung_jawab
+                FROM rkt_programs p
+                WHERE (SELECT COUNT(*) FROM rkt_monitoring m WHERE m.program_id = p.id AND m.activity_id IS NULL) = 0
+            ");
+            $programs = $stmtProg->fetchAll(PDO::FETCH_ASSOC);
+
+            if (empty($activities) && empty($programs)) {
+                return 0;
+            }
+
+            $ins = $pdo->prepare("
+                INSERT INTO rkt_monitoring
+                    (program_id, activity_id, tanggal_pelaksanaan, target, realisasi,
+                     persentase_capaian, penilaian_kualitatif, status_pelaksanaan,
+                     kendala, tindak_lanjut, output_aktual, bukti, catatan_evaluasi, petugas_evaluasi, realisasi_biaya)
+                VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)
+            ");
+
+            $count = 0;
+            foreach ($activities as $a) {
+                $bidang = $a['bidang_nama'] ?? '';
+                $tmpl = $monevByBidang[$bidang] ?? $monevByBidang['default'];
+                $tanggal = $a['jadwal_mulai'] ?: $a['jadwal_selesai'] ?: date('Y-m-d');
+                $target_txt = ($a['target_volume'] ? $a['target_volume'] . ' ' . $a['satuan'] : '') ?: $tmpl['target'];
+
+                $ins->execute([
+                    $a['program_id'],
+                    $a['act_id'],
+                    $tanggal,
+                    $target_txt,
+                    $tmpl['realisasi'],
+                    0.00,
+                    $tmpl['penilaian_kualitatif'],
+                    'belum_dimulai',
+                    $tmpl['kendala'],
+                    $tmpl['tindak_lanjut'],
+                    '',
+                    '',
+                    $tmpl['catatan_evaluasi'],
+                    $a['penanggung_jawab'] ?: 'Kepala Madrasah',
+                    null,
+                ]);
+                $count++;
+            }
+
+            foreach ($programs as $p) {
+                $bidang = $p['bidang_nama'] ?? '';
+                $tmpl = $monevByBidang[$bidang] ?? $monevByBidang['default'];
+
+                $ins->execute([
+                    $p['prog_id'],
+                    null,
+                    date('Y-m-d'),
+                    $tmpl['target'],
+                    $tmpl['realisasi'],
+                    0.00,
+                    $tmpl['penilaian_kualitatif'],
+                    'belum_dimulai',
+                    $tmpl['kendala'],
+                    $tmpl['tindak_lanjut'],
+                    '',
+                    '',
+                    $tmpl['catatan_evaluasi'],
+                    $p['penanggung_jawab'] ?: 'Kepala Madrasah',
+                    null,
+                ]);
+                $count++;
+            }
+
+            return $count;
+        } catch (Throwable $e) {
+            error_log('RKT seed monitoring examples error: ' . $e->getMessage());
+            return 0;
+        }
     }
 
     function rktDocStatusOptions(): array
