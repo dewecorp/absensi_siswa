@@ -441,14 +441,27 @@ if (!function_exists('rktEnsureSchema')) {
                 $bidang = $a['bidang_nama'] ?? '';
                 $tmpl = $monevByBidang[$bidang] ?? $monevByBidang['default'];
                 $tanggal = $a['jadwal_mulai'] ?: $a['jadwal_selesai'] ?: date('Y-m-d');
-                $target_txt = ($a['target_volume'] ? $a['target_volume'] . ' ' . $a['satuan'] : '') ?: $tmpl['target'];
+                $vol = trim(($a['target_volume'] ? $a['target_volume'] . ' ' . $a['satuan'] : ''));
+                $target_txt = $vol ?: $tmpl['target'];
+                $keg = trim($a['nama_kegiatan'] ?? '');
+                $out = trim($a['output'] ?? '');
+
+                if ($vol !== '' && $out !== '') {
+                    $realisasi_txt = "Terlaksana {$vol} kegiatan {$keg}; {$out} tersusun dan terdokumentasi.";
+                } elseif ($vol !== '') {
+                    $realisasi_txt = "Terlaksana {$vol}; kegiatan {$keg} berjalan sesuai jadwal.";
+                } elseif ($out !== '') {
+                    $realisasi_txt = "Kegiatan {$keg} terlaksana; {$out} terpenuhi.";
+                } else {
+                    $realisasi_txt = "Kegiatan {$keg} terlaksana sesuai rencana kerja.";
+                }
 
                 $ins->execute([
                     $a['program_id'],
                     $a['act_id'],
                     $tanggal,
                     $target_txt,
-                    $tmpl['realisasi'],
+                    $realisasi_txt,
                     0.00,
                     $tmpl['penilaian_kualitatif'],
                     'belum_dimulai',
@@ -466,13 +479,15 @@ if (!function_exists('rktEnsureSchema')) {
             foreach ($programs as $p) {
                 $bidang = $p['bidang_nama'] ?? '';
                 $tmpl = $monevByBidang[$bidang] ?? $monevByBidang['default'];
+                $prog = trim($p['nama_program'] ?? '');
+                $realisasi_txt = "Seluruh rangkaian kegiatan pada program '{$prog}' terlaksana sesuai target tahunan.";
 
                 $ins->execute([
                     $p['prog_id'],
                     null,
                     date('Y-m-d'),
                     $tmpl['target'],
-                    $tmpl['realisasi'],
+                    $realisasi_txt,
                     0.00,
                     $tmpl['penilaian_kualitatif'],
                     'belum_dimulai',
