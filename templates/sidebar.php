@@ -2256,26 +2256,37 @@ window.forumUnreadList = <?php echo json_encode($forum_unread_list ?? []); ?>;
 window.diskusiUnreadList = <?php echo json_encode($diskusi_unread_list ?? []); ?>;
 
 // Auto-scroll sidebar langsung (tidak terhambat penimpaan variabel $js_page)
-window.ensureSidebarActiveMenuVisible = function() {
+window.ensureSidebarActiveMenuVisible = function(restoreActive, scrollTarget) {
     try {
         var sidebar = document.querySelector('.main-sidebar');
         if (!sidebar) return;
 
-        // Cari anak menu aktif terlebih dahulu, baru fallback ke menu single
-        var active = sidebar.querySelector('.sidebar-menu ul.dropdown-menu a.active, .sidebar-menu ul.dropdown-menu li.active > a');
-        if (!active) {
-            active = sidebar.querySelector('.sidebar-menu > li.active:not(.dropdown) > a, .sidebar-menu > li:not(.dropdown) > a.active');
-        }
-        if (!active) {
-            active = sidebar.querySelector('.sidebar-menu a.active, .sidebar-menu li.active > a');
+        // restoreActive=false dipakai saat user membuka menu induk lain:
+        // jangan buka ulang menu induk lama yang anaknya masih bertanda aktif.
+        if (restoreActive === undefined) restoreActive = true;
+
+        var active = null;
+        if (scrollTarget && scrollTarget.nodeType === 1) {
+            active = scrollTarget;
+        } else {
+            // Cari anak menu aktif terlebih dahulu, baru fallback ke menu single
+            active = sidebar.querySelector('.sidebar-menu ul.dropdown-menu a.active, .sidebar-menu ul.dropdown-menu li.active > a');
+            if (!active) {
+                active = sidebar.querySelector('.sidebar-menu > li.active:not(.dropdown) > a, .sidebar-menu > li:not(.dropdown) > a.active');
+            }
+            if (!active) {
+                active = sidebar.querySelector('.sidebar-menu a.active, .sidebar-menu li.active > a');
+            }
         }
         if (!active) return;
 
-        var drop = active.closest('li.dropdown');
-        if (drop) {
-            drop.classList.add('active');
-            var dm = drop.querySelector('ul.dropdown-menu');
-            if (dm) dm.style.display = 'block';
+        if (restoreActive) {
+            var drop = active.closest('li.dropdown');
+            if (drop) {
+                drop.classList.add('active');
+                var dm = drop.querySelector('ul.dropdown-menu');
+                if (dm) dm.style.display = 'block';
+            }
         }
 
         var $sb = (window.jQuery && typeof window.jQuery.fn.niceScroll === 'function') ? window.jQuery(sidebar) : null;
@@ -2314,6 +2325,11 @@ window.ensureSidebarActiveMenuVisible = function() {
 
 (function() {
     var run = function() {
+        // Jangan jalankan auto-restore bila user sudah membuka/menutup menu sendiri,
+        // supaya menu induk yang baru dipilih tidak ditimpa menu lama.
+        if (window.__svSidebarUserToggled) {
+            return;
+        }
         if (typeof window.ensureSidebarActiveMenuVisible === 'function') {
             window.ensureSidebarActiveMenuVisible();
         }

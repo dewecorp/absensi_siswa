@@ -98,6 +98,9 @@ $(function() {
         var parent = me.parent();
         var active = parent.hasClass("active");
 
+        // Tandai user sudah berinteraksi agar auto-restore saat load tidak menimpa pilihan user.
+        window.__svSidebarUserToggled = true;
+
         // Close all other active menus
         $('.main-sidebar .sidebar-menu li.active').not(parent).each(function() {
           $(this).removeClass('active');
@@ -117,7 +120,9 @@ $(function() {
           parent.find('> .dropdown-menu').slideDown(200, function() {
             sidebar_refresh_scroll_state();
             if (typeof window.ensureSidebarActiveMenuVisible === 'function') {
-              window.ensureSidebarActiveMenuVisible();
+              // restoreActive=false: menu induk lain yang anaknya masih aktif
+              // tidak boleh ikut terbuka dan menimpa menu yang baru dibuka.
+              window.ensureSidebarActiveMenuVisible(false, me[0]);
             }
           });
         }
