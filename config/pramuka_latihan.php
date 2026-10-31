@@ -180,6 +180,34 @@ if (!function_exists('pramukaLatihanIsScheduleDay')) {
     }
 }
 
+if (!function_exists('pramukaLatihanScheduleDates')) {
+    /**
+     * Tanggal-tanggal yang jatuh pada hari latihan Pramuka dalam satu bulan.
+     *
+     * @return int[]
+     */
+    function pramukaLatihanScheduleDates(PDO $pdo, int $year, int $month): array
+    {
+        if ($year < 1970 || $month < 1 || $month > 12) {
+            return [];
+        }
+        $schedule = pramukaLatihanSchedule($pdo);
+        $dayNum = (int)($schedule['day_num'] ?? 0);
+        if ($dayNum <= 0) {
+            return [];
+        }
+        $numDays = (int)cal_days_in_month(CAL_GREGORIAN, $month, $year);
+        $dates = [];
+        for ($d = 1; $d <= $numDays; $d++) {
+            $ts = strtotime(sprintf('%04d-%02d-%02d', $year, $month, $d));
+            if ($ts !== false && (int)date('N', $ts) === $dayNum) {
+                $dates[] = $d;
+            }
+        }
+        return $dates;
+    }
+}
+
 if (!function_exists('pramukaLatihanScheduleLabel')) {
     function pramukaLatihanScheduleLabel(PDO $pdo): string
     {

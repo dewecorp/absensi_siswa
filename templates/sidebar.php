@@ -16,6 +16,7 @@ define('SIMAD_SIDEBAR_RENDERED', true);
 $current_page = basename($_SERVER['PHP_SELF']);
 $current_dir = basename(dirname($_SERVER['PHP_SELF'] ?? ''));
 $current_uri = (string)($_SERVER['REQUEST_URI'] ?? '');
+$is_ekskul_kehadiran_page = in_array($current_page, ['kehadiran_ekstra.php', 'rekap_kehadiran_ekstra.php'], true);
 $is_wali_tl_page = ($current_page === 'tindak_lanjut.php' && (str_contains($current_uri, 'wali/tindak_lanjut.php') || $current_dir === 'wali'));
 $is_kepala_tl_page = ($current_page === 'tindak_lanjut.php' && !$is_wali_tl_page);
 require_once __DIR__ . '/../config/sims_surat_helper.php';
@@ -44,9 +45,13 @@ if (!function_exists('get_dynamic_breadcrumb')) {
         }
 
         $cur_dir = basename(dirname($_SERVER['PHP_SELF'] ?? ''));
-        $score = function($url) use ($current_page, $cur_dir){
+        $cur_ekskul = isset($_GET['ekskul']) ? (int)$_GET['ekskul'] : 0;
+        $score = function($url) use ($current_page, $cur_dir, $cur_ekskul){
             $p = parse_url((string)$url, PHP_URL_PATH);
             if (basename((string)$p) !== $current_page) return 0;
+            $q = [];
+            parse_str((string)parse_url((string)$url, PHP_URL_QUERY), $q);
+            if (array_key_exists('ekskul', $q) && (int)$q['ekskul'] !== $cur_ekskul) return 0;
             $d = basename(dirname((string)$p));
             if ($d !== '' && $d !== '.' && $d === $cur_dir) return 2;
             return 1;
@@ -318,11 +323,31 @@ if (!function_exists('build_ekskul_anggota_menu')) {
             $eid = (int)($r['id_ekstrakurikuler'] ?? 0);
             $nm = trim((string)($r['nama_ekstrakurikuler'] ?? ''));
             if ($nm === '') continue;
-            $active = ($cur_page === 'data_anggota_ekskul.php' && $cur_ekskul === $eid)
-                || ($legacy_page !== '' && strtolower($nm) === $legacy_page);
             $q = 'ekskul=' . $eid . ($session_suffix !== '' ? '&session_type=' . $session_suffix : '');
-            $items[] = ['title' => 'Data Anggota ' . $nm, 'url' => '../admin/data_anggota_ekskul.php?' . $q, 'active' => $active];
+            $active_anggota = ($cur_page === 'data_anggota_ekskul.php' && $cur_ekskul === $eid)
+                || ($legacy_page !== '' && strtolower($nm) === $legacy_page);
+            $items[] = ['title' => 'Data Anggota ' . $nm, 'url' => '../admin/data_anggota_ekskul.php?' . $q, 'active' => $active_anggota];
+            $items[] = [
+                'title' => 'Kehadiran ' . $nm,
+                'url' => '../admin/kehadiran_ekstra.php?' . $q,
+                'active' => $cur_page === 'kehadiran_ekstra.php' && $cur_ekskul === $eid,
+            ];
+            $items[] = [
+                'title' => 'Rekap ' . $nm,
+                'url' => '../admin/rekap_kehadiran_ekstra.php?' . $q,
+                'active' => $cur_page === 'rekap_kehadiran_ekstra.php' && $cur_ekskul === $eid,
+            ];
         }
+        return $items;
+    }
+}
+
+// Urutkan submenu ekstrakurikuler sesuai abjad agar rapi
+if (!function_exists('sort_ekskul_submenu_by_title')) {
+    function sort_ekskul_submenu_by_title(array $items): array {
+        usort($items, static function ($a, $b) {
+            return strcasecmp((string)($a['title'] ?? ''), (string)($b['title'] ?? ''));
+        });
         return $items;
     }
 }
@@ -379,11 +404,11 @@ switch ($user_level) {
             ['title' => 'Rekap Sholat Dhuha', 'url' => '../admin/rekap_sholat_dhuha.php', 'active' => $current_page === 'rekap_sholat_dhuha.php']
         ];
 
-        $ekstrakurikuler_submenu_admin = [
+        $ekstrakurikuler_submenu_admin = sort_ekskul_submenu_by_title([
             ['title' => 'Data Ekstrakurikuler', 'url' => '../admin/data_ekstrakurikuler.php', 'active' => $current_page === 'data_ekstrakurikuler.php'],
             ['title' => 'Data Pembina Ekstra', 'url' => '../admin/data_pembina_ekstrakurikuler.php', 'active' => $current_page === 'data_pembina_ekstrakurikuler.php'],
             ...build_ekskul_anggota_menu($pdo ?? null),
-        ];
+        ]);
 
         $pramuka_submenu_admin = [
             ['title' => 'Data Tingkat Pramuka', 'url' => '../admin/data_tingkat_barung.php', 'active' => $current_page === 'data_tingkat_barung.php'],
@@ -500,7 +525,7 @@ switch ($user_level) {
                 'title' => 'Ekstrakurikuler',
                 'icon' => 'fas fa-users',
                 'submenu' => $ekstrakurikuler_submenu_admin,
-                'active' => in_array($current_page, ['data_ekstrakurikuler.php', 'data_pembina_ekstrakurikuler.php', 'data_anggota_ekskul.php', 'data_anggota_pencak_silat.php', 'data_anggota_rebana.php'])
+                'active' => in_array($current_page, ['data_ekstrakurikuler.php', 'data_pembina_ekstrakurikuler.php', 'data_anggota_ekskul.php', 'data_anggota_pencak_silat.php', 'data_anggota_rebana.php']) || $is_ekskul_kehadiran_page
             ],
             [
                 'title' => 'Pramuka',
@@ -713,11 +738,11 @@ switch ($user_level) {
             ['title' => 'Rekap Sholat Berjamaah', 'url' => '../kepala/rekap_sholat.php', 'active' => $current_page === 'rekap_sholat.php'],
             ['title' => 'Rekap Sholat Dhuha', 'url' => '../kepala/rekap_sholat_dhuha.php', 'active' => $current_page === 'rekap_sholat_dhuha.php']
         ];
-        $ekstrakurikuler_submenu_kepala = [
+        $ekstrakurikuler_submenu_kepala = sort_ekskul_submenu_by_title([
             ['title' => 'Data Ekstrakurikuler', 'url' => '../admin/data_ekstrakurikuler.php?session_type=kepala_madrasah', 'active' => $current_page === 'data_ekstrakurikuler.php'],
             ['title' => 'Data Pembina Ekskul', 'url' => '../admin/data_pembina_ekstrakurikuler.php?session_type=kepala_madrasah', 'active' => $current_page === 'data_pembina_ekstrakurikuler.php'],
             ...build_ekskul_anggota_menu($pdo ?? null, 'kepala_madrasah'),
-        ];
+        ]);
         $pramuka_submenu_kepala = [
             ['title' => 'Data Pembina Pramuka', 'url' => '../admin/data_pembina_pramuka.php?session_type=kepala_madrasah', 'active' => $current_page === 'data_pembina_pramuka.php'],
             ['title' => 'Data Tingkat Pramuka', 'url' => '../admin/data_tingkat_barung.php?session_type=kepala_madrasah', 'active' => $current_page === 'data_tingkat_barung.php'],
@@ -805,7 +830,7 @@ switch ($user_level) {
                 'title' => 'Ekstrakurikuler',
                 'icon' => 'fas fa-users',
                 'submenu' => $ekstrakurikuler_submenu_kepala,
-                'active' => in_array($current_page, ['data_ekstrakurikuler.php', 'data_pembina_ekstrakurikuler.php', 'data_anggota_ekskul.php', 'data_anggota_pencak_silat.php', 'data_anggota_rebana.php'])
+                'active' => in_array($current_page, ['data_ekstrakurikuler.php', 'data_pembina_ekstrakurikuler.php', 'data_anggota_ekskul.php', 'data_anggota_pencak_silat.php', 'data_anggota_rebana.php']) || $is_ekskul_kehadiran_page
             ],
             [
                 'title' => 'Pramuka',
@@ -948,11 +973,11 @@ switch ($user_level) {
         ];
         usort($absensi_submenu_tu, static function ($a, $b) { return strcasecmp($a['title'] ?? '', $b['title'] ?? ''); });
 
-        $ekstrakurikuler_submenu_tu = [
+        $ekstrakurikuler_submenu_tu = sort_ekskul_submenu_by_title([
             ['title' => 'Data Ekstrakurikuler', 'url' => '../admin/data_ekstrakurikuler.php?session_type=tata_usaha', 'active' => $current_page === 'data_ekstrakurikuler.php'],
             ['title' => 'Data Pembina Ekstra', 'url' => '../admin/data_pembina_ekstrakurikuler.php?session_type=tata_usaha', 'active' => $current_page === 'data_pembina_ekstrakurikuler.php'],
             ...build_ekskul_anggota_menu($pdo ?? null, 'tata_usaha'),
-        ];
+        ]);
         $pramuka_submenu_tu = [
             ['title' => 'Data Pembina Pramuka', 'url' => '../admin/data_pembina_pramuka.php?session_type=tata_usaha', 'active' => $current_page === 'data_pembina_pramuka.php'],
             ['title' => 'Data Tingkat Pramuka', 'url' => '../admin/data_tingkat_barung.php?session_type=tata_usaha', 'active' => $current_page === 'data_tingkat_barung.php'],
@@ -963,7 +988,6 @@ switch ($user_level) {
             ['title' => 'Syarat Kecakapan Umum', 'url' => '../admin/syarat_kecakapan_umum.php?session_type=tata_usaha', 'active' => $current_page === 'syarat_kecakapan_umum.php'],
             ['title' => 'Surat Keterangan', 'url' => '../admin/surat_keterangan.php?session_type=tata_usaha', 'active' => $current_page === 'surat_keterangan.php'],
         ];
-        usort($ekstrakurikuler_submenu_tu, static function ($a, $b) { return strcasecmp($a['title'] ?? '', $b['title'] ?? ''); });
 
         $menu_top_tu = [
             [
@@ -993,7 +1017,7 @@ switch ($user_level) {
                 'title' => 'Ekstrakurikuler',
                 'icon' => 'fas fa-users',
                 'submenu' => $ekstrakurikuler_submenu_tu,
-                'active' => in_array($current_page, ['data_ekstrakurikuler.php', 'data_pembina_ekstrakurikuler.php', 'data_anggota_ekskul.php', 'data_anggota_pencak_silat.php', 'data_anggota_rebana.php'])
+                'active' => in_array($current_page, ['data_ekstrakurikuler.php', 'data_pembina_ekstrakurikuler.php', 'data_anggota_ekskul.php', 'data_anggota_pencak_silat.php', 'data_anggota_rebana.php']) || $is_ekskul_kehadiran_page
             ],
             [
                 'title' => 'Pramuka',
@@ -1221,11 +1245,11 @@ switch ($user_level) {
         }
         // is_guru_pembina_pramuka sudah ditentukan lewat helper yang robust.
 
-        $ekstrakurikuler_submenu_guru = [
+        $ekstrakurikuler_submenu_guru = sort_ekskul_submenu_by_title([
             ['title' => 'Data Ekstrakurikuler', 'url' => '../admin/data_ekstrakurikuler.php?session_type=guru', 'active' => $current_page === 'data_ekstrakurikuler.php'],
             ['title' => 'Data Pembina Ekskul', 'url' => '../admin/data_pembina_ekstrakurikuler.php?session_type=guru', 'active' => $current_page === 'data_pembina_ekstrakurikuler.php'],
             ...build_ekskul_anggota_menu($pdo ?? null, 'guru'),
-        ];
+        ]);
         $pramuka_submenu_guru = [
             ['title' => 'Data Pembina Pramuka', 'url' => '../admin/data_pembina_pramuka.php?session_type=guru', 'active' => $current_page === 'data_pembina_pramuka.php'],
             ['title' => 'Data Anggota Pramuka', 'url' => '../admin/data_barung.php?session_type=guru', 'active' => $current_page === 'data_barung.php'],
@@ -1329,7 +1353,7 @@ switch ($user_level) {
                 'title' => 'Ekstrakurikuler',
                 'icon' => 'fas fa-users',
                 'submenu' => $ekstrakurikuler_submenu_guru,
-                'active' => in_array($current_page, ['data_ekstrakurikuler.php', 'data_pembina_ekstrakurikuler.php', 'data_anggota_ekskul.php', 'data_anggota_pencak_silat.php', 'data_anggota_rebana.php'])
+                'active' => in_array($current_page, ['data_ekstrakurikuler.php', 'data_pembina_ekstrakurikuler.php', 'data_anggota_ekskul.php', 'data_anggota_pencak_silat.php', 'data_anggota_rebana.php']) || $is_ekskul_kehadiran_page
             ],
             [
                 'title' => 'Pramuka',
@@ -1550,11 +1574,11 @@ switch ($user_level) {
         $data_utama_urls_wali = array_map(function($item) {
             return basename($item['url']);
         }, $data_utama_submenu_wali);
-        $ekstrakurikuler_submenu_wali = [
+        $ekstrakurikuler_submenu_wali = sort_ekskul_submenu_by_title([
             ['title' => 'Data Ekstrakurikuler', 'url' => '../admin/data_ekstrakurikuler.php?session_type=wali', 'active' => $current_page === 'data_ekstrakurikuler.php'],
             ['title' => 'Data Pembina Ekskul', 'url' => '../admin/data_pembina_ekstrakurikuler.php?session_type=wali', 'active' => $current_page === 'data_pembina_ekstrakurikuler.php'],
             ...build_ekskul_anggota_menu($pdo ?? null, 'wali'),
-        ];
+        ]);
         $pramuka_submenu_wali = [
             ['title' => 'Data Pembina Pramuka', 'url' => '../admin/data_pembina_pramuka.php?session_type=wali', 'active' => $current_page === 'data_pembina_pramuka.php'],
             ['title' => 'Data Anggota Pramuka', 'url' => '../admin/data_barung.php?session_type=wali', 'active' => $current_page === 'data_barung.php'],
@@ -1641,7 +1665,7 @@ switch ($user_level) {
                 'title' => 'Ekstrakurikuler',
                 'icon' => 'fas fa-users',
                 'submenu' => $ekstrakurikuler_submenu_wali,
-                'active' => in_array($current_page, ['data_ekstrakurikuler.php', 'data_pembina_ekstrakurikuler.php', 'data_anggota_ekskul.php', 'data_anggota_pencak_silat.php', 'data_anggota_rebana.php'])
+                'active' => in_array($current_page, ['data_ekstrakurikuler.php', 'data_pembina_ekstrakurikuler.php', 'data_anggota_ekskul.php', 'data_anggota_pencak_silat.php', 'data_anggota_rebana.php']) || $is_ekskul_kehadiran_page
             ],
             [
                 'title' => 'Pramuka',

@@ -59,6 +59,7 @@ $results = [];
 $title = '';
 $m_start = 0;
 $m_end = 0;
+$schedule_days = [];
 
 if ($filter_type === 'daily') {
     $title = 'Rekap Kehadiran Latihan Harian - Tanggal: ' . formatDateIndonesia($attendance_date);
@@ -81,6 +82,7 @@ if ($filter_type === 'daily') {
     $month = (int)substr($month_picker, 5, 2);
     $month_names = ['', 'Januari', 'Februari', 'Maret', 'April', 'Mei', 'Juni', 'Juli', 'Agustus', 'September', 'Oktober', 'November', 'Desember'];
     $title = 'Rekap Kehadiran Latihan Bulanan - ' . ($month_names[$month] ?? '') . ' ' . $year;
+    $schedule_days = pramukaLatihanScheduleDates($pdo, $year, $month);
 
     $stmt = $pdo->prepare("
         SELECT p.id_peserta_didik_barung, p.nama_peserta_didik AS nama_siswa, p.nta AS nisn
@@ -109,18 +111,13 @@ if ($filter_type === 'daily') {
     }
 
     $holidays = getHolidays($pdo, $year, $month);
-    $num_days = cal_days_in_month(CAL_GREGORIAN, $month, $year);
 
     foreach ($students as $student) {
         $pid = (int)$student['id_peserta_didik_barung'];
         $row = $student;
         $row['days'] = [];
         $summary = ['H' => 0, 'S' => 0, 'I' => 0, 'A' => 0];
-        for ($i = 1; $i <= 31; $i++) {
-            if ($i > $num_days) {
-                $row['days'][$i] = '-';
-                continue;
-            }
+        foreach ($schedule_days as $i) {
             $date_str = sprintf('%04d-%02d-%02d', $year, $month, $i);
             $status = $attendance_map[$pid][$i] ?? '';
             $display = '';
@@ -243,7 +240,7 @@ if ($filter_type === 'daily') {
     <meta charset="UTF-8">
     <title><?= htmlspecialchars($title) ?></title>
     <style>
-        @page { size: legal landscape; margin: 0cm 0.5cm 0.2cm 0.5cm; }
+        @page { size: <?= $filter_type === 'monthly' ? '210mm 330mm' : '330mm 210mm' ?>; margin: 0cm 0.5cm 0.2cm 0.5cm; }
         body { font-family: Arial, sans-serif; font-size: 11px; margin: 0; padding: 2px 10px 0; }
         .header { text-align: center; margin-bottom: 4px; position: relative; }
         .logo { position: absolute; left: 0; top: 0; max-width: 60px; }
@@ -301,11 +298,11 @@ if ($filter_type === 'daily') {
                 <tr>
                     <th rowspan="2" class="col-no">No</th>
                     <th rowspan="2" class="col-nama">Nama Siswa</th>
-                    <th colspan="31">Tanggal</th>
+                    <th colspan="<?= count($schedule_days) ?>">Tanggal Latihan</th>
                     <th colspan="4">Total</th>
                 </tr>
                 <tr>
-                    <?php for ($i = 1; $i <= 31; $i++) echo "<th class='col-tgl'>$i</th>"; ?>
+                    <?php foreach ($schedule_days as $day): ?><th class="col-tgl"><?= $day ?></th><?php endforeach; ?>
                     <th class="col-stat">H</th><th class="col-stat">S</th><th class="col-stat">I</th><th class="col-stat">A</th>
                 </tr>
             </thead>
@@ -314,12 +311,12 @@ if ($filter_type === 'daily') {
                 <tr>
                     <td><?= $no++ ?></td>
                     <td class="text-left" style="white-space: nowrap;"><?= htmlspecialchars($row['nama_siswa']) ?></td>
-                    <?php for ($i = 1; $i <= 31; $i++):
-                        $val = $row['days'][$i] ?? '';
+                    <?php foreach ($schedule_days as $day):
+                        $val = $row['days'][$day] ?? '';
                         $style = ($val === 'L') ? 'color: red; font-weight: bold;' : '';
                     ?>
                         <td style="<?= $style ?>"><?= htmlspecialchars((string)$val) ?></td>
-                    <?php endfor; ?>
+                    <?php endforeach; ?>
                     <td><?= (int)$row['summary']['H'] ?></td><td><?= (int)$row['summary']['S'] ?></td><td><?= (int)$row['summary']['I'] ?></td><td><?= (int)$row['summary']['A'] ?></td>
                 </tr>
                 <?php endforeach; ?>

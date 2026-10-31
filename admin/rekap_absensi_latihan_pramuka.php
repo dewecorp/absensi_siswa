@@ -150,6 +150,7 @@ if ($tingkat_id > 0) {
     } elseif ($filter_type === 'monthly' && $selected_month !== '') {
         $year = (int)substr($selected_month, 0, 4);
         $month = (int)substr($selected_month, 5, 2);
+        $schedule_days = pramukaLatihanScheduleDates($pdo, $year, $month);
 
         $st = $pdo->prepare("SELECT p.id_peserta_didik_barung, p.nama_peserta_didik, p.nta,
                 COALESCE((
@@ -198,6 +199,9 @@ if ($tingkat_id > 0) {
             }
             $d = (int)$r['day'];
             $byId[$pid]['days'][$d] = $r['keterangan'];
+            if (!in_array($d, $schedule_days, true)) {
+                continue;
+            }
             $key = ($r['keterangan'] === 'Terlambat') ? 'Hadir' : $r['keterangan'];
             if (isset($byId[$pid]['summary'][$key])) {
                 $byId[$pid]['summary'][$key]++;
@@ -818,48 +822,6 @@ include '../templates/header.php';
                                                     </div>
                                                 </div>
                                             <?php endforeach; ?>
-                                        </div>
-
-                                        <div class="table-responsive d-none">
-                                            <table class="table table-bordered table-md">
-                                                <thead>
-                                                    <tr>
-                                                        <th rowspan="2">No</th>
-                                                        <th rowspan="2">Nama Siswa</th>
-                                                        <th colspan="31" class="text-center"><?php echo htmlspecialchars($js_month_name . ' ' . $js_month_year); ?></th>
-                                                        <th colspan="4" class="text-center">Total</th>
-                                                    </tr>
-                                                    <tr>
-                                                        <?php for ($day = 1; $day <= 31; $day++): ?><th><?php echo $day; ?></th><?php endfor; ?>
-                                                        <th>Hadir</th><th>Sakit</th><th>Izin</th><th>Alpa</th>
-                                                    </tr>
-                                                </thead>
-                                                <tbody>
-                                                    <?php foreach ($monthly_results as $index => $row): ?>
-                                                        <tr>
-                                                            <td><?php echo $index + 1; ?></td>
-                                                            <td><?php echo htmlspecialchars((string)$row['nama_siswa']); ?></td>
-                                                            <?php for ($day = 1; $day <= 31; $day++): ?>
-                                                                <td>
-                                                                    <?php
-                                                                    $status = $row['days'][$day] ?? '';
-                                                                    $current_date = sprintf('%04d-%02d-%02d', $year, $month, $day);
-                                                                    if (isset($holidays[$current_date])) {
-                                                                        echo '<span style="color:red;" title="' . htmlspecialchars((string)$holidays[$current_date], ENT_QUOTES, 'UTF-8') . '">L</span>';
-                                                                    } elseif ($status !== '') {
-                                                                        echo '<span>' . htmlspecialchars(substr((string)$status, 0, 1)) . '</span>';
-                                                                    }
-                                                                    ?>
-                                                                </td>
-                                                            <?php endfor; ?>
-                                                            <td class="text-center"><?php echo (int)($row['summary']['Hadir'] ?? 0); ?></td>
-                                                            <td class="text-center"><?php echo (int)($row['summary']['Sakit'] ?? 0); ?></td>
-                                                            <td class="text-center"><?php echo (int)($row['summary']['Izin'] ?? 0); ?></td>
-                                                            <td class="text-center"><?php echo (int)($row['summary']['Alpa'] ?? 0); ?></td>
-                                                        </tr>
-                                                    <?php endforeach; ?>
-                                                </tbody>
-                                            </table>
                                         </div>
                                     </div>
                                 <?php elseif (!empty($student_results)): ?>
