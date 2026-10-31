@@ -71,8 +71,6 @@
                 if ($.fn.DataTable.isDataTable(this)) return;
 
                 $(this).DataTable({
-                    scrollX: true,
-                    scrollCollapse: true,
                     autoWidth: false
                 });
             });

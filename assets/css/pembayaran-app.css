@@ -391,23 +391,23 @@
 
 /* ---------- Tables ---------- */
 .pembayaran-app table.pembayaran-table {
-    border-collapse: separate;
-    border-spacing: 0;
+    border-collapse: collapse;
     margin-bottom: 0;
     width: 100% !important;
+    color: #34395e;
 }
 
 .pembayaran-app table.pembayaran-table thead th {
-    background: #f8fafc;
-    color: #475569;
-    text-transform: uppercase;
-    font-size: .72rem;
-    font-weight: 800;
-    letter-spacing: .05em;
-    border: 0 !important;
-    border-bottom: 1px solid var(--pb-line) !important;
-    padding: 12px 14px;
+    background: #f4f6f9;
+    color: #34395e;
+    text-transform: none;
+    font-size: .875rem;
+    font-weight: 700;
+    letter-spacing: 0;
+    border: 1px solid #e3e6ec !important;
+    padding: 12px 15px;
     white-space: nowrap;
+    vertical-align: middle;
 }
 
 .pembayaran-app table.pembayaran-table thead th.sorting,
@@ -422,7 +422,7 @@
 /* Kolom "No" cukup nomor urut: sembunyikan ikon sorting agar tidak menimpa label */
 .pembayaran-app table.pembayaran-table thead th:first-child {
     background-image: none !important;
-    padding-right: 14px;
+    padding-right: 15px;
 }
 
 @media (min-width: 992px) {
@@ -430,20 +430,23 @@
         width: 64px !important;
         min-width: 64px;
     }
+
+    .pembayaran-app table.pembayaran-table tbody td {
+        height: 60px;
+    }
 }
 
 .pembayaran-app table.pembayaran-table tbody td {
-    border: 0 !important;
-    border-bottom: 1px solid #eef2f7 !important;
-    padding: 12px 14px;
+    border: 1px solid #e3e6ec !important;
+    padding: 12px 15px;
     vertical-align: middle;
 }
 
-.pembayaran-app table.pembayaran-table tbody tr:last-child td {
-    border-bottom: 0 !important;
+.pembayaran-app table.pembayaran-table tbody tr:nth-of-type(odd) td {
+    background-color: rgba(0, 0, 0, .02);
 }
 
-.pembayaran-app table.pembayaran-table tbody tr:hover {
+.pembayaran-app table.pembayaran-table tbody tr:hover td {
     background: #f8fbff;
 }
 
