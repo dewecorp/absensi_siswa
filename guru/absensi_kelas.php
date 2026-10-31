@@ -1,6 +1,7 @@
 <?php
 require_once '../config/database.php';
 require_once '../config/functions.php';
+require_once '../config/pramuka_latihan.php';
 
 // Check if user is logged in and has guru level
 if (!isAuthorized(['guru'])) {
@@ -149,6 +150,10 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['save_attendance'])) {
                             updateSholatAttendance($pdo, (int)$id_siswa, (string)$tanggal, '');
                         }
                     }
+                    if (function_exists('pramukaLatihanSyncFromDaily')) {
+                        $id_guru_sync = in_array($_SESSION['level'] ?? '', ['admin', 'tata_usaha'], true) ? null : ($_SESSION['user_id'] ?? null);
+                        pramukaLatihanSyncFromDaily($pdo, (int)$id_siswa, (string)$tanggal, '', $id_guru_sync);
+                    }
                     continue;
                 }
 
@@ -175,6 +180,11 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['save_attendance'])) {
                 // Sinkron otomatis ke Sholat Dhuha dan Sholat Berjamaah
                 if (function_exists('updateSholatAttendance')) {
                     updateSholatAttendance($pdo, (int)$id_siswa, (string)$tanggal, (string)$keterangan);
+                }
+                // Sinkron otomatis ke kehadiran latihan Pramuka (sesuai jadwal ekstrakurikuler)
+                if (function_exists('pramukaLatihanSyncFromDaily')) {
+                    $id_guru_sync = in_array($_SESSION['level'] ?? '', ['admin', 'tata_usaha'], true) ? null : ($_SESSION['user_id'] ?? null);
+                    pramukaLatihanSyncFromDaily($pdo, (int)$id_siswa, (string)$tanggal, (string)$keterangan, $id_guru_sync);
                 }
             }
         }

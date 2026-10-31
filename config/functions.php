@@ -3859,6 +3859,13 @@ if (!function_exists('simadSaveSingleAttendance')) {
                         $d = $pdo->prepare("DELETE FROM tb_absensi WHERE id_siswa = ? AND tanggal = ?");
                         $d->execute([$id_siswa, $tanggal]);
                     }
+                    $__pramukaHelper = __DIR__ . '/pramuka_latihan.php';
+                    if (is_file($__pramukaHelper)) {
+                        require_once $__pramukaHelper;
+                    }
+                    if (function_exists('pramukaLatihanSyncFromDaily')) {
+                        pramukaLatihanSyncFromDaily($pdo, $id_siswa, $tanggal, '', $id_guru);
+                    }
                     return ['success' => true];
                 }
 
@@ -3870,6 +3877,13 @@ if (!function_exists('simadSaveSingleAttendance')) {
                     $jam = ($status === 'Hadir') ? $now : null;
                     $i = $pdo->prepare("INSERT INTO tb_absensi (id_siswa, tanggal, keterangan, id_guru, jam_masuk) VALUES (?, ?, ?, ?, ?)");
                     $i->execute([$id_siswa, $tanggal, $status, $id_guru, $jam]);
+                }
+                $__pramukaHelper = __DIR__ . '/pramuka_latihan.php';
+                if (is_file($__pramukaHelper)) {
+                    require_once $__pramukaHelper;
+                }
+                if (function_exists('pramukaLatihanSyncFromDaily')) {
+                    pramukaLatihanSyncFromDaily($pdo, $id_siswa, $tanggal, $status, $id_guru);
                 }
                 return ['success' => true];
             }
