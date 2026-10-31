@@ -230,6 +230,93 @@ if (!function_exists('pramukaLatihanScheduleLabel')) {
     }
 }
 
+if (!function_exists('pramukaLatihanManualInputIsLate')) {
+    /**
+     * True bila input kehadiran dilakukan setelah jam latihan pada tanggal tersebut lewat.
+     */
+    function pramukaLatihanManualInputIsLate(PDO $pdo, string $tanggal): bool
+    {
+        $ts = strtotime($tanggal);
+        if ($ts === false) {
+            return false;
+        }
+        $schedule = pramukaLatihanSchedule($pdo);
+        $selesai = trim((string)($schedule['waktu_selesai'] ?? ''));
+        if ($selesai === '') {
+            $selesai = trim((string)($schedule['waktu'] ?? ''));
+        }
+        if ($selesai === '') {
+            return $ts < strtotime(date('Y-m-d'));
+        }
+        $endTs = strtotime(date('Y-m-d', $ts) . ' ' . substr($selesai, 0, 5) . ':00');
+        return $endTs !== false && time() > $endTs;
+    }
+}
+
+if (!function_exists('pramukaLatihanNotifManualLate')) {
+    /**
+     * Notifikasi khusus input manual kehadiran Pramuka yang sudah lewat jadwal.
+     * Dibuat berbeda dari notifikasi kehadiran harian agar tidak tertukar.
+     */
+    function pramukaLatihanNotifManualLate(PDO $pdo, int $idPeserta, string $tanggal): void
+    {
+        $idPeserta = (int)$idPeserta;
+        $tanggal = trim($tanggal);
+        if ($idPeserta <= 0 || $tanggal === '') {
+            return;
+        }
+
+        $tingkat = '';
+        try {
+            $st = $pdo->prepare("
+                SELECT t.nama_tingkat
+                FROM tb_peserta_didik_barung p
+                LEFT JOIN tb_tingkat_barung t ON t.id_tingkat_barung = p.id_tingkat_barung
+                WHERE p.id_peserta_didik_barung = ?
+                LIMIT 1
+            ");
+            $st->execute([$idPeserta]);
+            $tingkat = trim((string)($st->fetchColumn() ?: ''));
+        } catch (Throwable $e) {
+            $tingkat = '';
+        }
+        if ($tingkat === '') {
+            $tingkat = 'Pramuka';
+        }
+
+        $aktor = function_exists('simadAktorKehadiranLabel')
+            ? simadAktorKehadiranLabel($pdo, '')
+            : trim((string)($_SESSION['nama_guru'] ?? ($_SESSION['username'] ?? 'Pengguna')));
+
+        $tanggal_txt = date('d-m-Y', strtotime($tanggal) ?: time());
+        $jam = date('H:i');
+        $message = "$aktor mengisi kehadiran Latihan Pramuka tingkat $tingkat untuk $tanggal_txt secara manual karena jadwal latihan sudah lewat (diinput pukul $jam WIB).";
+
+        // Cegah notifikasi berulang saat input banyak peserta dalam waktu singkat.
+        try {
+            $dup = $pdo->prepare("
+                SELECT COUNT(*)
+                FROM tb_notifikasi
+                WHERE link = ?
+                  AND message LIKE ?
+                  AND created_at >= DATE_SUB(NOW(), INTERVAL 10 MINUTE)
+            ");
+            $dup->execute(['rekap_absensi_latihan_pramuka.php', "$aktor mengisi kehadiran Latihan Pramuka tingkat $tingkat untuk $tanggal_txt%"]);
+            if ((int)$dup->fetchColumn() > 0) {
+                return;
+            }
+        } catch (Throwable $e) {
+            // Lanjut kirim bila pengecekan duplikat gagal.
+        }
+
+        try {
+            createNotification($pdo, $message, 'rekap_absensi_latihan_pramuka.php', 'absensi_pramuka', null, 'admin_kepala');
+        } catch (Throwable $e) {
+            // Notifikasi tidak boleh menggagalkan penyimpanan kehadiran.
+        }
+    }
+}
+
 if (!function_exists('pramukaLatihanResolveSiswaId')) {
     function pramukaLatihanResolveSiswaId(PDO $pdo, int $idPeserta): int
     {

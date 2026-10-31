@@ -33,12 +33,16 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && (isset($_POST['single_absensi_latih
         exit;
     }
     $id_peserta_js = (int)($_POST['id_peserta_didik_barung'] ?? $_POST['id_siswa'] ?? 0);
-    $res = pramukaLatihanSaveSingle($pdo, $scope, $id_peserta_js, $tanggal_js, (string)($_POST['status'] ?? ''));
+    $status_js = (string)($_POST['status'] ?? '');
+    $res = pramukaLatihanSaveSingle($pdo, $scope, $id_peserta_js, $tanggal_js, $status_js);
     if (!empty($res['success'])) {
         $username = $_SESSION['username'] ?? 'system';
         try {
             logActivity($pdo, $username, 'Input Kehadiran Latihan Pramuka', 'Peserta ID: ' . $id_peserta_js . ' tanggal ' . $tanggal_js);
         } catch (Throwable $e) {
+        }
+        if (trim($status_js) !== '' && function_exists('pramukaLatihanManualInputIsLate') && pramukaLatihanManualInputIsLate($pdo, $tanggal_js)) {
+            pramukaLatihanNotifManualLate($pdo, $id_peserta_js, $tanggal_js);
         }
     }
     echo json_encode($res);

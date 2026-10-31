@@ -510,6 +510,14 @@ $notif_list_h_u = $n_notif_nav_u <= 0 ? 'height:auto;max-height:140px;overflow:h
             .main-navbar, .navbar-bg {
                 display: flex !important;
             }
+            /* Samakan tepi navbar dengan tepi konten */
+            .main-navbar {
+                left: 280px !important;
+                right: 30px !important;
+            }
+            body.sidebar-mini .main-navbar {
+                left: 90px !important;
+            }
             .main-content {
                 padding-left: 280px !important;
                 padding-top: 70px !important;

@@ -4103,7 +4103,7 @@ if (!function_exists('simadNotifKehadiranHarian')) {
             // sekaligus melihat kelas mana yang belum dipresensi
             $aktor   = simadAktorKehadiranLabel($pdo, $nama_kelas);
             $progres = simadProgresPresensiHarian($pdo, $tanggal, $id_kelas);
-            $message = "$aktor mengisi kehadiran $identitas: $status_txt pukul $jam WIB, $tanggal_txt.";
+            $message = "$aktor mengisi kehadiran harian $identitas: $status_txt pukul $jam WIB, $tanggal_txt.";
             if ($progres['total'] > 0) {
                 $label = $progres['kelas'] !== '' ? $progres['kelas'] : 'kelas';
                 if (stripos($label, 'kelas') === false) {
@@ -4178,7 +4178,7 @@ if (!function_exists('simadNotifKehadiranKelas')) {
         $jam         = date('H:i');
         $tanggal_txt = date('d-m-Y', strtotime($tanggal) ?: time());
 
-        $message = "$aktor telah mengirim kehadiran kelas $raw_kelas pada pukul $jam WIB, $tanggal_txt.";
+        $message = "$aktor telah mengirim kehadiran harian kelas $raw_kelas pada pukul $jam WIB, $tanggal_txt.";
 
         if (!empty($progres['belum'])) {
             $message .= ' Kelas belum dipresensi: ' . implode(', ', $progres['belum']) . '.';

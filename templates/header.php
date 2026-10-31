@@ -749,6 +749,14 @@ if (getUserLevel() === 'siswa' && isset($_SESSION['user_id'])) {
             .main-navbar, .navbar-bg {
                 display: flex !important;
             }
+            /* Samakan tepi navbar dengan tepi konten */
+            .main-navbar {
+                left: 280px !important;
+                right: 30px !important;
+            }
+            body.sidebar-mini .main-navbar {
+                left: 90px !important;
+            }
             .main-content {
                 padding-left: 280px !important;
                 padding-top: 70px !important;
