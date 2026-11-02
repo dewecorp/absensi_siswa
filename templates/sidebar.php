@@ -451,6 +451,7 @@ switch ($user_level) {
 
         $pembelajaran_submenu_admin = [
             ['title' => 'Bahan Ajar', 'url' => '../guru/bahan_ajar.php?session_type=admin', 'active' => $current_page === 'bahan_ajar.php'],
+            ['title' => 'Data Buku Ajar', 'url' => '../guru/buku_ajar.php?session_type=admin', 'active' => $current_page === 'buku_ajar.php'],
             ['title' => 'Bank Soal', 'url' => '../guru/bank_soal.php?session_type=admin', 'active' => in_array($current_page, ['bank_soal.php', 'preview_bank_soal.php'])],
             ['title' => 'Catatan Perkembangan', 'url' => '../guru/catatan_perkembangan.php?session_type=admin', 'active' => $current_page === 'catatan_perkembangan.php'],
             ['title' => 'Data Perkembangan', 'url' => '../guru/data_perkembangan.php?session_type=admin', 'active' => $current_page === 'data_perkembangan.php'],
@@ -759,6 +760,7 @@ switch ($user_level) {
 
         $pembelajaran_submenu_kepala = [
             ['title' => 'Bahan Ajar', 'url' => '../guru/bahan_ajar.php?session_type=kepala_madrasah', 'active' => $current_page === 'bahan_ajar.php'],
+            ['title' => 'Data Buku Ajar', 'url' => '../guru/buku_ajar.php?session_type=kepala_madrasah', 'active' => $current_page === 'buku_ajar.php'],
             ['title' => 'Bank Soal', 'url' => '../guru/bank_soal.php?session_type=kepala_madrasah', 'active' => in_array($current_page, ['bank_soal.php', 'preview_bank_soal.php'])],
             ['title' => 'Catatan Perkembangan', 'url' => '../guru/catatan_perkembangan.php?session_type=kepala_madrasah', 'active' => $current_page === 'catatan_perkembangan.php'],
             ['title' => 'Komunikasi Kelas', 'url' => '../guru/komunikasi_kelas.php?session_type=kepala_madrasah', 'active' => $current_page === 'komunikasi_kelas.php'],
@@ -1009,6 +1011,17 @@ switch ($user_level) {
                     ['title' => 'Struktur Kelas', 'url' => '../admin/struktur_kelas.php?session_type=tata_usaha', 'active' => $current_page === 'struktur_kelas.php']
                 ],
                 'active' => in_array($current_page, ['struktur_kelas.php', 'mata_pelajaran.php', 'kalender_pendidikan.php', 'siswa_baru.php', 'data_peserta_ujian.php', 'data_prestasi_siswa.php', 'data_nilai_ujian.php'])
+            ],
+            [
+                'title' => 'Pembelajaran',
+                'icon' => 'fas fa-chalkboard-teacher',
+                'submenu' => [
+                    ['title' => 'Data Buku Ajar', 'url' => '../guru/buku_ajar.php?session_type=tata_usaha', 'active' => $current_page === 'buku_ajar.php'],
+                    ['title' => 'Bahan Ajar', 'url' => '../guru/bahan_ajar.php?session_type=tata_usaha', 'active' => $current_page === 'bahan_ajar.php'],
+                    ['title' => 'Bank Soal', 'url' => '../guru/bank_soal.php?session_type=tata_usaha', 'active' => in_array($current_page, ['bank_soal.php', 'preview_bank_soal.php'])],
+                    ['title' => 'Perangkat Pembelajaran', 'url' => '../guru/perangkat_pembelajaran.php?session_type=tata_usaha', 'active' => in_array($current_page, ['perangkat_pembelajaran.php', 'preview_perangkat.php'])],
+                ],
+                'active' => in_array($current_page, ['buku_ajar.php', 'bahan_ajar.php', 'bank_soal.php', 'preview_bank_soal.php', 'perangkat_pembelajaran.php', 'preview_perangkat.php'])
             ]
         ];
 
@@ -1298,6 +1311,7 @@ switch ($user_level) {
         }
 
         $pembelajaran_submenu_guru = [
+            ['title' => 'Data Buku Ajar', 'url' => '../guru/buku_ajar.php', 'active' => $current_page === 'buku_ajar.php'],
             ['title' => 'Perangkat Pembelajaran', 'url' => '../guru/perangkat_pembelajaran.php', 'active' => in_array($current_page, ['perangkat_pembelajaran.php', 'preview_perangkat.php'])],
             ['title' => 'Tugas Siswa', 'url' => '../guru/tugas.php', 'active' => in_array($current_page, ['tugas.php', 'detail_tugas.php'])],
             ['title' => 'Bank Soal', 'url' => '../guru/bank_soal.php', 'active' => in_array($current_page, ['bank_soal.php', 'preview_bank_soal.php'])],
@@ -1591,6 +1605,7 @@ switch ($user_level) {
         }
 
         $pembelajaran_submenu_wali = [
+            ['title' => 'Data Buku Ajar', 'url' => '../guru/buku_ajar.php?session_type=wali', 'active' => $current_page === 'buku_ajar.php'],
             ['title' => 'Jurnal Mengajar', 'url' => '../guru/jurnal_mengajar.php?session_type=wali', 'active' => $current_page === 'jurnal_mengajar.php'],
             ['title' => 'Perangkat Pembelajaran', 'url' => '../guru/perangkat_pembelajaran.php?session_type=wali', 'active' => in_array($current_page, ['perangkat_pembelajaran.php', 'preview_perangkat.php'])],
             ['title' => 'Tugas Siswa', 'url' => '../guru/tugas.php?session_type=wali', 'active' => in_array($current_page, ['tugas.php', 'detail_tugas.php'])],

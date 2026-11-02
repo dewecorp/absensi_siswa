@@ -179,6 +179,27 @@ if (!function_exists('ensure_learning_schema')) {
             ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4
         ");
 
+        // 6b. Data Buku Ajar
+        $pdo->exec("
+            CREATE TABLE IF NOT EXISTS tb_buku_ajar (
+                id INT AUTO_INCREMENT PRIMARY KEY,
+                id_guru INT NOT NULL,
+                id_mapel INT NULL,
+                id_kelas INT NULL,
+                judul VARCHAR(255) NOT NULL,
+                penyusun VARCHAR(255) NULL,
+                jenis_buku ENUM('Digital','Cetak') NOT NULL DEFAULT 'Cetak',
+                semester VARCHAR(20) NULL,
+                tahun_ajaran VARCHAR(30) NULL,
+                status ENUM('Draft','Aktif','Arsip') NOT NULL DEFAULT 'Aktif',
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+                INDEX idx_guru (id_guru),
+                INDEX idx_mapel (id_mapel),
+                INDEX idx_kelas (id_kelas)
+            ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4
+        ");
+
         // 7 & 8. Catatan Perkembangan Siswa & Master Data Perkembangan
         $pdo->exec("
             CREATE TABLE IF NOT EXISTS tb_master_perkembangan (
