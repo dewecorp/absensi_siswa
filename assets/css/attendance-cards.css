@@ -74,7 +74,13 @@
   padding: 7px 6px; font-size: 11.5px; font-weight: 800; color: #64748b;
   cursor: pointer; line-height: 1.1; text-align: center;
   -webkit-appearance: none; appearance: none;
+  outline: none !important;
   transition: transform .12s ease, background .12s ease, border-color .12s ease, box-shadow .12s ease;
+}
+.att-opt:focus,
+.att-opt:focus-visible {
+  outline: none !important;
+  box-shadow: none !important;
 }
 .att-opt i { font-size: 13px; }
 .att-opt input { position: absolute; opacity: 0; width: 0; height: 0; pointer-events: none; }
