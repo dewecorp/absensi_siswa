@@ -142,27 +142,52 @@ $f_kelas = (int)($_GET['f_kelas'] ?? 0);
 $f_jenis = trim((string)($_GET['f_jenis'] ?? ''));
 $f_semester = trim((string)($_GET['f_semester'] ?? ''));
 
+$where = [];
+$params = [];
+
 if ($is_admin_or_viewer) {
-    $where = ["1=1"];
-    $params = [];
+    // Admin / Kepala / TU: default semua, bisa filter per kelas
+    if ($f_kelas > 0) {
+        $where[] = "b.id_kelas = ?";
+        $params[] = $f_kelas;
+    }
 } elseif ($is_wali && $wali_kelas_id) {
-    // Wali: tampilkan semua buku di kelasnya (dari semua guru)
-    $where = ["b.id_kelas = ?"];
-    $params = [$wali_kelas_id];
-    // Pre-filter kelas ke kelas walinya
-    if ($f_kelas <= 0) $f_kelas = (int)$wali_kelas_id;
+    // Wali: bisa melihat buku kelas walinya (dari semua guru) + buku buatannya sendiri (di kelas manapun yang diajar)
+    if ($f_kelas > 0) {
+        $where[] = "b.id_kelas = ? AND (b.id_kelas = ? OR b.id_guru = ?)";
+        $params[] = $f_kelas;
+        $params[] = $wali_kelas_id;
+        $params[] = $guru_id;
+    } else {
+        // Default: semua kelas
+        $where[] = "(b.id_kelas = ? OR b.id_guru = ?)";
+        $params[] = $wali_kelas_id;
+        $params[] = $guru_id;
+    }
 } else {
-    // Guru: hanya buku miliknya sendiri
-    $where = ["b.id_guru = ?"];
-    $params = [$guru_id];
+    // Guru: hanya buku miliknya
+    $where[] = "b.id_guru = ?";
+    $params[] = $guru_id;
+    if ($f_kelas > 0) {
+        $where[] = "b.id_kelas = ?";
+        $params[] = $f_kelas;
+    }
 }
 
-if ($f_mapel > 0) { $where[] = "b.id_mapel = ?"; $params[] = $f_mapel; }
-if ($f_kelas > 0) { $where[] = "b.id_kelas = ?"; $params[] = $f_kelas; }
-if ($f_jenis !== '') { $where[] = "b.jenis_buku = ?"; $params[] = $f_jenis; }
-if ($f_semester !== '') { $where[] = "b.semester = ?"; $params[] = $f_semester; }
+if ($f_mapel > 0) {
+    $where[] = "b.id_mapel = ?";
+    $params[] = $f_mapel;
+}
+if ($f_jenis !== '') {
+    $where[] = "b.jenis_buku = ?";
+    $params[] = $f_jenis;
+}
+if ($f_semester !== '') {
+    $where[] = "b.semester = ?";
+    $params[] = $f_semester;
+}
 
-$where_sql = implode(' AND ', $where);
+$where_sql = !empty($where) ? implode(' AND ', $where) : "1=1";
 $stmt = $pdo->prepare("
     SELECT b.*, m.nama_mapel, k.nama_kelas, g.nama_guru
     FROM tb_buku_ajar b
@@ -273,7 +298,7 @@ include '../templates/sidebar.php';
                             <i class="fas fa-file-excel mr-1"></i> Excel
                         </a>
                         <button type="button" class="btn btn-danger btn-sm px-3 shadow-sm" style="border-radius: 8px;"
-                                onclick="window.open('cetak_buku_ajar.php<?= $export_qs ?>', '_blank')">
+                                onclick="var w = window.open('cetak_buku_ajar.php<?= $export_qs ?>', '_blank', 'noopener,noreferrer'); if (w) w.opener = null;">
                             <i class="fas fa-print mr-1"></i> Cetak PDF
                         </button>
                         <?php if ($can_crud): ?>
@@ -336,17 +361,22 @@ include '../templates/sidebar.php';
                                                 </div>
 
                                                 <!-- Penyusun -->
-                                                <div class="small text-muted mb-2" style="font-size: 11.5px;">
+                                                <div class="small text-muted mb-1" style="font-size: 11.5px;">
                                                     <i class="fas fa-user-edit mr-1"></i>
                                                     <strong>Penyusun:</strong> <?= htmlspecialchars($r['penyusun'] ?: '-') ?>
                                                 </div>
 
+                                                <!-- Guru Pengampu -->
+                                                <?php if (($is_admin_or_viewer || $is_wali) && !empty($r['nama_guru'])): ?>
+                                                    <div class="small text-muted mb-2 text-truncate" style="font-size: 11.5px;" title="<?= htmlspecialchars($r['nama_guru']) ?>">
+                                                        <i class="fas fa-chalkboard-teacher mr-1 text-primary"></i>
+                                                        <strong>Guru Pengampu:</strong> <?= htmlspecialchars($r['nama_guru']) ?>
+                                                    </div>
+                                                <?php endif; ?>
+
                                                 <!-- Metadata -->
-                                                <div class="small text-muted mb-2 d-flex justify-content-between" style="font-size: 11px;">
+                                                <div class="small text-muted mb-2" style="font-size: 11px;">
                                                     <span><i class="far fa-calendar-alt mr-1"></i> <?= htmlspecialchars($r['semester'] ?? '-') ?> (<?= htmlspecialchars($r['tahun_ajaran'] ?? '-') ?>)</span>
-                                                    <?php if ($is_admin_or_viewer && !empty($r['nama_guru'])): ?>
-                                                        <span title="Diinput oleh"><i class="fas fa-user mr-1"></i><?= htmlspecialchars($r['nama_guru']) ?></span>
-                                                    <?php endif; ?>
                                                 </div>
                                             </div>
 
@@ -369,7 +399,6 @@ include '../templates/sidebar.php';
                                                         <i class="fas fa-trash"></i> Hapus
                                                     </button>
                                                 <?php elseif ($is_admin_or_viewer): ?>
-                                                    <span class="small text-muted"><i class="fas fa-eye mr-1"></i>Hanya lihat</span>
                                                 <?php else: ?>
                                                     <span class="small text-muted"><i class="fas fa-info-circle mr-1"></i>Buku guru lain</span>
                                                 <?php endif; ?>
@@ -418,7 +447,7 @@ include '../templates/sidebar.php';
                             <label>Mata Pelajaran</label>
                             <select name="id_mapel" id="inp_mapel" class="form-control">
                                 <option value="">-- Pilih Mapel --</option>
-                                <?php foreach ($mapel_list as $m): ?>
+                                <?php foreach ($all_mapel_modal as $m): ?>
                                     <option value="<?= (int)$m['id_mapel'] ?>"><?= htmlspecialchars($m['nama_mapel']) ?></option>
                                 <?php endforeach; ?>
                             </select>
@@ -427,7 +456,7 @@ include '../templates/sidebar.php';
                             <label>Kelas</label>
                             <select name="id_kelas" id="inp_kelas" class="form-control">
                                 <option value="">-- Pilih Kelas --</option>
-                                <?php foreach ($kelas_list as $k): ?>
+                                <?php foreach ($all_kelas_modal as $k): ?>
                                     <option value="<?= (int)$k['id_kelas'] ?>"><?= htmlspecialchars($k['nama_kelas']) ?></option>
                                 <?php endforeach; ?>
                             </select>

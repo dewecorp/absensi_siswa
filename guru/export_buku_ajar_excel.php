@@ -53,27 +53,39 @@ $f_kelas = (int)($_GET['f_kelas'] ?? 0);
 $f_jenis = trim((string)($_GET['f_jenis'] ?? ''));
 $f_semester = trim((string)($_GET['f_semester'] ?? ''));
 
-// Build query
+$where = [];
+$params = [];
+
 if ($is_admin_or_viewer) {
-    $where = ["1=1"];
-    $params = [];
+    if ($f_kelas > 0) {
+        $where[] = "b.id_kelas = ?";
+        $params[] = $f_kelas;
+    }
 } elseif ($is_wali && $wali_kelas_id) {
-    // Wali: semua buku di kelasnya
-    $where = ["b.id_kelas = ?"];
-    $params = [$wali_kelas_id];
-    if ($f_kelas <= 0) $f_kelas = (int)$wali_kelas_id;
+    if ($f_kelas > 0) {
+        $where[] = "b.id_kelas = ? AND (b.id_kelas = ? OR b.id_guru = ?)";
+        $params[] = $f_kelas;
+        $params[] = $wali_kelas_id;
+        $params[] = $guru_id;
+    } else {
+        $where[] = "(b.id_kelas = ? OR b.id_guru = ?)";
+        $params[] = $wali_kelas_id;
+        $params[] = $guru_id;
+    }
 } else {
-    // Guru: hanya buku miliknya
-    $where = ["b.id_guru = ?"];
-    $params = [$guru_id];
+    $where[] = "b.id_guru = ?";
+    $params[] = $guru_id;
+    if ($f_kelas > 0) {
+        $where[] = "b.id_kelas = ?";
+        $params[] = $f_kelas;
+    }
 }
 
 if ($f_mapel > 0) { $where[] = "b.id_mapel = ?"; $params[] = $f_mapel; }
-if ($f_kelas > 0) { $where[] = "b.id_kelas = ?"; $params[] = $f_kelas; }
 if ($f_jenis !== '') { $where[] = "b.jenis_buku = ?"; $params[] = $f_jenis; }
 if ($f_semester !== '') { $where[] = "b.semester = ?"; $params[] = $f_semester; }
 
-$where_sql = implode(' AND ', $where);
+$where_sql = !empty($where) ? implode(' AND ', $where) : "1=1";
 $stmt = $pdo->prepare("
     SELECT b.*, m.nama_mapel, k.nama_kelas, g.nama_guru
     FROM tb_buku_ajar b

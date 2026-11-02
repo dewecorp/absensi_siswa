@@ -65,27 +65,39 @@ $f_kelas   = (int)($_GET['f_kelas']   ?? 0);
 $f_jenis   = trim((string)($_GET['f_jenis']   ?? ''));
 $f_semester = trim((string)($_GET['f_semester'] ?? ''));
 
-// Build query
+$where  = [];
+$params = [];
+
 if ($is_admin_or_viewer) {
-    $where  = ["1=1"];
-    $params = [];
+    if ($f_kelas > 0) {
+        $where[] = "b.id_kelas = ?";
+        $params[] = $f_kelas;
+    }
 } elseif ($is_wali && $wali_kelas_id) {
-    // Wali: semua buku di kelasnya
-    $where  = ["b.id_kelas = ?"];
-    $params = [$wali_kelas_id];
-    if ($f_kelas <= 0) $f_kelas = (int)$wali_kelas_id;
+    if ($f_kelas > 0) {
+        $where[] = "b.id_kelas = ? AND (b.id_kelas = ? OR b.id_guru = ?)";
+        $params[] = $f_kelas;
+        $params[] = $wali_kelas_id;
+        $params[] = $guru_id;
+    } else {
+        $where[] = "(b.id_kelas = ? OR b.id_guru = ?)";
+        $params[] = $wali_kelas_id;
+        $params[] = $guru_id;
+    }
 } else {
-    // Guru: hanya buku miliknya
-    $where  = ["b.id_guru = ?"];
-    $params = [$guru_id];
+    $where[] = "b.id_guru = ?";
+    $params[] = $guru_id;
+    if ($f_kelas > 0) {
+        $where[] = "b.id_kelas = ?";
+        $params[] = $f_kelas;
+    }
 }
 
 if ($f_mapel > 0)   { $where[] = "b.id_mapel = ?";  $params[] = $f_mapel; }
-if ($f_kelas > 0)   { $where[] = "b.id_kelas = ?";  $params[] = $f_kelas; }
 if ($f_jenis !== '') { $where[] = "b.jenis_buku = ?"; $params[] = $f_jenis; }
 if ($f_semester !== '') { $where[] = "b.semester = ?"; $params[] = $f_semester; }
 
-$where_sql = implode(' AND ', $where);
+$where_sql = !empty($where) ? implode(' AND ', $where) : "1=1";
 $stmt = $pdo->prepare("
     SELECT b.*, m.nama_mapel, k.nama_kelas, g.nama_guru
     FROM tb_buku_ajar b
@@ -320,7 +332,7 @@ $school_city = $school_profile['tempat_jadwal'] ?? 'Jepara';
             <th class="center">Jenis Buku</th>
             <?php if ($is_admin_or_viewer): ?>
                 <th class="center">Kelas</th>
-                <th>Guru Penginput</th>
+                <th>Guru Pengampu</th>
             <?php endif; ?>
         </tr>
     </thead>
@@ -379,30 +391,37 @@ $school_city = $school_profile['tempat_jadwal'] ?? 'Jepara';
 </div>
 
 <script>
-(function() {
-    // Auto-print saat halaman dibuka (setelah semua gambar QR selesai load)
-    var images = document.querySelectorAll('img');
-    var loaded = 0;
+// Tunggu semua gambar load dengan timeout fallback, lalu print
+window.addEventListener('load', function() {
+    var images = Array.from(document.querySelectorAll('img'));
+    if (images.length === 0) {
+        setTimeout(function() { window.print(); }, 300);
+        return;
+    }
+
+    var done = 0;
     var total = images.length;
-    if (total === 0) {
-        setTimeout(function() { window.print(); }, 600);
-    } else {
-        images.forEach(function(img) {
-            if (img.complete) {
-                loaded++;
-            } else {
-                img.addEventListener('load', function() { loaded++; checkAll(); });
-                img.addEventListener('error', function() { loaded++; checkAll(); });
-            }
-        });
-        checkAll();
+    var printed = false;
+
+    function tryPrint() {
+        if (printed) return;
+        printed = true;
+        setTimeout(function() { window.print(); }, 300);
     }
-    function checkAll() {
-        if (loaded >= total) {
-            setTimeout(function() { window.print(); }, 400);
+
+    images.forEach(function(img) {
+        if (img.complete) {
+            done++;
+            if (done >= total) tryPrint();
+        } else {
+            img.addEventListener('load',  function() { done++; if (done >= total) tryPrint(); });
+            img.addEventListener('error', function() { done++; if (done >= total) tryPrint(); });
         }
-    }
-})();
+    });
+
+    // Fallback: print paksa setelah 4 detik walau gambar belum selesai
+    setTimeout(tryPrint, 4000);
+});
 </script>
 
 </body>
