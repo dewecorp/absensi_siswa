@@ -596,6 +596,45 @@ include '../templates/sidebar.php';
 
         <div class="section-body">
             <style>
+            /* Global badge override — semua badge di halaman ini lebih tebal */
+            .section-body .badge {
+                font-size: 12px !important;
+                font-weight: 700 !important;
+                padding: 5px 10px !important;
+                border-radius: 8px !important;
+                letter-spacing: 0.1px;
+                line-height: 1.2;
+            }
+            /* badge-light jangan samar, beri border jelas */
+            .section-body .badge-light {
+                background: #f1f5f9 !important;
+                color: #334155 !important;
+                border: 1.5px solid #cbd5e1 !important;
+            }
+            .section-body .badge-secondary {
+                background: #475569 !important;
+                color: #fff !important;
+            }
+            .section-body .badge-success {
+                background: #059669 !important;
+                color: #fff !important;
+            }
+            .section-body .badge-danger {
+                background: #dc2626 !important;
+                color: #fff !important;
+            }
+            .section-body .badge-warning {
+                background: #d97706 !important;
+                color: #fff !important;
+            }
+            .section-body .badge-primary {
+                background: #2563eb !important;
+                color: #fff !important;
+            }
+            .section-body .badge-info {
+                background: #0891b2 !important;
+                color: #fff !important;
+            }
             /* Modern Mobile App Style Cards */
             .app-stat-tile {
                 background: #ffffff;
@@ -663,6 +702,72 @@ include '../templates/sidebar.php';
                 white-space: nowrap;
                 overflow: hidden;
                 text-overflow: ellipsis;
+            }
+
+            /* Modern Info Tugas Box */
+            .app-info-pill {
+                background: #ffffff;
+                border: 1px solid #edf2f7;
+                border-radius: 12px;
+                padding: 10px 12px;
+                display: flex;
+                align-items: center;
+                gap: 10px;
+                box-shadow: 0 1px 4px rgba(0, 0, 0, 0.02);
+                min-width: 125px;
+            }
+            .app-info-pill .info-pill-icon {
+                width: 36px;
+                height: 36px;
+                border-radius: 10px;
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                font-size: 15px;
+                flex-shrink: 0;
+            }
+            .bg-light-primary { background: #eff6ff; color: #2563eb; }
+            .bg-light-success { background: #ecfdf5; color: #059669; }
+            .bg-light-warning { background: #fffbeb; color: #d97706; }
+            .bg-light-danger  { background: #fef2f2; color: #dc2626; }
+            .bg-light-info    { background: #f5f3ff; color: #7c3aed; }
+
+            .info-pill-label {
+                font-size: 10.5px;
+                text-transform: uppercase;
+                font-weight: 700;
+                color: #94a3b8;
+                line-height: 1.1;
+                margin-bottom: 2px;
+            }
+            .info-pill-value {
+                font-size: 13.5px;
+                font-weight: 800;
+                color: #1e293b;
+                line-height: 1.2;
+            }
+
+            .app-timeline-box {
+                background: #f8fafc;
+                border-radius: 14px;
+                border: 1px solid #edf2f6;
+                padding: 12px 14px;
+            }
+            .timeline-dot {
+                width: 10px;
+                height: 10px;
+                border-radius: 50%;
+                flex-shrink: 0;
+            }
+
+            .app-instruksi-box {
+                background: #fbfcfe;
+                border-left: 3.5px solid #3b82f6;
+                border-radius: 4px 12px 12px 4px;
+                padding: 12px 14px;
+                border-top: 1px solid #f1f5f9;
+                border-right: 1px solid #f1f5f9;
+                border-bottom: 1px solid #f1f5f9;
             }
 
             /* Question Analysis Mobile Card */
@@ -837,58 +942,166 @@ include '../templates/sidebar.php';
             <div class="row">
                 <!-- Info Tugas -->
                 <div class="col-lg-7 mb-4">
-                    <div class="card h-100">
-                        <div class="card-header bg-light">
-                            <h4><i class="fas fa-info-circle mr-2"></i>Informasi Tugas</h4>
-                            <div class="card-header-action">
-                                <span class="badge badge-<?= $tugas['status'] === 'Aktif' ? 'success' : 'secondary' ?>">
-                                    <?= htmlspecialchars($tugas['status']) ?>
-                                </span>
+                    <div class="card h-100 shadow-sm border" style="border-radius: 16px; overflow: hidden;">
+                        <?php
+                        $judul_bersih = $tugas['judul'];
+                        if ($tugas['jenis_tugas'] === 'CBT') {
+                            $judul_bersih = preg_replace('/^kuis\s*/i', '', $judul_bersih);
+                            if (stripos($judul_bersih, 'cbt') !== 0) $judul_bersih = 'CBT ' . trim($judul_bersih);
+                        } elseif ($tugas['jenis_tugas'] === 'Kuis') {
+                            $judul_bersih = preg_replace('/^cbt\s*/i', '', $judul_bersih);
+                            if (stripos($judul_bersih, 'kuis') !== 0) $judul_bersih = 'Kuis ' . trim($judul_bersih);
+                        }
+                        $now_ts = time();
+                        $deadline_ts = !empty($tugas['deadline']) ? strtotime($tugas['deadline']) : null;
+                        $is_expired = $deadline_ts && ($now_ts > $deadline_ts);
+                        ?>
+                        <!-- Header Box -->
+                        <div class="p-3 bg-white border-bottom">
+                            <div class="d-flex justify-content-between align-items-center flex-wrap" style="gap: 8px;">
+                                <div class="d-flex flex-wrap align-items-center" style="gap: 6px;">
+                                    <span style="display:inline-flex;align-items:center;background:#2563eb;color:#fff;border-radius:10px;padding:5px 11px;font-size:12.5px;font-weight:700;line-height:1;">
+                                        <i class="fas fa-book-open mr-1"></i> <?= htmlspecialchars($tugas['nama_mapel'] ?? '-') ?>
+                                    </span>
+                                    <span style="display:inline-flex;align-items:center;background:#f1f5f9;color:#1e293b;border:1.5px solid #e2e8f0;border-radius:10px;padding:5px 11px;font-size:12.5px;font-weight:700;line-height:1;">
+                                        <i class="fas fa-users mr-1 text-primary"></i> <?= htmlspecialchars($tugas['nama_kelas'] ?? '-') ?>
+                                    </span>
+                                    <span style="display:inline-flex;align-items:center;background:#7c3aed;color:#fff;border-radius:10px;padding:5px 11px;font-size:12.5px;font-weight:700;line-height:1;">
+                                        <?= htmlspecialchars($tugas['jenis_tugas']) ?>
+                                    </span>
+                                </div>
+                                <div>
+                                    <?php if ($tugas['status'] === 'Aktif'): ?>
+                                    <span style="display:inline-flex;align-items:center;background:#059669;color:#fff;border-radius:10px;padding:5px 12px;font-size:12.5px;font-weight:700;line-height:1;">
+                                        <i class="fas fa-circle mr-1" style="font-size:7px;"></i> Aktif
+                                    </span>
+                                    <?php else: ?>
+                                    <span style="display:inline-flex;align-items:center;background:#64748b;color:#fff;border-radius:10px;padding:5px 12px;font-size:12.5px;font-weight:700;line-height:1;">
+                                        <i class="fas fa-circle mr-1" style="font-size:7px;"></i> <?= htmlspecialchars($tugas['status']) ?>
+                                    </span>
+                                    <?php endif; ?>
+                                </div>
                             </div>
-                        </div>
-                        <div class="card-body">
-                            <?php
-                            $judul_bersih = $tugas['judul'];
-                            if ($tugas['jenis_tugas'] === 'CBT') {
-                                $judul_bersih = preg_replace('/^kuis\s*/i', '', $judul_bersih);
-                                if (stripos($judul_bersih, 'cbt') !== 0) $judul_bersih = 'CBT ' . trim($judul_bersih);
-                            } elseif ($tugas['jenis_tugas'] === 'Kuis') {
-                                $judul_bersih = preg_replace('/^cbt\s*/i', '', $judul_bersih);
-                                if (stripos($judul_bersih, 'kuis') !== 0) $judul_bersih = 'Kuis ' . trim($judul_bersih);
-                            }
-                            ?>
-                            <h5 class="text-primary font-weight-bold mb-3">
+
+                            <h4 class="font-weight-bold text-dark mt-3 mb-1" style="line-height: 1.35;">
                                 <?= htmlspecialchars($judul_bersih) ?>
-                            </h5>
-                            <table class="table table-sm table-bordered mt-3">
-                                <tr><th width="30%">Mata Pelajaran</th><td><?= htmlspecialchars($tugas['nama_mapel'] ?? '-') ?></td></tr>
-                                <tr><th>Kelas</th><td><?= htmlspecialchars($tugas['nama_kelas'] ?? '-') ?></td></tr>
-                                <tr><th>Materi / TP</th><td><?= htmlspecialchars($tugas['materi_tp'] ?? '-') ?></td></tr>
-                                 <tr><th>Jenis Tugas</th><td><span class="badge badge-light border"><?= htmlspecialchars($tugas['jenis_tugas']) ?></span></td></tr>
-                                <tr><th>Jumlah Soal</th><td><strong class="text-primary"><?= count($soal_list) ?> Butir Soal</strong></td></tr>
+                            </h4>
+                            <?php if (!empty($tugas['materi_tp'])): ?>
+                                <div class="text-muted small mt-1">
+                                    <i class="fas fa-bullseye text-primary mr-1"></i> <strong>Materi / TP:</strong> <?= htmlspecialchars($tugas['materi_tp']) ?>
+                                </div>
+                            <?php endif; ?>
+                        </div>
+
+                        <div class="card-body p-3 d-flex flex-column justify-content-between" style="gap: 12px;">
+                            <!-- Info Pills Row -->
+                            <div class="row no-gutters" style="gap: 8px;">
+                                <div class="col app-info-pill">
+                                    <div class="info-pill-icon bg-light-primary">
+                                        <i class="fas fa-list-ol"></i>
+                                    </div>
+                                    <div>
+                                        <div class="info-pill-label">Jumlah Soal</div>
+                                        <div class="info-pill-value"><?= count($soal_list) ?> Butir</div>
+                                    </div>
+                                </div>
+
+                                <div class="col app-info-pill">
+                                    <div class="info-pill-icon bg-light-warning">
+                                        <i class="fas fa-award"></i>
+                                    </div>
+                                    <div>
+                                        <div class="info-pill-label">Nilai Maksimal</div>
+                                        <div class="info-pill-value text-dark"><?= (int)$tugas['nilai_maksimal'] ?> Poin</div>
+                                    </div>
+                                </div>
+
                                 <?php if (in_array($tugas['jenis_tugas'], ['Kuis', 'CBT'], true)): ?>
-                                <tr><th>Durasi Pengerjaan</th><td><strong class="text-danger"><i class="fas fa-clock mr-1"></i> <?= (int)($tugas['durasi_menit'] ?? 90) ?> Menit</strong></td></tr>
+                                <div class="col app-info-pill">
+                                    <div class="info-pill-icon bg-light-danger">
+                                        <i class="fas fa-stopwatch"></i>
+                                    </div>
+                                    <div>
+                                        <div class="info-pill-label">Durasi Ujian</div>
+                                        <div class="info-pill-value text-danger"><?= (int)($tugas['durasi_menit'] ?? 90) ?> Menit</div>
+                                    </div>
+                                </div>
                                 <?php endif; ?>
-                                <tr><th>Tanggal Mulai</th><td><?= !empty($tugas['tgl_mulai']) ? date('d/m/Y H:i', strtotime($tugas['tgl_mulai'])) : '-' ?></td></tr>
-                                <tr><th>Deadline</th><td class="font-weight-bold text-danger"><?= !empty($tugas['deadline']) ? date('d/m/Y H:i', strtotime($tugas['deadline'])) : '-' ?></td></tr>
-                                <tr><th>Nilai Maksimal</th><td><?= (int)$tugas['nilai_maksimal'] ?></td></tr>
-                                <tr>
-                                    <th>Lampiran Berkas</th>
-                                    <td>
-                                        <?php if (!empty($tugas['lampiran'])): ?>
-                                            <a href="preview_tugas.php?id=<?= (int)$tugas['id'] ?>" target="_blank" class="btn btn-sm btn-primary">
-                                                <i class="fas fa-book-reader mr-1"></i> Baca Dokumen
+
+                                <?php if (!empty($tugas['lampiran'])): ?>
+                                <div class="col app-info-pill">
+                                    <div class="info-pill-icon bg-light-info">
+                                        <i class="fas fa-file-pdf"></i>
+                                    </div>
+                                    <div>
+                                        <div class="info-pill-label">Lampiran</div>
+                                        <div>
+                                            <a href="preview_tugas.php?id=<?= (int)$tugas['id'] ?>" target="_blank" class="btn btn-primary btn-xs py-0 px-2 font-weight-bold" style="border-radius: 6px; font-size: 11px;">
+                                                <i class="fas fa-book-reader mr-1"></i> Buka
                                             </a>
+                                        </div>
+                                    </div>
+                                </div>
+                                <?php endif; ?>
+                            </div>
+
+                            <!-- Timeline & Schedule Card -->
+                            <div class="app-timeline-box">
+                                <div class="d-flex justify-content-between align-items-center flex-wrap" style="gap: 8px;">
+                                    <div class="d-flex align-items-center" style="gap: 8px;">
+                                        <div class="timeline-dot bg-success"></div>
+                                        <div>
+                                            <div class="text-muted" style="font-size: 10px; text-transform: uppercase; font-weight: 700;">Waktu Mulai</div>
+                                            <div class="font-weight-bold text-dark" style="font-size: 12.5px;">
+                                                <?= !empty($tugas['tgl_mulai']) ? date('d M Y, H:i', strtotime($tugas['tgl_mulai'])) : '-' ?> WIB
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                    <div class="text-center d-none d-sm-block px-1">
+                                        <i class="fas fa-arrow-right text-muted" style="font-size: 12px;"></i>
+                                    </div>
+
+                                    <div class="d-flex align-items-center" style="gap: 8px;">
+                                        <div class="timeline-dot <?= $is_expired ? 'bg-secondary' : 'bg-danger' ?>"></div>
+                                        <div>
+                                            <div class="text-muted" style="font-size: 10px; text-transform: uppercase; font-weight: 700;">Batas Waktu (Deadline)</div>
+                                            <div class="font-weight-bold <?= $is_expired ? 'text-muted' : 'text-danger' ?>" style="font-size: 12.5px;">
+                                                <?= !empty($tugas['deadline']) ? date('d M Y, H:i', strtotime($tugas['deadline'])) : '-' ?> WIB
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <?php if ($deadline_ts): ?>
+                                    <div class="mt-2 pt-2 border-top d-flex justify-content-between align-items-center" style="font-size: 11.5px;">
+                                        <span class="text-muted"><i class="fas fa-hourglass-half mr-1"></i> Status Tenggat:</span>
+                                        <?php if ($is_expired): ?>
+                                            <span style="display:inline-flex;align-items:center;background:#64748b;color:#fff;border-radius:8px;padding:4px 10px;font-size:12px;font-weight:700;line-height:1.2;">
+                                                <i class="fas fa-lock mr-1" style="font-size:10px;"></i> Waktu Pengumpulan Telah Berakhir
+                                            </span>
                                         <?php else: ?>
-                                            <span class="text-muted">Tidak ada lampiran</span>
+                                            <?php 
+                                            $diff_sec = $deadline_ts - $now_ts;
+                                            $diff_d = floor($diff_sec / 86400);
+                                            $diff_h = floor(($diff_sec % 86400) / 3600);
+                                            $sisa_txt = $diff_d > 0 ? "Tersisa {$diff_d} hari {$diff_h} jam lagi" : "Tersisa {$diff_h} jam lagi";
+                                            ?>
+                                            <span style="display:inline-flex;align-items:center;background:#fef2f2;color:#dc2626;border:1.5px solid #fecaca;border-radius:8px;padding:4px 10px;font-size:12px;font-weight:700;line-height:1.2;">
+                                                <i class="fas fa-hourglass-half mr-1" style="font-size:10px;"></i> <?= $sisa_txt ?>
+                                            </span>
                                         <?php endif; ?>
-                                    </td>
-                                </tr>
-                                <tr>
-                                    <th>Instruksi</th>
-                                    <td style="white-space: pre-wrap;"><?= htmlspecialchars($tugas['instruksi'] ?? '-') ?></td>
-                                </tr>
-                            </table>
+                                    </div>
+                                <?php endif; ?>
+                            </div>
+
+                            <!-- Petunjuk / Instruksi Box -->
+                            <div class="app-instruksi-box">
+                                <div class="d-flex align-items-center mb-1 text-dark font-weight-bold" style="font-size: 12px;">
+                                    <i class="fas fa-info-circle text-primary mr-2"></i> Petunjuk & Instruksi Pengerjaan
+                                </div>
+                                <div class="text-dark" style="font-size: 13px; line-height: 1.5; white-space: pre-wrap;"><?= !empty($tugas['instruksi']) ? htmlspecialchars($tugas['instruksi']) : '<em class="text-muted">Tidak ada instruksi khusus dari guru.</em>' ?></div>
+                            </div>
                         </div>
                     </div>
                 </div>
