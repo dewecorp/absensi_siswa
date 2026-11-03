@@ -165,6 +165,228 @@ if (in_array($tugas['jenis_tugas'], ['Kuis', 'CBT'], true)) {
     $soal_list = $stSoal->fetchAll(PDO::FETCH_ASSOC);
 }
 
+// Analisis Butir Soal CBT / Kuis
+$is_cbt_or_kuis = in_array($tugas['jenis_tugas'], ['Kuis', 'CBT'], true);
+$analisis_soal = [];
+$total_responden_cbt = 0;
+$total_skor_cbt = 0;
+$skor_cbt_list = [];
+$rekap_kesukaran = ['Mudah' => 0, 'Sedang' => 0, 'Sukar' => 0];
+
+if ($is_cbt_or_kuis && !empty($soal_list)) {
+    $responden_list = [];
+    foreach ($students as $s) {
+        if (!empty($s['tgl_kumpul'])) {
+            $raw_ans = [];
+            if (!empty($s['catatan_siswa'])) {
+                $decoded = json_decode($s['catatan_siswa'], true);
+                if (is_array($decoded)) {
+                    $raw_ans = $decoded;
+                }
+            }
+            $val_nilai = $s['nilai'] !== null ? (float)$s['nilai'] : 0;
+            $responden_list[] = [
+                'id_siswa' => $s['id_siswa'],
+                'nama_siswa' => $s['nama_siswa'],
+                'nilai' => $val_nilai,
+                'jawaban' => $raw_ans,
+            ];
+            $total_skor_cbt += $val_nilai;
+            $skor_cbt_list[] = $val_nilai;
+        }
+    }
+    $total_responden_cbt = count($responden_list);
+
+    // Kelompok Atas & Bawah untuk Daya Pembeda (bila responden >= 4)
+    $upper_grp = [];
+    $lower_grp = [];
+    if ($total_responden_cbt >= 4) {
+        $sorted_resp = $responden_list;
+        usort($sorted_resp, fn($a, $b) => $b['nilai'] <=> $a['nilai']);
+        $half = (int)ceil($total_responden_cbt / 2);
+        $upper_grp = array_slice($sorted_resp, 0, $half);
+        $lower_grp = array_slice($sorted_resp, -$half);
+    }
+
+    foreach ($soal_list as $idx => $soal) {
+        $sId = $soal['id'];
+        $tipe = $soal['tipe_soal'];
+        $kunci = trim((string)$soal['kunci_jawaban']);
+        $bobot = (int)($soal['bobot'] ?? 10);
+
+        $distribusi = ['A' => 0, 'B' => 0, 'C' => 0, 'D' => 0, 'E' => 0, 'Lainnya' => 0];
+        $pemilih = ['A' => [], 'B' => [], 'C' => [], 'D' => [], 'E' => [], 'Lainnya' => []];
+        $jml_benar = 0;
+        $jml_salah = 0;
+        $siswa_benar = [];
+        $siswa_salah = [];
+
+        foreach ($responden_list as $resp) {
+            $jwb = $resp['jawaban'][$sId] ?? $resp['jawaban'][(string)$sId] ?? null;
+            $nama = $resp['nama_siswa'];
+            $is_benar = false;
+
+            if ($tipe === 'Pilihan Ganda') {
+                $jwb_clean = trim((string)$jwb);
+                $opt_u = strtoupper($jwb_clean);
+                if (in_array($opt_u, ['A', 'B', 'C', 'D', 'E'], true)) {
+                    $distribusi[$opt_u]++;
+                    $pemilih[$opt_u][] = $nama;
+                } else {
+                    $distribusi['Lainnya']++;
+                    $pemilih['Lainnya'][] = $nama . ($jwb_clean !== '' ? " ($jwb_clean)" : ' (Kosong)');
+                }
+                if ($jwb_clean !== '' && strcasecmp($jwb_clean, $kunci) === 0) {
+                    $is_benar = true;
+                }
+            } elseif ($tipe === 'Pilihan Ganda Kompleks') {
+                $k_arr = array_filter(array_map('strtoupper', array_map('trim', explode(',', $kunci))));
+                $j_arr = array_filter(array_map('strtoupper', array_map('trim', explode(',', (string)$jwb))));
+                if (!empty($j_arr)) {
+                    foreach ($j_arr as $opt) {
+                        if (in_array($opt, ['A', 'B', 'C', 'D', 'E'], true)) {
+                            $distribusi[$opt]++;
+                            $pemilih[$opt][] = $nama;
+                        }
+                    }
+                } else {
+                    $distribusi['Lainnya']++;
+                    $pemilih['Lainnya'][] = $nama . ' (Kosong)';
+                }
+                if (count($k_arr) > 0 && count(array_intersect($k_arr, $j_arr)) === count($k_arr) && count(array_diff($j_arr, $k_arr)) === 0) {
+                    $is_benar = true;
+                }
+            } else {
+                $jwb_clean = trim((string)$jwb);
+                if ($jwb_clean !== '') {
+                    $distribusi['Lainnya']++;
+                    $pemilih['Lainnya'][] = $nama;
+                    if ($kunci !== '') {
+                        similar_text(strtolower($jwb_clean), strtolower($kunci), $pct);
+                        if ($pct >= 70.0) $is_benar = true;
+                    }
+                } else {
+                    $distribusi['Lainnya']++;
+                    $pemilih['Lainnya'][] = $nama . ' (Kosong)';
+                }
+            }
+
+            if ($is_benar) {
+                $jml_benar++;
+                $siswa_benar[] = $nama;
+            } else {
+                $jml_salah++;
+                $siswa_salah[] = [
+                    'nama' => $nama,
+                    'jawaban' => $jwb !== null && $jwb !== '' ? (is_array($jwb) ? implode(',', $jwb) : $jwb) : '(Kosong)'
+                ];
+            }
+        }
+
+        $p_val = $total_responden_cbt > 0 ? round($jml_benar / $total_responden_cbt, 2) : 0;
+        $pct_benar = $total_responden_cbt > 0 ? round(($jml_benar / $total_responden_cbt) * 100, 1) : 0;
+        $pct_salah = $total_responden_cbt > 0 ? round(($jml_salah / $total_responden_cbt) * 100, 1) : 0;
+
+        if ($p_val > 0.70) {
+            $kesukaran_label = 'Mudah';
+            $kesukaran_badge = 'badge-success';
+            $rekap_kesukaran['Mudah']++;
+        } elseif ($p_val >= 0.30) {
+            $kesukaran_label = 'Sedang';
+            $kesukaran_badge = 'badge-warning';
+            $rekap_kesukaran['Sedang']++;
+        } else {
+            $kesukaran_label = 'Sukar';
+            $kesukaran_badge = 'badge-danger';
+            $rekap_kesukaran['Sukar']++;
+        }
+
+        $d_val = null;
+        $d_label = '-';
+        $d_badge = 'badge-secondary';
+        if ($total_responden_cbt >= 4) {
+            $bu = 0;
+            $bl = 0;
+            foreach ($upper_grp as $u) {
+                $uj = $u['jawaban'][$sId] ?? $u['jawaban'][(string)$sId] ?? null;
+                if ($tipe === 'Pilihan Ganda' && $uj !== null && strcasecmp(trim((string)$uj), $kunci) === 0) $bu++;
+                elseif ($tipe === 'Pilihan Ganda Kompleks') {
+                    $k_arr = array_filter(array_map('strtoupper', array_map('trim', explode(',', $kunci))));
+                    $j_arr = array_filter(array_map('strtoupper', array_map('trim', explode(',', (string)$uj))));
+                    if (count($k_arr) > 0 && count(array_intersect($k_arr, $j_arr)) === count($k_arr) && count(array_diff($j_arr, $k_arr)) === 0) $bu++;
+                }
+            }
+            foreach ($lower_grp as $l) {
+                $lj = $l['jawaban'][$sId] ?? $l['jawaban'][(string)$sId] ?? null;
+                if ($tipe === 'Pilihan Ganda' && $lj !== null && strcasecmp(trim((string)$lj), $kunci) === 0) $bl++;
+                elseif ($tipe === 'Pilihan Ganda Kompleks') {
+                    $k_arr = array_filter(array_map('strtoupper', array_map('trim', explode(',', $kunci))));
+                    $j_arr = array_filter(array_map('strtoupper', array_map('trim', explode(',', (string)$lj))));
+                    if (count($k_arr) > 0 && count(array_intersect($k_arr, $j_arr)) === count($k_arr) && count(array_diff($j_arr, $k_arr)) === 0) $bl++;
+                }
+            }
+            $half_size = count($upper_grp);
+            if ($half_size > 0) {
+                $d_val = round(($bu - $bl) / $half_size, 2);
+                if ($d_val >= 0.40) {
+                    $d_label = 'Sangat Baik';
+                    $d_badge = 'badge-success';
+                } elseif ($d_val >= 0.30) {
+                    $d_label = 'Baik';
+                    $d_badge = 'badge-info';
+                } elseif ($d_val >= 0.20) {
+                    $d_label = 'Cukup';
+                    $d_badge = 'badge-warning';
+                } else {
+                    $d_label = 'Kurang / Jelek';
+                    $d_badge = 'badge-danger';
+                }
+            }
+        }
+
+        $rekomendasi = 'Diterima';
+        if ($total_responden_cbt > 0) {
+            if ($p_val > 0.85) $rekomendasi = 'Terlalu Mudah (Revisi Pengecoh)';
+            elseif ($p_val < 0.20) $rekomendasi = 'Terlalu Sulit (Perlu Ditinjau)';
+            elseif ($d_val !== null && $d_val < 0.20) $rekomendasi = 'Daya Pembeda Rendah';
+            else $rekomendasi = 'Soal Baik (Diterima)';
+        }
+
+        $analisis_soal[] = [
+            'no' => $idx + 1,
+            'id' => $sId,
+            'tipe_soal' => $tipe,
+            'pertanyaan' => $soal['pertanyaan'],
+            'kunci_jawaban' => $kunci,
+            'bobot' => $bobot,
+            'pilihan_a' => $soal['pilihan_a'],
+            'pilihan_b' => $soal['pilihan_b'],
+            'pilihan_c' => $soal['pilihan_c'],
+            'pilihan_d' => $soal['pilihan_d'],
+            'pilihan_e' => $soal['pilihan_e'],
+            'jml_benar' => $jml_benar,
+            'jml_salah' => $jml_salah,
+            'pct_benar' => $pct_benar,
+            'pct_salah' => $pct_salah,
+            'distribusi' => $distribusi,
+            'pemilih' => $pemilih,
+            'siswa_benar' => $siswa_benar,
+            'siswa_salah' => $siswa_salah,
+            'p_val' => $p_val,
+            'kesukaran_label' => $kesukaran_label,
+            'kesukaran_badge' => $kesukaran_badge,
+            'd_val' => $d_val,
+            'd_label' => $d_label,
+            'd_badge' => $d_badge,
+            'rekomendasi' => $rekomendasi,
+        ];
+    }
+}
+
+$avg_nilai_cbt = $total_responden_cbt > 0 ? round($total_skor_cbt / $total_responden_cbt, 1) : 0;
+$max_nilai_cbt = !empty($skor_cbt_list) ? max($skor_cbt_list) : 0;
+$min_nilai_cbt = !empty($skor_cbt_list) ? min($skor_cbt_list) : 0;
+
 // Statistics
 $jml_siswa = count($students);
 $sudah_kumpul = 0;
@@ -205,15 +427,33 @@ $can_crud_js = json_encode((bool)$can_crud);
 $js_page = [<<<JS
 $(document).ready(function() {
     if ($('#table-pengumpulan').length) {
+        var colCount = $('#table-pengumpulan thead th').length;
+        var nonSortable = [colCount - 1];
+        if (colCount >= 10) nonSortable.push(colCount - 2);
         $('#table-pengumpulan').DataTable({
             'order': [[1, 'asc']],
-            'columnDefs': [{ 'sortable': false, 'targets': [8, 9] }],
+            'columnDefs': [{ 'sortable': false, 'targets': nonSortable }],
             'language': {
                 'lengthMenu': 'Tampilkan _MENU_ entri',
                 'zeroRecords': 'Tidak ada data pengumpulan',
                 'info': 'Menampilkan _START_ sampai _END_ dari _TOTAL_ entri',
                 'infoEmpty': 'Menampilkan 0 sampai 0 dari 0 entri',
                 'search': 'Cari Siswa:',
+                'paginate': { 'first': 'Pertama', 'last': 'Terakhir', 'next': 'Selanjutnya', 'previous': 'Sebelumnya' }
+            }
+        });
+    }
+
+    if ($('#table-analisis-soal').length) {
+        $('#table-analisis-soal').DataTable({
+            'order': [[0, 'asc']],
+            'columnDefs': [{ 'sortable': false, 'targets': [2, 6, 9] }],
+            'language': {
+                'lengthMenu': 'Tampilkan _MENU_ entri',
+                'zeroRecords': 'Tidak ada butir soal',
+                'info': 'Menampilkan _START_ sampai _END_ dari _TOTAL_ butir soal',
+                'infoEmpty': 'Menampilkan 0 sampai 0 dari 0 butir soal',
+                'search': 'Cari Soal:',
                 'paginate': { 'first': 'Pertama', 'last': 'Terakhir', 'next': 'Selanjutnya', 'previous': 'Sebelumnya' }
             }
         });
@@ -238,6 +478,103 @@ $(document).ready(function() {
         $('#mdl_catatan_siswa').text(data.catatan_siswa || '-');
         $('#modalPeriksa').modal('show');
     });
+
+    // Modal Detail Analisis Butir Soal
+    $(document).on('click', '.btn-detail-analisis', function() {
+        var item = $(this).data('json');
+        if (typeof item === 'string') {
+            try { item = JSON.parse(item); } catch(e) {}
+        }
+        if (!item) return;
+
+        $('#an_no_soal').text(item.no);
+        $('#an_tipe_soal').text(item.tipe_soal);
+        $('#an_bobot').text('Bobot: ' + item.bobot);
+        $('#an_badge_kesukaran').attr('class', 'badge ' + item.kesukaran_badge).text('Kesukaran: ' + item.kesukaran_label + ' (P=' + parseFloat(item.p_val).toFixed(2) + ')');
+        if (item.d_val !== null) {
+            $('#an_badge_pembeda').show().attr('class', 'badge ml-1 ' + item.d_badge).text('Pembeda: ' + item.d_label + ' (D=' + parseFloat(item.d_val).toFixed(2) + ')');
+        } else {
+            $('#an_badge_pembeda').hide();
+        }
+        $('#an_pertanyaan').html(item.pertanyaan ? item.pertanyaan.replace(/\\n/g, '<br>') : '-');
+        $('#an_kunci').text(item.kunci_jawaban || '-');
+        $('#an_rekomendasi_wrap').html('Status: <strong class="text-primary">' + (item.rekomendasi || 'Diterima') + '</strong>');
+
+        // Distribusi Opsi
+        if (item.tipe_soal !== 'Essay') {
+            $('#an_box_distribusi').show();
+            var htmlOpsi = '';
+            var kunciArr = String(item.kunci_jawaban || '').toUpperCase().split(',').map(function(s){ return s.trim(); });
+            var totalResp = (item.jml_benar + item.jml_salah) || 1;
+            var opts = { 'A': item.pilihan_a, 'B': item.pilihan_b, 'C': item.pilihan_c, 'D': item.pilihan_d, 'E': item.pilihan_e };
+            
+            for (var k in opts) {
+                if (opts[k]) {
+                    var isKey = kunciArr.indexOf(k) !== -1;
+                    var count = (item.distribusi && item.distribusi[k]) ? item.distribusi[k] : 0;
+                    var pct = Math.round((count / totalResp) * 100);
+                    var barClass = isKey ? 'bg-success' : 'bg-info';
+                    htmlOpsi += '<div class="mb-2">';
+                    htmlOpsi += '<div class="d-flex justify-content-between mb-1" style="font-size:13px;">';
+                    htmlOpsi += '<span><strong>' + k + '.</strong> ' + opts[k] + (isKey ? ' <span class="badge badge-success py-0 px-2 ml-1">KUNCI</span>' : '') + '</span>';
+                    htmlOpsi += '<span class="font-weight-bold ' + (isKey ? 'text-success' : 'text-dark') + '">' + count + ' Siswa (' + pct + '%)</span>';
+                    htmlOpsi += '</div>';
+                    htmlOpsi += '<div class="progress" style="height: 12px; border-radius: 6px;">';
+                    htmlOpsi += '<div class="progress-bar ' + barClass + '" role="progressbar" style="width: ' + pct + '%;" aria-valuenow="' + pct + '" aria-valuemin="0" aria-valuemax="100"></div>';
+                    htmlOpsi += '</div>';
+                    htmlOpsi += '</div>';
+                }
+            }
+            $('#an_container_opsi').html(htmlOpsi);
+        } else {
+            $('#an_box_distribusi').hide();
+        }
+
+        // List Benar
+        $('#an_cnt_benar').text(item.jml_benar || 0);
+        var htmlBenar = '';
+        if (item.siswa_benar && item.siswa_benar.length > 0) {
+            htmlBenar = '<div class="d-flex flex-wrap" style="gap:4px;">';
+            item.siswa_benar.forEach(function(nama) {
+                htmlBenar += '<span class="badge badge-light border text-dark font-weight-normal py-1 px-2" style="font-size:11.5px;"><i class="fas fa-check text-success mr-1"></i>' + nama + '</span>';
+            });
+            htmlBenar += '</div>';
+        } else {
+            htmlBenar = '<span class="text-muted small">Tidak ada siswa yang menjawab benar.</span>';
+        }
+        $('#an_list_benar').html(htmlBenar);
+
+        // List Salah
+        $('#an_cnt_salah').text(item.jml_salah || 0);
+        var htmlSalah = '';
+        if (item.siswa_salah && item.siswa_salah.length > 0) {
+            htmlSalah = '<div class="d-flex flex-wrap" style="gap:4px;">';
+            item.siswa_salah.forEach(function(s) {
+                var sNama = typeof s === 'object' ? s.nama : s;
+                var sJwb = typeof s === 'object' ? s.jawaban : '';
+                htmlSalah += '<span class="badge badge-light border text-dark font-weight-normal py-1 px-2" style="font-size:11.5px;"><i class="fas fa-times text-danger mr-1"></i>' + sNama + (sJwb ? ' <em class="text-muted">(' + sJwb + ')</em>' : '') + '</span>';
+            });
+            htmlSalah += '</div>';
+        } else {
+            htmlSalah = '<span class="text-muted small">Semua siswa menjawab benar.</span>';
+        }
+        $('#an_list_salah').html(htmlSalah);
+
+        $('#modalDetailAnalisisSoal').modal('show');
+    });
+
+    // Live search mobile pengumpulan
+    $('#mobileSearchPengumpulan').on('input', function() {
+        var q = $(this).val().toLowerCase().trim();
+        $('.mobile-student-card').each(function() {
+            var nama = $(this).data('nama') || '';
+            if (q === '' || nama.indexOf(q) !== -1) {
+                $(this).show();
+            } else {
+                $(this).hide();
+            }
+        });
+    });
 });
 JS
 ];
@@ -261,9 +598,14 @@ include '../templates/sidebar.php';
             <div class="mb-3 d-flex justify-content-between align-items-center flex-wrap" style="gap:8px;">
                 <a href="tugas.php" class="btn btn-dark btn-sm"><i class="fas fa-arrow-left mr-1"></i> Kembali ke Daftar Tugas</a>
                 <?php if (in_array($tugas['jenis_tugas'], ['Kuis', 'CBT'], true)): ?>
-                <a href="buat_soal_tugas.php?id=<?= (int)$tugas['id'] ?>" class="btn btn-primary btn-sm">
-                    <i class="fas fa-question-circle mr-1"></i> Kelola Soal <?= htmlspecialchars($tugas['jenis_tugas']) ?>
-                </a>
+                <div class="d-flex flex-wrap" style="gap:6px;">
+                    <a href="#section-analisis-soal" class="btn btn-info btn-sm font-weight-bold">
+                        <i class="fas fa-chart-pie mr-1"></i> Analisis Butir Soal
+                    </a>
+                    <a href="buat_soal_tugas.php?id=<?= (int)$tugas['id'] ?>" class="btn btn-primary btn-sm font-weight-bold">
+                        <i class="fas fa-question-circle mr-1"></i> Kelola Soal <?= htmlspecialchars($tugas['jenis_tugas']) ?>
+                    </a>
+                </div>
                 <?php endif; ?>
             </div>
             <!-- Informasi Tugas & Statistik -->
@@ -376,10 +718,203 @@ include '../templates/sidebar.php';
                 </div>
             </div>
 
+            <?php if (in_array($tugas['jenis_tugas'], ['Kuis', 'CBT'], true)): ?>
+            <!-- Box Analisis Butir Soal CBT -->
+            <div class="card shadow-sm mb-4" id="section-analisis-soal">
+                <div class="card-header bg-light d-flex justify-content-between align-items-center flex-wrap" style="gap:8px;">
+                    <h4 class="mb-0"><i class="fas fa-chart-bar text-primary mr-2"></i>Analisis Butir Soal <?= htmlspecialchars($tugas['jenis_tugas']) ?></h4>
+                    <div class="d-flex flex-wrap" style="gap:6px;">
+                        <a href="cetak_analisis_soal.php?id=<?= (int)$tugas['id'] ?>" target="_blank" class="btn btn-danger btn-sm font-weight-bold">
+                            <i class="fas fa-print mr-1"></i> Cetak Analisis
+                        </a>
+                        <a href="export_analisis_soal_excel.php?id=<?= (int)$tugas['id'] ?>" class="btn btn-success btn-sm font-weight-bold">
+                            <i class="fas fa-file-excel mr-1"></i> Export Excel
+                        </a>
+                    </div>
+                </div>
+                <div class="card-body">
+                    <?php if ($total_responden_cbt === 0): ?>
+                        <div class="alert alert-light border text-center py-4">
+                            <div class="mb-2 text-info" style="font-size: 32px;"><i class="fas fa-info-circle"></i></div>
+                            <h6 class="font-weight-bold text-dark">Belum Ada Siswa yang Mengerjakan</h6>
+                            <p class="text-muted small mb-0">Analisis butir soal otomatis ditampilkan setelah ada siswa yang menyelesaikan dan mengumpulkan ujian ini.</p>
+                        </div>
+                    <?php else: ?>
+                        <!-- Mini KPI Summary -->
+                        <div class="row mb-3">
+                            <div class="col-6 col-md-3 mb-2">
+                                <div class="border rounded p-2 text-center bg-light">
+                                    <small class="text-muted d-block">Responden</small>
+                                    <h5 class="mb-0 text-primary font-weight-bold"><?= $total_responden_cbt ?> / <?= $jml_siswa ?> <small style="font-size:11px;" class="text-muted">(<?= round(($total_responden_cbt / max(1, $jml_siswa)) * 100) ?>%)</small></h5>
+                                </div>
+                            </div>
+                            <div class="col-6 col-md-3 mb-2">
+                                <div class="border rounded p-2 text-center bg-light">
+                                    <small class="text-muted d-block">Rata-rata Nilai</small>
+                                    <h5 class="mb-0 text-dark font-weight-bold"><?= $avg_nilai_cbt ?> <small style="font-size:11px;" class="text-muted">(Min: <?= $min_nilai_cbt ?>, Max: <?= $max_nilai_cbt ?>)</small></h5>
+                                </div>
+                            </div>
+                            <div class="col-4 col-md-2 mb-2">
+                                <div class="border rounded p-2 text-center bg-light">
+                                    <small class="text-success font-weight-bold d-block">Mudah</small>
+                                    <h5 class="mb-0 text-success font-weight-bold"><?= $rekap_kesukaran['Mudah'] ?> <small style="font-size:11px;">Soal</small></h5>
+                                </div>
+                            </div>
+                            <div class="col-4 col-md-2 mb-2">
+                                <div class="border rounded p-2 text-center bg-light">
+                                    <small class="text-warning font-weight-bold d-block">Sedang</small>
+                                    <h5 class="mb-0 text-warning font-weight-bold"><?= $rekap_kesukaran['Sedang'] ?> <small style="font-size:11px;">Soal</small></h5>
+                                </div>
+                            </div>
+                            <div class="col-4 col-md-2 mb-2">
+                                <div class="border rounded p-2 text-center bg-light">
+                                    <small class="text-danger font-weight-bold d-block">Sukar</small>
+                                    <h5 class="mb-0 text-danger font-weight-bold"><?= $rekap_kesukaran['Sukar'] ?> <small style="font-size:11px;">Soal</small></h5>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Desktop Table View: Analisis Soal -->
+                        <div class="table-responsive d-none d-md-block">
+                            <table class="table table-striped table-bordered table-sm text-dark" id="table-analisis-soal">
+                                <thead class="bg-light">
+                                    <tr>
+                                        <th width="4%" class="text-center">No</th>
+                                        <th width="12%">Tipe</th>
+                                        <th>Pertanyaan</th>
+                                        <th width="6%" class="text-center">Kunci</th>
+                                        <th width="8%" class="text-center">Benar</th>
+                                        <th width="8%" class="text-center">Salah</th>
+                                        <th width="16%">Distribusi Opsi</th>
+                                        <th width="13%" class="text-center">Kesukaran (P)</th>
+                                        <th width="12%" class="text-center">Pembeda (D)</th>
+                                        <th width="6%" class="text-center">Aksi</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    <?php foreach ($analisis_soal as $item): ?>
+                                    <tr>
+                                        <td class="text-center font-weight-bold"><?= $item['no'] ?></td>
+                                        <td><span class="badge badge-light border"><?= htmlspecialchars($item['tipe_soal']) ?></span></td>
+                                        <td>
+                                            <div class="font-weight-normal text-truncate" style="max-width: 280px;" title="<?= htmlspecialchars(strip_tags($item['pertanyaan'])) ?>">
+                                                <?= htmlspecialchars(strip_tags($item['pertanyaan'])) ?>
+                                            </div>
+                                        </td>
+                                        <td class="text-center">
+                                            <span class="badge badge-primary font-weight-bold"><?= htmlspecialchars($item['kunci_jawaban']) ?></span>
+                                        </td>
+                                        <td class="text-center">
+                                            <span class="badge badge-success font-weight-bold"><?= $item['jml_benar'] ?> (<?= $item['pct_benar'] ?>%)</span>
+                                        </td>
+                                        <td class="text-center">
+                                            <span class="badge badge-danger font-weight-bold"><?= $item['jml_salah'] ?> (<?= $item['pct_salah'] ?>%)</span>
+                                        </td>
+                                        <td>
+                                            <?php if ($item['tipe_soal'] !== 'Essay'): ?>
+                                                <div class="d-flex flex-wrap" style="gap:3px; font-size:11px;">
+                                                    <?php 
+                                                    $kunci_opts = array_map('trim', explode(',', strtoupper($item['kunci_jawaban'])));
+                                                    foreach (['A', 'B', 'C', 'D', 'E'] as $opt_k): 
+                                                        if (!empty($item['pilihan_' . strtolower($opt_k)])):
+                                                            $is_k = in_array($opt_k, $kunci_opts, true);
+                                                            $cnt = $item['distribusi'][$opt_k] ?? 0;
+                                                    ?>
+                                                        <span class="badge <?= $is_k ? 'badge-success' : 'badge-light border' ?>" title="<?= $is_k ? 'Kunci Jawaban' : 'Pengecoh' ?>: <?= $cnt ?> siswa">
+                                                            <?= $opt_k ?>: <?= $cnt ?><?= $is_k ? '✓' : '' ?>
+                                                        </span>
+                                                    <?php 
+                                                        endif;
+                                                    endforeach; 
+                                                    ?>
+                                                </div>
+                                            <?php else: ?>
+                                                <span class="text-muted small">Uraian</span>
+                                            <?php endif; ?>
+                                        </td>
+                                        <td class="text-center">
+                                            <span class="badge <?= $item['kesukaran_badge'] ?> font-weight-bold"><?= $item['kesukaran_label'] ?> (<?= number_format($item['p_val'], 2) ?>)</span>
+                                        </td>
+                                        <td class="text-center">
+                                            <?php if ($item['d_val'] !== null): ?>
+                                                <span class="badge <?= $item['d_badge'] ?>"><?= $item['d_label'] ?> (<?= number_format($item['d_val'], 2) ?>)</span>
+                                            <?php else: ?>
+                                                <span class="text-muted small" title="Minimal 4 responden">-</span>
+                                            <?php endif; ?>
+                                        </td>
+                                        <td class="text-center">
+                                            <button type="button" class="btn btn-info btn-sm px-2 btn-detail-analisis" data-json='<?= htmlspecialchars(json_encode($item), ENT_QUOTES, 'UTF-8') ?>' title="Detail Analisis Butir Soal">
+                                                <i class="fas fa-eye"></i>
+                                            </button>
+                                        </td>
+                                    </tr>
+                                    <?php endforeach; ?>
+                                </tbody>
+                            </table>
+                        </div>
+
+                        <!-- Mobile View: Cards Analisis Soal -->
+                        <div class="d-md-none">
+                            <div class="d-flex flex-column" style="gap: 10px;">
+                                <?php foreach ($analisis_soal as $item): ?>
+                                <div class="card mb-2 border shadow-sm" style="border-radius: 12px;">
+                                    <div class="card-body p-3">
+                                        <div class="d-flex justify-content-between align-items-center mb-2">
+                                            <div class="d-flex align-items-center" style="gap:6px;">
+                                                <span class="badge badge-primary font-weight-bold">Soal #<?= $item['no'] ?></span>
+                                                <span class="badge badge-light border"><?= htmlspecialchars($item['tipe_soal']) ?></span>
+                                            </div>
+                                            <span class="badge <?= $item['kesukaran_badge'] ?>"><?= $item['kesukaran_label'] ?> (P=<?= number_format($item['p_val'], 2) ?>)</span>
+                                        </div>
+                                        <p class="text-dark font-weight-normal mb-2" style="font-size: 13.5px; line-height: 1.4;">
+                                            <?= htmlspecialchars(strip_tags($item['pertanyaan'])) ?>
+                                        </p>
+                                        <div class="bg-light p-2 rounded mb-2" style="font-size: 12px;">
+                                            <div class="d-flex justify-content-between mb-1">
+                                                <span>Kunci: <strong class="text-success"><?= htmlspecialchars($item['kunci_jawaban']) ?></strong></span>
+                                                <span>Bobot: <strong><?= (int)$item['bobot'] ?></strong></span>
+                                            </div>
+                                            <div class="d-flex justify-content-between">
+                                                <span class="text-success font-weight-bold"><i class="fas fa-check mr-1"></i>Benar: <?= $item['jml_benar'] ?> (<?= $item['pct_benar'] ?>%)</span>
+                                                <span class="text-danger font-weight-bold"><i class="fas fa-times mr-1"></i>Salah: <?= $item['jml_salah'] ?> (<?= $item['pct_salah'] ?>%)</span>
+                                            </div>
+                                        </div>
+                                        <?php if ($item['tipe_soal'] !== 'Essay'): ?>
+                                            <div class="d-flex flex-wrap align-items-center mb-2" style="gap:4px; font-size:11px;">
+                                                <span class="text-muted mr-1">Distribusi:</span>
+                                                <?php 
+                                                $kunci_opts = array_map('trim', explode(',', strtoupper($item['kunci_jawaban'])));
+                                                foreach (['A', 'B', 'C', 'D', 'E'] as $opt_k): 
+                                                    if (!empty($item['pilihan_' . strtolower($opt_k)])):
+                                                        $is_k = in_array($opt_k, $kunci_opts, true);
+                                                        $cnt = $item['distribusi'][$opt_k] ?? 0;
+                                                ?>
+                                                    <span class="badge <?= $is_k ? 'badge-success' : 'badge-light border' ?>">
+                                                        <?= $opt_k ?>: <?= $cnt ?><?= $is_k ? '✓' : '' ?>
+                                                    </span>
+                                                <?php 
+                                                    endif;
+                                                endforeach; 
+                                                ?>
+                                            </div>
+                                        <?php endif; ?>
+                                        <button type="button" class="btn btn-outline-info btn-sm btn-block btn-detail-analisis" data-json='<?= htmlspecialchars(json_encode($item), ENT_QUOTES, 'UTF-8') ?>'>
+                                            <i class="fas fa-search-plus mr-1"></i> Detail Analisis Butir Soal
+                                        </button>
+                                    </div>
+                                </div>
+                                <?php endforeach; ?>
+                            </div>
+                        </div>
+                    <?php endif; ?>
+                </div>
+            </div>
+            <?php endif; ?>
+
             <!-- Tabel Pengumpulan Tugas -->
             <div class="card">
                 <div class="card-header d-flex justify-content-between align-items-center flex-wrap" style="gap:8px;">
-                    <h4><i class="fas fa-users-cog mr-2"></i>Tabel Pengumpulan Tugas</h4>
+                    <h4><i class="fas fa-users-cog mr-2"></i>Daftar Pengumpulan Siswa</h4>
                     <div class="d-flex flex-wrap" style="gap:6px;">
                         <?php if ($can_crud): ?>
                         <button type="button" class="btn btn-warning btn-sm font-weight-bold" data-toggle="modal" data-target="#modalPerpanjangWaktu" title="Perpanjang Batas Waktu Pengerjaan">
@@ -391,7 +926,8 @@ include '../templates/sidebar.php';
                     </div>
                 </div>
                 <div class="card-body">
-                    <div class="table-responsive">
+                    <!-- Desktop Table View -->
+                    <div class="table-responsive d-none d-md-block">
                         <table class="table table-striped table-bordered table-sm" id="table-pengumpulan">
                             <thead>
                                 <tr>
@@ -514,6 +1050,128 @@ include '../templates/sidebar.php';
                             </tbody>
                         </table>
                     </div>
+
+                    <!-- Mobile App View: Cards Siswa (Tanpa Tabel) -->
+                    <div class="d-md-none">
+                        <div class="form-group mb-3">
+                            <div class="input-group">
+                                <div class="input-group-prepend">
+                                    <span class="input-group-text bg-white border-right-0"><i class="fas fa-search text-muted"></i></span>
+                                </div>
+                                <input type="text" id="mobileSearchPengumpulan" class="form-control border-left-0" placeholder="Cari nama siswa...">
+                            </div>
+                        </div>
+
+                        <div class="d-flex flex-column" id="mobilePengumpulanList" style="gap: 10px;">
+                            <?php foreach ($students as $i => $s): ?>
+                                <?php
+                                $is_kumpul = !empty($s['tgl_kumpul']);
+                                $keterlambatan_label = '-';
+                                if ($is_kumpul && $deadline_ts) {
+                                    $diff = strtotime($s['tgl_kumpul']) - $deadline_ts;
+                                    if ($diff > 0) {
+                                        $jam = floor($diff / 3600);
+                                        $keterlambatan_label = $jam > 24 ? floor($jam / 24) . ' hari' : $jam . ' jam';
+                                    } else {
+                                        $keterlambatan_label = 'Tepat Waktu';
+                                    }
+                                }
+                                $s_json = $s;
+                                $s_json['soal_list'] = $soal_list;
+                                ?>
+                                <div class="card mb-2 border shadow-sm mobile-student-card" data-nama="<?= htmlspecialchars(strtolower($s['nama_siswa'])) ?>" style="border-radius: 14px; overflow: hidden;">
+                                    <div class="card-body p-3">
+                                        <div class="d-flex justify-content-between align-items-start mb-2">
+                                            <div class="d-flex align-items-center" style="gap: 10px;">
+                                                <div class="rounded-circle bg-light text-primary font-weight-bold d-flex align-items-center justify-content-center" style="width: 36px; height: 36px; font-size: 13.5px; border: 1.5px solid #dbeafe; flex-shrink: 0;">
+                                                    <?= $i + 1 ?>
+                                                </div>
+                                                <div>
+                                                    <h6 class="mb-0 font-weight-bold text-dark" style="font-size: 14px;"><?= htmlspecialchars($s['nama_siswa']) ?></h6>
+                                                    <small class="text-muted">NISN: <?= htmlspecialchars($s['nisn'] ?? '-') ?></small>
+                                                </div>
+                                            </div>
+                                            <?php if (in_array($tugas['jenis_tugas'], ['Kuis', 'CBT'], true)): ?>
+                                                <?php if ($is_kumpul): ?>
+                                                    <span class="badge badge-success">Sudah</span>
+                                                <?php else: ?>
+                                                    <span class="badge badge-secondary">Belum</span>
+                                                <?php endif; ?>
+                                            <?php else: ?>
+                                                <?php if ($is_kumpul): ?>
+                                                    <span class="badge badge-success">Sudah Kumpul</span>
+                                                <?php else: ?>
+                                                    <span class="badge badge-danger">Belum Kumpul</span>
+                                                <?php endif; ?>
+                                            <?php endif; ?>
+                                        </div>
+
+                                        <div class="bg-light p-2 rounded mb-3" style="font-size: 12px;">
+                                            <div class="d-flex justify-content-between py-1 border-bottom">
+                                                <span class="text-muted"><?= in_array($tugas['jenis_tugas'], ['Kuis', 'CBT'], true) ? 'Tgl Mengerjakan' : 'Tgl Kumpul' ?>:</span>
+                                                <strong><?= $is_kumpul ? date('d/m/Y H:i', strtotime($s['tgl_kumpul'])) : '-' ?></strong>
+                                            </div>
+                                            <div class="d-flex justify-content-between py-1 border-bottom">
+                                                <span class="text-muted">Keterlambatan:</span>
+                                                <span>
+                                                    <?php if ($keterlambatan_label === 'Tepat Waktu'): ?>
+                                                        <span class="badge badge-light text-success font-weight-bold py-0 px-2">Tepat Waktu</span>
+                                                    <?php elseif ($keterlambatan_label !== '-'): ?>
+                                                        <span class="badge badge-warning py-0 px-2"><?= $keterlambatan_label ?></span>
+                                                    <?php else: ?>
+                                                        -
+                                                    <?php endif; ?>
+                                                </span>
+                                            </div>
+                                            <div class="d-flex justify-content-between align-items-center py-1 <?= !in_array($tugas['jenis_tugas'], ['Kuis', 'CBT'], true) ? 'border-bottom' : '' ?>">
+                                                <span class="text-muted">Nilai:</span>
+                                                <strong>
+                                                    <?php if ($s['nilai'] !== null): ?>
+                                                        <span class="badge badge-primary font-weight-bold" style="font-size: 13px;"><?= (float)$s['nilai'] ?></span>
+                                                    <?php else: ?>
+                                                        <span class="text-muted">-</span>
+                                                    <?php endif; ?>
+                                                </strong>
+                                            </div>
+                                            <?php if (!in_array($tugas['jenis_tugas'], ['Kuis', 'CBT'], true)): ?>
+                                            <div class="d-flex justify-content-between py-1">
+                                                <span class="text-muted">Status Periksa:</span>
+                                                <span class="badge badge-<?= ($s['status_periksa'] ?? '') === 'Sudah Diperiksa' ? 'success' : (($s['status_periksa'] ?? '') === 'Perlu Revisi' ? 'warning' : 'secondary') ?>">
+                                                    <?= htmlspecialchars($s['status_periksa'] ?? 'Belum Diperiksa') ?>
+                                                </span>
+                                            </div>
+                                            <?php endif; ?>
+                                        </div>
+
+                                        <?php if (in_array($tugas['jenis_tugas'], ['Kuis', 'CBT'], true)): ?>
+                                            <button type="button" class="btn btn-info btn-sm btn-block btn-lihat-jawaban"
+                                                data-json='<?= htmlspecialchars(json_encode($s_json), ENT_QUOTES, 'UTF-8') ?>'>
+                                                <i class="fas fa-eye mr-1"></i> Lihat Jawaban
+                                            </button>
+                                        <?php else: ?>
+                                            <?php if ($can_crud): ?>
+                                                <button type="button" class="btn btn-primary btn-sm btn-block btn-periksa"
+                                                    data-json='<?= htmlspecialchars(json_encode($s), ENT_QUOTES, 'UTF-8') ?>'>
+                                                    <i class="fas fa-check-circle mr-1"></i> Periksa / Nilai
+                                                </button>
+                                            <?php else: ?>
+                                                <button type="button" class="btn btn-info btn-sm btn-block btn-periksa"
+                                                    data-json='<?= htmlspecialchars(json_encode($s), ENT_QUOTES, 'UTF-8') ?>'>
+                                                    <i class="fas fa-eye mr-1"></i> Detail
+                                                </button>
+                                            <?php endif; ?>
+                                            <?php if (!empty($s['file_path'])): ?>
+                                                <?php $ext = strtoupper(pathinfo($s['file_path'], PATHINFO_EXTENSION)); ?>
+                                                <a href="preview_tugas.php?id_pengumpulan=<?= (int)$s['id_pengumpulan'] ?>" target="_blank" class="btn btn-outline-primary btn-sm btn-block mt-2">
+                                                    <i class="fas fa-book-reader mr-1"></i> Baca Berkas (<?= $ext ?>)
+                                                </a>
+                                            <?php endif; ?>
+                                        <?php endif; ?>
+                                    </div>
+                                </div>
+                            <?php endforeach; ?>
+                        </div>
+                    </div>
                 </div>
             </div>
         </div>
@@ -600,8 +1258,79 @@ include '../templates/sidebar.php';
     </div>
 </div>
 
+<!-- Modal Detail Analisis Butir Soal -->
+<div class="modal fade" id="modalDetailAnalisisSoal" tabindex="-1" role="dialog" aria-hidden="true">
+    <div class="modal-dialog modal-lg" role="document">
+        <div class="modal-content">
+            <div class="modal-header bg-primary text-white">
+                <h5 class="modal-title text-white"><i class="fas fa-chart-pie mr-2"></i>Detail Analisis Soal No. <span id="an_no_soal"></span></h5>
+                <button type="button" class="close text-white" data-dismiss="modal"><span>&times;</span></button>
+            </div>
+            <div class="modal-body bg-light" style="max-height: 75vh; overflow-y: auto;">
+                <div class="card mb-3 shadow-sm border">
+                    <div class="card-body">
+                        <div class="d-flex justify-content-between align-items-center flex-wrap mb-2" style="gap:6px;">
+                            <div>
+                                <span class="badge badge-info" id="an_tipe_soal"></span>
+                                <span class="badge badge-secondary ml-1" id="an_bobot"></span>
+                            </div>
+                            <div>
+                                <span class="badge" id="an_badge_kesukaran"></span>
+                                <span class="badge ml-1" id="an_badge_pembeda"></span>
+                            </div>
+                        </div>
+                        <label class="font-weight-bold text-muted small mb-1">Pertanyaan Soal:</label>
+                        <div class="p-3 bg-white rounded border mb-2 font-weight-normal text-dark" id="an_pertanyaan" style="font-size: 14.5px; line-height: 1.6;"></div>
+                        <div class="d-flex justify-content-between align-items-center flex-wrap" style="gap:8px;">
+                            <span>Kunci Jawaban Guru: <strong class="text-success" id="an_kunci"></strong></span>
+                            <span class="text-muted small" id="an_rekomendasi_wrap"></span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Distribusi Opsi Jawaban Siswa -->
+                <div class="card mb-3 shadow-sm border" id="an_box_distribusi">
+                    <div class="card-header bg-white py-2">
+                        <h6 class="mb-0 font-weight-bold text-dark"><i class="fas fa-poll mr-2 text-primary"></i>Distribusi Pemilihan Opsi Jawaban</h6>
+                    </div>
+                    <div class="card-body py-3" id="an_container_opsi">
+                        <!-- Populated via JS -->
+                    </div>
+                </div>
+
+                <!-- Daftar Siswa Benar vs Salah -->
+                <div class="row">
+                    <div class="col-md-6 mb-3">
+                        <div class="card h-100 shadow-sm border">
+                            <div class="card-header bg-white py-2 text-success font-weight-bold">
+                                <i class="fas fa-check-circle mr-1"></i> Siswa Menjawab Benar (<span id="an_cnt_benar">0</span>)
+                            </div>
+                            <div class="card-body py-2" id="an_list_benar" style="max-height: 220px; overflow-y: auto;">
+                                <!-- List populated via JS -->
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-md-6 mb-3">
+                        <div class="card h-100 shadow-sm border">
+                            <div class="card-header bg-white py-2 text-danger font-weight-bold">
+                                <i class="fas fa-times-circle mr-1"></i> Siswa Menjawab Salah (<span id="an_cnt_salah">0</span>)
+                            </div>
+                            <div class="card-body py-2" id="an_list_salah" style="max-height: 220px; overflow-y: auto;">
+                                <!-- List populated via JS -->
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-dismiss="modal">Tutup</button>
+            </div>
+        </div>
+    </div>
+</div>
+
 <?php
-$js_page = [];
+$js_page = $js_page ?? [];
 if ($message) {
     $js_page[] = "Swal.fire({ icon: '" . ($message['type'] === 'danger' ? 'error' : $message['type']) . "', title: '" . ($message['type'] === 'success' ? 'Berhasil' : 'Perhatian') . "', text: " . json_encode($message['text']) . ", timer: 2200, showConfirmButton: false });";
 }
@@ -610,12 +1339,20 @@ $(document).ready(function() {
     $(document).on('click', '.btn-lihat-jawaban', function() {
         var data = $(this).data('json');
         if (typeof data === 'string') { try { data = JSON.parse(data); } catch(e) {} }
+        data = data || {};
         
+        var soalList = data.soal_list || [];
+        var totalBobotMaks = 0;
+        soalList.forEach(function(s) {
+            totalBobotMaks += (parseInt(s.bobot) || 10);
+        });
+        if (totalBobotMaks === 0) totalBobotMaks = 100;
+
         $('#jw_nama_siswa').text(data.nama_siswa || '-');
         if (data.tgl_kumpul) {
             $('#jw_status_kumpul').html('<span class="badge badge-success">Sudah Mengerjakan</span>');
             $('#jw_tgl_kumpul').text(data.tgl_kumpul);
-            $('#jw_nilai').text((data.nilai !== null ? data.nilai : '0') + ' / 100');
+            $('#jw_nilai').text((data.nilai !== null ? parseFloat(data.nilai) : 0) + ' / ' + totalBobotMaks);
         } else {
             $('#jw_status_kumpul').html('<span class="badge badge-secondary">Belum Mengerjakan</span>');
             $('#jw_tgl_kumpul').text('-');
@@ -633,29 +1370,80 @@ $(document).ready(function() {
         }
 
         var htmlSoal = '';
-        var soalList = data.soal_list || [];
         if (soalList.length === 0) {
             htmlSoal = '<div class="text-center text-muted py-4">Belum ada butir soal.</div>';
         } else {
+            var ringkasan = { total: soalList.length, benar: 0, sebagian: 0, salah: 0, kosong: 0, totalPoin: 0 };
             soalList.forEach(function(soal, idx) {
                 var sId = soal.id;
-                var jwbSiswa = hasSubmitted ? (jawabanSiswa[sId] || '(Belum dijawab)') : null;
-                var kunci = soal.kunci_jawaban || '';
-                var isCorrect = false;
-                if (hasSubmitted && soal.tipe_soal !== 'Essay') {
-                    isCorrect = (String(jwbSiswa).trim().toLowerCase() === String(kunci).trim().toLowerCase());
+                var bobot = parseInt(soal.bobot) || 10;
+                // Ambil jawaban persis berdasarkan ID butir soal (soal.id)
+                var rawJwb = null;
+                if (hasSubmitted) {
+                    if (jawabanSiswa[sId] !== undefined) {
+                        rawJwb = jawabanSiswa[sId];
+                    } else if (jawabanSiswa[String(sId)] !== undefined) {
+                        rawJwb = jawabanSiswa[String(sId)];
+                    }
                 }
 
-                htmlSoal += '<div class="card mb-3 shadow-sm border">';
-                htmlSoal += '<div class="card-header bg-white d-flex justify-content-between align-items-center">';
-                htmlSoal += '<div><span class="badge badge-primary mr-2">Soal No. ' + (idx + 1) + '</span> <span class="badge badge-info">' + soal.tipe_soal + '</span></div>';
-                if (hasSubmitted && soal.tipe_soal !== 'Essay') {
-                    if (isCorrect) {
-                        htmlSoal += '<span class="badge badge-success"><i class="fas fa-check mr-1"></i> Benar</span>';
-                    } else {
-                        htmlSoal += '<span class="badge badge-danger"><i class="fas fa-times mr-1"></i> Salah</span>';
+                var isDijawab = (rawJwb !== null && rawJwb !== undefined && String(rawJwb).trim() !== '');
+                var jwbSiswa = isDijawab ? String(rawJwb).trim() : null;
+                var kunci = String(soal.kunci_jawaban || '').trim();
+                var isCorrect = false;
+                var poinDiperoleh = 0;
+
+                if (hasSubmitted && isDijawab) {
+                    if (soal.tipe_soal === 'Pilihan Ganda') {
+                        isCorrect = (jwbSiswa.toLowerCase() === kunci.toLowerCase());
+                        if (isCorrect) poinDiperoleh = bobot;
+                    } else if (soal.tipe_soal === 'Pilihan Ganda Kompleks') {
+                        var kArr = kunci.toUpperCase().split(',').map(function(s){ return s.trim(); }).filter(Boolean).sort();
+                        var jArr = jwbSiswa.toUpperCase().split(',').map(function(s){ return s.trim(); }).filter(Boolean).sort();
+                        isCorrect = (kArr.length > 0 && kArr.join(',') === jArr.join(','));
+                        if (isCorrect) {
+                            poinDiperoleh = bobot;
+                        } else {
+                            var benarCount = 0;
+                            jArr.forEach(function(x){ if (kArr.indexOf(x) !== -1) benarCount++; });
+                            var salahCount = jArr.length - benarCount;
+                            if (benarCount > 0 && salahCount === 0) {
+                                poinDiperoleh = Math.round((benarCount / kArr.length) * bobot * 10) / 10;
+                            } else if (benarCount > 0 && salahCount > 0) {
+                                poinDiperoleh = Math.round(Math.max(0, (benarCount - salahCount) / kArr.length) * bobot * 10) / 10;
+                            }
+                        }
+                    } else if (soal.tipe_soal === 'Essay') {
+                        isCorrect = (jwbSiswa.toLowerCase() === kunci.toLowerCase());
+                        if (isCorrect) poinDiperoleh = bobot;
                     }
-                } else if (!hasSubmitted) {
+                }
+
+                if (!hasSubmitted || !isDijawab) {
+                    ringkasan.kosong++;
+                } else if (isCorrect) {
+                    ringkasan.benar++;
+                } else if (poinDiperoleh > 0) {
+                    ringkasan.sebagian++;
+                } else {
+                    ringkasan.salah++;
+                }
+                ringkasan.totalPoin += poinDiperoleh;
+
+                htmlSoal += '<div class="card mb-3 shadow-sm border">';
+                htmlSoal += '<div class="card-header bg-white d-flex justify-content-between align-items-center flex-wrap" style="gap:6px;">';
+                htmlSoal += '<div><span class="badge badge-primary mr-2">Soal No. ' + (idx + 1) + '</span> <span class="badge badge-info mr-2">' + soal.tipe_soal + '</span> <span class="badge badge-light border font-weight-bold">Poin: ' + poinDiperoleh + ' / ' + bobot + '</span></div>';
+                if (hasSubmitted) {
+                    if (!isDijawab) {
+                        htmlSoal += '<span class="badge badge-secondary"><i class="fas fa-minus mr-1"></i> Tidak Dijawab (+0)</span>';
+                    } else if (isCorrect) {
+                        htmlSoal += '<span class="badge badge-success"><i class="fas fa-check mr-1"></i> Benar (+' + poinDiperoleh + ')</span>';
+                    } else if (poinDiperoleh > 0) {
+                        htmlSoal += '<span class="badge badge-warning text-dark"><i class="fas fa-check-circle mr-1"></i> Sebagian Benar (+' + poinDiperoleh + ')</span>';
+                    } else {
+                        htmlSoal += '<span class="badge badge-danger"><i class="fas fa-times mr-1"></i> Salah (+0)</span>';
+                    }
+                } else {
                     htmlSoal += '<span class="badge badge-secondary">Siswa Belum Mengerjakan</span>';
                 }
                 htmlSoal += '</div>';
@@ -664,27 +1452,49 @@ $(document).ready(function() {
 
                 if (soal.tipe_soal !== 'Essay') {
                     var opts = { 'A': soal.pilihan_a, 'B': soal.pilihan_b, 'C': soal.pilihan_c, 'D': soal.pilihan_d, 'E': soal.pilihan_e };
+                    var chosenArr = isDijawab ? jwbSiswa.toUpperCase().split(',').map(function(s){ return s.trim(); }) : [];
+                    var keyArr = kunci.toUpperCase().split(',').map(function(s){ return s.trim(); });
+
                     htmlSoal += '<div class="pl-2 mb-3">';
                     for (var k in opts) {
                         if (opts[k]) {
-                            var isChosen = hasSubmitted && (String(jwbSiswa).toUpperCase().indexOf(k) !== -1);
-                            var isKey = (String(kunci).toUpperCase().indexOf(k) !== -1);
-                            var badgeCls = '';
+                            var isChosen = chosenArr.indexOf(k) !== -1;
+                            var isKey = keyArr.indexOf(k) !== -1;
+                            var badgeCls = 'text-dark';
                             if (isKey) badgeCls = 'text-success font-weight-bold';
-                            if (isChosen && !isKey) badgeCls = 'text-danger font-weight-bold text-decoration-line-through';
-                            if (isChosen && isKey) badgeCls = 'text-success font-weight-bold';
+                            if (isChosen && !isKey) badgeCls = 'text-danger font-weight-bold';
 
-                            htmlSoal += '<div class="py-1 ' + badgeCls + '"><strong>' + k + '.</strong> ' + opts[k] + (isChosen ? ' <em>(Pilihan Siswa)</em>' : '') + (isKey ? ' <strong>(Kunci)</strong>' : '') + '</div>';
+                            htmlSoal += '<div class="py-1 ' + badgeCls + '">';
+                            htmlSoal += '<strong>' + k + '.</strong> ' + opts[k];
+                            if (isChosen) {
+                                htmlSoal += ' <span class="badge badge-light border text-danger ml-1"><em>(Pilihan Siswa)</em></span>';
+                            }
+                            if (isKey) {
+                                htmlSoal += ' <span class="badge badge-success ml-1"><strong>(Kunci)</strong></span>';
+                            }
+                            htmlSoal += '</div>';
                         }
                     }
                     htmlSoal += '</div>';
                 } else {
-                    htmlSoal += '<div class="p-3 bg-light rounded mb-2"><strong>Jawaban Siswa:</strong><br>' + (hasSubmitted ? (jwbSiswa || '-') : '<em class="text-muted">Siswa belum mengerjakan</em>') + '</div>';
+                    htmlSoal += '<div class="p-3 bg-light rounded mb-2"><strong>Jawaban Siswa:</strong><br>' + (isDijawab ? jwbSiswa : '<em class="text-muted">Tidak dijawab / Kosong</em>') + '</div>';
                 }
 
-                htmlSoal += '<div class="small text-muted font-italic">Kunci Jawaban Guru: <strong>' + (kunci || '-') + '</strong> | Bobot: ' + (soal.bobot || 10) + '</div>';
+                htmlSoal += '<div class="small text-muted font-italic">Kunci Jawaban Guru: <strong>' + (kunci || '-') + '</strong> | Bobot: ' + bobot + '</div>';
                 htmlSoal += '</div></div>';
             });
+
+            // Analisis ringkasan performa siswa
+            if (hasSubmitted) {
+                var htmlSummary = '<div class="alert alert-light border mb-3 p-3">';
+                htmlSummary += '<div class="row text-center">';
+                htmlSummary += '<div class="col-3"><strong>Total Soal:</strong><br><span class="badge badge-primary px-3 py-1 font-weight-bold" style="font-size:13px;">' + ringkasan.total + ' Butir</span></div>';
+                htmlSummary += '<div class="col-3"><strong>Jawaban Benar:</strong><br><span class="badge badge-success px-3 py-1 font-weight-bold" style="font-size:13px;">' + ringkasan.benar + ' Soal</span></div>';
+                htmlSummary += '<div class="col-3"><strong>Jawaban Salah:</strong><br><span class="badge badge-danger px-3 py-1 font-weight-bold" style="font-size:13px;">' + (ringkasan.salah + ringkasan.sebagian) + ' Soal</span></div>';
+                htmlSummary += '<div class="col-3"><strong>Tidak Dijawab:</strong><br><span class="badge badge-secondary px-3 py-1 font-weight-bold" style="font-size:13px;">' + ringkasan.kosong + ' Soal</span></div>';
+                htmlSummary += '</div></div>';
+                htmlSoal = htmlSummary + htmlSoal;
+            }
         }
 
         $('#jw_container_soal').html(htmlSoal);

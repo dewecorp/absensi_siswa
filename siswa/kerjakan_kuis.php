@@ -118,9 +118,13 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && !$is_upcoming && (empty($submission
         }
     }
 
-    $nilai_akhir = $max_skor > 0 ? round(($total_skor / $max_skor) * 100, 2) : 0;
+    // Nilai akhir adalah total skor poin yang diperoleh sesuai bobot soal
+    $nilai_akhir = round($total_skor, 2);
 
     try {
+        if ($max_skor > 0) {
+            $pdo->prepare("UPDATE tb_tugas SET nilai_maksimal = ? WHERE id = ?")->execute([$max_skor, $id_tugas]);
+        }
         $stIns = $pdo->prepare("
             INSERT INTO tb_tugas_pengumpulan (
                 id_tugas, id_siswa, catatan_siswa, nilai, tgl_kumpul, status_periksa
@@ -150,6 +154,124 @@ if (!empty($submission['catatan_siswa'])) {
 
 $total_soal = count($soal_list);
 $bobot_json = json_encode(array_column($soal_list, 'bobot'));
+$total_bobot_maks = array_sum(array_column($soal_list, 'bobot')) ?: 100;
+
+// Analisis rincian butir soal untuk review & pembahasan siswa
+$analisis_soal = [];
+$ringkasan_analisis = [
+    'total' => count($soal_list),
+    'benar' => 0,
+    'sebagian' => 0,
+    'salah' => 0,
+    'kosong' => 0,
+    'total_poin' => 0,
+    'total_maks' => $total_bobot_maks
+];
+
+if (!empty($submission)) {
+    foreach ($soal_list as $idx => $soal) {
+        $sId = $soal['id'];
+        $bobot = (int)($soal['bobot'] ?? 10);
+        $rawJwb = $saved_answers[$sId] ?? null;
+        $isDijawab = ($rawJwb !== null && trim((string)$rawJwb) !== '');
+        $jwbClean = $isDijawab ? trim((string)$rawJwb) : null;
+        $kunci = trim((string)$soal['kunci_jawaban']);
+        $tipe = $soal['tipe_soal'];
+        $isCorrect = false;
+        $poin = 0;
+        $penjelasan = '';
+
+        $opts = [
+            'A' => $soal['pilihan_a'],
+            'B' => $soal['pilihan_b'],
+            'C' => $soal['pilihan_c'],
+            'D' => $soal['pilihan_d'],
+            'E' => $soal['pilihan_e']
+        ];
+
+        if ($tipe === 'Pilihan Ganda') {
+            if ($isDijawab) {
+                if (strcasecmp($jwbClean, $kunci) === 0) {
+                    $isCorrect = true;
+                    $poin = $bobot;
+                    $penjelasan = "Jawaban Anda tepat. Poin penuh (+{$bobot}) diperoleh.";
+                    $ringkasan_analisis['benar']++;
+                } else {
+                    $kunciText = $opts[strtoupper($kunci)] ?? '';
+                    $penjelasan = "Jawaban Anda belum tepat. Anda memilih opsi <strong>" . htmlspecialchars($jwbClean) . "</strong>, sedangkan kunci yang benar adalah opsi <strong>" . htmlspecialchars($kunci) . ($kunciText !== '' ? " (" . htmlspecialchars($kunciText) . ")" : '') . "</strong>.";
+                    $ringkasan_analisis['salah']++;
+                }
+            } else {
+                $kunciText = $opts[strtoupper($kunci)] ?? '';
+                $penjelasan = "Soal ini tidak dijawab saat ujian. Kunci jawaban yang benar adalah opsi <strong>" . htmlspecialchars($kunci) . ($kunciText !== '' ? " (" . htmlspecialchars($kunciText) . ")" : '') . "</strong>.";
+                $ringkasan_analisis['kosong']++;
+            }
+        } elseif ($tipe === 'Pilihan Ganda Kompleks') {
+            $kunci_arr = array_filter(array_map('strtoupper', array_map('trim', explode(',', $kunci))));
+            $jwb_arr   = array_filter(array_map('strtoupper', array_map('trim', explode(',', (string)$jwbClean))));
+            $totKunci  = count($kunci_arr);
+            if ($isDijawab && $totKunci > 0) {
+                $benarCount = count(array_intersect($kunci_arr, $jwb_arr));
+                $salahCount = count(array_diff($jwb_arr, $kunci_arr));
+                if ($benarCount === $totKunci && $salahCount === 0) {
+                    $isCorrect = true;
+                    $poin = $bobot;
+                    $penjelasan = "Semua pilihan Anda tepat (" . implode(', ', $jwb_arr) . "). Poin penuh (+{$bobot}) diperoleh.";
+                    $ringkasan_analisis['benar']++;
+                } elseif ($benarCount > 0 && $salahCount === 0) {
+                    $poin = round(($benarCount / $totKunci) * $bobot, 2);
+                    $penjelasan = "Pilihan Anda sebagian benar (" . implode(', ', $jwb_arr) . " dari " . implode(', ', $kunci_arr) . "). Memperoleh +{$poin} poin.";
+                    $ringkasan_analisis['sebagian']++;
+                } else {
+                    $poin = round(max(0, ($benarCount - $salahCount) / $totKunci) * $bobot, 2);
+                    $penjelasan = "Kunci jawaban yang benar adalah: <strong>" . implode(', ', $kunci_arr) . "</strong>. Poin diperoleh: +{$poin}.";
+                    if ($poin > 0) $ringkasan_analisis['sebagian']++;
+                    else $ringkasan_analisis['salah']++;
+                }
+            } else {
+                $penjelasan = "Soal ini tidak dijawab saat ujian. Kunci jawaban yang benar adalah: <strong>" . implode(', ', $kunci_arr) . "</strong>.";
+                $ringkasan_analisis['kosong']++;
+            }
+        } elseif ($tipe === 'Essay') {
+            if ($isDijawab) {
+                if ($kunci !== '') {
+                    similar_text(strtolower($jwbClean), strtolower($kunci), $pct);
+                    if ($pct >= 80.0) {
+                        $isCorrect = true;
+                        $poin = $bobot;
+                        $penjelasan = "Jawaban essay Anda sangat sesuai dengan panduan kata kunci guru. Poin (+{$bobot}).";
+                        $ringkasan_analisis['benar']++;
+                    } elseif ($pct >= 50.0) {
+                        $poin = round($bobot * 0.5, 2);
+                        $penjelasan = "Jawaban essay Anda mendekati panduan kata kunci guru. Poin (+{$poin}).";
+                        $ringkasan_analisis['sebagian']++;
+                    } else {
+                        $penjelasan = "Jawaban essay Anda telah tersimpan dan diperiksa. Panduan kata kunci guru: <em>" . htmlspecialchars($kunci) . "</em>.";
+                        $ringkasan_analisis['salah']++;
+                    }
+                } else {
+                    $penjelasan = "Jawaban essay Anda telah tersimpan dan diperiksa.";
+                    $ringkasan_analisis['benar']++;
+                }
+            } else {
+                $penjelasan = "Soal essay tidak dijawab saat ujian. Panduan kata kunci guru: <em>" . htmlspecialchars($kunci) . "</em>.";
+                $ringkasan_analisis['kosong']++;
+            }
+        }
+
+        $ringkasan_analisis['total_poin'] += $poin;
+
+        $analisis_soal[] = [
+            'soal' => $soal,
+            'is_dijawab' => $isDijawab,
+            'jwb_siswa' => $jwbClean,
+            'is_correct' => $isCorrect,
+            'poin' => $poin,
+            'penjelasan' => $penjelasan,
+            'opts' => $opts
+        ];
+    }
+}
 ?>
 <!DOCTYPE html>
 <html lang="id">
@@ -218,40 +340,140 @@ textarea.form-control{font-size:14px}
     &bull; Deadline: <strong><?= !empty($tugas['deadline']) ? date('d/m/Y H:i', strtotime($tugas['deadline'])) : '-' ?></strong>
   </div>
 
-  <?php if ($tampilkan_hasil_final): ?>
-    <div class="exam-card"><div class="exam-card-body text-center py-5">
-      <div class="mb-3 text-success" style="font-size:50px"><i class="fas fa-check-circle"></i></div>
-      <h3 class="text-success font-weight-bold">Anda Telah Mengerjakan <?= htmlspecialchars($tugas['jenis_tugas']) ?> Ini</h3>
-      <p class="text-muted">Tanggal: <?= date('d/m/Y H:i', strtotime($submission['tgl_kumpul'])) ?></p>
-      <div class="display-4 font-weight-bold text-primary mb-3">Nilai: <?= (float)$submission['nilai'] ?> / 100</div>
-      <a href="tugas.php" class="btn btn-primary"><i class="fas fa-arrow-left mr-1"></i> Kembali ke Daftar Tugas</a>
-    </div></div>
-
-  <?php elseif (empty($soal_list)): ?>
+  <?php if (empty($soal_list)): ?>
     <div class="exam-card"><div class="exam-card-body text-center py-5">
       <p class="text-muted">Belum ada butir soal dari guru.</p>
       <a href="tugas.php" class="btn btn-primary">Kembali</a>
     </div></div>
 
   <?php else: ?>
-    <?php if ($just_saved): ?>
-      <div class="exam-card mb-3" id="resultSaved"><div class="exam-card-body text-center py-4">
-        <div class="mb-2 text-success" style="font-size:44px"><i class="fas fa-check-circle"></i></div>
-        <h4 class="font-weight-bold text-dark">Jawaban Tersimpan!</h4>
-        <div class="display-4 font-weight-bold text-primary">Nilai: <?= (float)$saved_nilai ?> / 100</div>
-        <p class="text-muted small">Selama waktu masih tersedia, Anda dapat memperbaiki jawaban.</p>
-        <div class="d-flex justify-content-center" style="gap:8px;flex-wrap:wrap">
-          <a href="tugas.php" class="btn btn-primary font-weight-bold"><i class="fas fa-list mr-1"></i> Ke Daftar Tugas</a>
-          <button type="button" id="btnPerbaiki" class="btn btn-warning font-weight-bold"><i class="fas fa-edit mr-1"></i> Perbaiki Jawaban</button>
+    <?php if (!empty($submission)): ?>
+      <div id="sectionReviewHasil">
+        <!-- Banner Hasil Nilai & Analisis -->
+        <div class="exam-card mb-4 border-0 shadow-sm">
+          <div class="exam-card-body p-4">
+            <div class="row align-items-center">
+              <div class="col-md-5 text-center border-right py-2">
+                <div class="mb-2 text-success" style="font-size:42px;"><i class="fas fa-check-circle"></i></div>
+                <h4 class="font-weight-bold text-dark mb-1">Hasil &amp; Analisis Nilai</h4>
+                <div class="display-4 font-weight-bold text-primary mb-2"><?= (float)$submission['nilai'] ?> <span style="font-size:24px;color:#6c757d;">/ <?= $total_bobot_maks ?></span></div>
+                <?php $persen = $total_bobot_maks > 0 ? round(((float)$submission['nilai'] / $total_bobot_maks) * 100) : 0; ?>
+                <span class="badge badge-primary px-3 py-1 font-weight-bold" style="font-size:13px;"><?= $persen ?>% Capaian</span>
+                <div class="small text-muted mt-2"><i class="far fa-clock mr-1"></i>Dikumpulkan: <strong><?= date('d/m/Y H:i', strtotime($submission['tgl_kumpul'])) ?></strong></div>
+              </div>
+              <div class="col-md-7 py-2">
+                <div class="row text-center mb-3">
+                  <div class="col-3">
+                    <span class="text-muted small">Total Soal</span>
+                    <h5 class="font-weight-bold mb-0 text-dark"><?= $ringkasan_analisis['total'] ?></h5>
+                  </div>
+                  <div class="col-3">
+                    <span class="text-muted small">Benar</span>
+                    <h5 class="font-weight-bold mb-0 text-success"><?= $ringkasan_analisis['benar'] ?></h5>
+                  </div>
+                  <div class="col-3">
+                    <span class="text-muted small">Salah</span>
+                    <h5 class="font-weight-bold mb-0 text-danger"><?= $ringkasan_analisis['salah'] + $ringkasan_analisis['sebagian'] ?></h5>
+                  </div>
+                  <div class="col-3">
+                    <span class="text-muted small">Kosong</span>
+                    <h5 class="font-weight-bold mb-0 text-secondary"><?= $ringkasan_analisis['kosong'] ?></h5>
+                  </div>
+                </div>
+                <div class="d-flex justify-content-center flex-wrap" style="gap:8px;">
+                  <a href="tugas.php" class="btn btn-primary font-weight-bold"><i class="fas fa-arrow-left mr-1"></i> Ke Daftar Tugas</a>
+                  <?php if (!$is_expired): ?>
+                    <button type="button" id="btnBukaPerbaikan" class="btn btn-warning font-weight-bold"><i class="fas fa-edit mr-1"></i> Perbaiki Jawaban</button>
+                  <?php else: ?>
+                    <span class="badge badge-secondary py-2 px-3 font-weight-bold"><i class="fas fa-lock mr-1"></i> Waktu Berakhir (Hasil Final)</span>
+                  <?php endif; ?>
+                </div>
+              </div>
+            </div>
+          </div>
         </div>
-      </div></div>
+
+        <!-- Rincian Pembahasan Soal per Butir -->
+        <h5 class="font-weight-bold text-dark mb-3"><i class="fas fa-poll-h mr-2 text-primary"></i>Pembahasan &amp; Analisis Butir Soal</h5>
+        <?php foreach ($analisis_soal as $idx => $item): ?>
+          <?php
+          $soal = $item['soal'];
+          $bobot = (int)($soal['bobot'] ?? 10);
+          $poin = $item['poin'];
+          $is_dijawab = $item['is_dijawab'];
+          $is_correct = $item['is_correct'];
+          $jwb_siswa = $item['jwb_siswa'];
+          $kunci = trim((string)$soal['kunci_jawaban']);
+          ?>
+          <div class="exam-card mb-3 shadow-sm border">
+            <div class="exam-card-head bg-white d-flex justify-content-between align-items-center flex-wrap" style="gap:6px;">
+              <div>
+                <span class="badge badge-primary mr-2">Soal No. <?= $idx + 1 ?></span>
+                <span class="badge badge-info mr-2"><?= htmlspecialchars($soal['tipe_soal']) ?></span>
+                <span class="badge badge-light border font-weight-bold">Poin: <?= $poin ?> / <?= $bobot ?></span>
+              </div>
+              <div>
+                <?php if (!$is_dijawab): ?>
+                  <span class="badge badge-secondary"><i class="fas fa-minus mr-1"></i> Tidak Dijawab (+0)</span>
+                <?php elseif ($is_correct): ?>
+                  <span class="badge badge-success"><i class="fas fa-check mr-1"></i> Benar (+<?= $poin ?>)</span>
+                <?php elseif ($poin > 0): ?>
+                  <span class="badge badge-warning text-dark"><i class="fas fa-check-circle mr-1"></i> Sebagian Benar (+<?= $poin ?>)</span>
+                <?php else: ?>
+                  <span class="badge badge-danger"><i class="fas fa-times mr-1"></i> Salah (+0)</span>
+                <?php endif; ?>
+              </div>
+            </div>
+            <div class="exam-card-body">
+              <p class="font-weight-bold text-dark mb-3" style="font-size:15px;line-height:1.6;"><?= nl2br(htmlspecialchars($soal['pertanyaan'])) ?></p>
+
+              <?php if ($soal['tipe_soal'] !== 'Essay'): ?>
+                <?php
+                $opts = $item['opts'];
+                $chosenArr = $is_dijawab ? array_filter(array_map('trim', explode(',', strtoupper((string)$jwb_siswa)))) : [];
+                $keyArr = array_filter(array_map('trim', explode(',', strtoupper($kunci))));
+                ?>
+                <div class="pl-2 mb-3">
+                  <?php foreach ($opts as $k => $opt): ?>
+                    <?php if (!empty($opt)): ?>
+                      <?php
+                      $isChosen = in_array($k, $chosenArr, true);
+                      $isKey = in_array($k, $keyArr, true);
+                      $cls = 'text-dark';
+                      if ($isKey) $cls = 'text-success font-weight-bold';
+                      if ($isChosen && !$isKey) $cls = 'text-danger font-weight-bold';
+                      ?>
+                      <div class="py-1 <?= $cls ?>">
+                        <strong><?= $k ?>.</strong> <?= htmlspecialchars($opt) ?>
+                        <?php if ($isChosen): ?>
+                          <span class="badge badge-light border text-<?= $isKey ? 'success' : 'danger' ?> ml-1"><em>(Pilihan Anda)</em></span>
+                        <?php endif; ?>
+                        <?php if ($isKey): ?>
+                          <span class="badge badge-success ml-1"><strong>(Kunci Benar)</strong></span>
+                        <?php endif; ?>
+                      </div>
+                    <?php endif; ?>
+                  <?php endforeach; ?>
+                </div>
+              <?php else: ?>
+                <div class="p-3 bg-light rounded mb-2 border">
+                  <strong>Jawaban Anda:</strong><br>
+                  <?= $is_dijawab ? nl2br(htmlspecialchars($jwb_siswa)) : '<em class="text-muted">Tidak dijawab / Kosong</em>' ?>
+                </div>
+                <div class="small text-muted mb-2">Panduan Kunci Guru: <strong><?= htmlspecialchars($kunci ?: '-') ?></strong></div>
+              <?php endif; ?>
+
+              <div class="alert alert-light border mt-3 mb-0 p-3 text-dark small" style="background:#f8fafc;">
+                <strong><i class="fas fa-lightbulb text-warning mr-1"></i> Pembahasan &amp; Analisis:</strong><br>
+                <?= $item['penjelasan'] ?>
+              </div>
+            </div>
+          </div>
+        <?php endforeach; ?>
+      </div>
     <?php endif; ?>
 
-    <?php if (!empty($submission) && !$just_saved): ?>
-      <div class="alert alert-info">Jawaban Anda sudah tersimpan sebelumnya. Anda dapat memperbaiki selama waktu masih tersedia.</div>
-    <?php endif; ?>
-
-    <div id="startExamOverlay" <?= $just_saved ? 'style="display:none"' : '' ?>>
+    <div id="startExamOverlay" <?= !empty($submission) ? 'style="display:none"' : '' ?>>
       <div class="panel">
         <div class="mb-3 text-primary" style="font-size:54px"><i class="fas fa-laptop-code"></i></div>
         <h3 class="font-weight-bold">Konfirmasi Memulai Ujian</h3>
@@ -260,7 +482,7 @@ textarea.form-control{font-size:14px}
       </div>
     </div>
 
-    <form method="POST" id="formKerjakanKuis" <?= $just_saved ? 'style="display:none"' : '' ?>>
+    <form method="POST" id="formKerjakanKuis" <?= !empty($submission) ? 'style="display:none"' : '' ?>>
       <div class="exam-grid">
         <div class="exam-card">
           <div class="exam-card-head">
@@ -315,6 +537,9 @@ textarea.form-control{font-size:14px}
             <hr>
             <button type="button" id="btnSubmitKuis" class="btn btn-success btn-lg btn-block font-weight-bold"><i class="fas fa-paper-plane mr-2"></i> Selesai &amp; Serahkan</button>
             <button type="button" id="btnKeluarUjian" class="btn btn-outline-danger btn-block btn-sm font-weight-bold mt-2"><i class="fas fa-sign-out-alt mr-1"></i> Keluar / Batal</button>
+            <?php if (!empty($submission)): ?>
+              <button type="button" id="btnTutupPerbaikan" class="btn btn-outline-info btn-block btn-sm font-weight-bold mt-2"><i class="fas fa-poll-h mr-1"></i> Kembali ke Pembahasan</button>
+            <?php endif; ?>
           </div>
         </div>
       </div>
@@ -382,8 +607,36 @@ textarea.form-control{font-size:14px}
   var perbaiki = document.getElementById('btnPerbaiki');
   if(perbaiki){
     perbaiki.addEventListener('click', function(){
-      document.getElementById('resultSaved').style.display = 'none';
-      document.getElementById('formKerjakanKuis').style.display = 'block';
+      var rs = document.getElementById('resultSaved');
+      if(rs) rs.style.display = 'none';
+      var rev = document.getElementById('sectionReviewHasil');
+      if(rev) rev.style.display = 'none';
+      var f = document.getElementById('formKerjakanKuis');
+      if(f) f.style.display = 'block';
+    });
+  }
+
+  var bukaPerbaikan = document.getElementById('btnBukaPerbaikan');
+  if(bukaPerbaikan){
+    bukaPerbaikan.addEventListener('click', function(){
+      var rev = document.getElementById('sectionReviewHasil');
+      if(rev) rev.style.display = 'none';
+      var f = document.getElementById('formKerjakanKuis');
+      if(f) {
+        f.style.display = 'block';
+        updateTimer();
+        setInterval(updateTimer, 1000);
+      }
+    });
+  }
+
+  var tutupPerbaikan = document.getElementById('btnTutupPerbaikan');
+  if(tutupPerbaikan){
+    tutupPerbaikan.addEventListener('click', function(){
+      var f = document.getElementById('formKerjakanKuis');
+      if(f) f.style.display = 'none';
+      var rev = document.getElementById('sectionReviewHasil');
+      if(rev) rev.style.display = 'block';
     });
   }
 
@@ -487,20 +740,10 @@ textarea.form-control{font-size:14px}
 
   if(JUST_SAVED && SAVED_NILAI !== null){
     Swal.fire({
-      title: 'Nilai Anda: ' + SAVED_NILAI,
-      text: 'Jawaban tersimpan. Ke daftar tugas atau perbaiki selama waktu tersedia.',
+      title: 'Nilai Anda: ' + SAVED_NILAI + ' / <?= $total_bobot_maks ?>',
+      text: 'Jawaban tersimpan dan telah diperiksa. Rincian dan pembahasan soal dapat dilihat di bawah.',
       icon: 'success',
-      showDenyButton: true,
-      confirmButtonText: 'Ke Daftar Tugas',
-      denyButtonText: 'Perbaiki Jawaban'
-    }).then(function(r){
-      if(r.isConfirmed){ window.location.href = 'tugas.php'; }
-      else if(r.isDenied){
-        var rs = document.getElementById('resultSaved');
-        if(rs) rs.style.display = 'none';
-        var f = document.getElementById('formKerjakanKuis');
-        if(f) f.style.display = 'block';
-      }
+      confirmButtonText: 'Lihat Pembahasan'
     });
   }
   <?php if ($error_msg): ?>

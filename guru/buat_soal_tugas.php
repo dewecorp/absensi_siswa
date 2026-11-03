@@ -51,6 +51,17 @@ $pdo->exec("
     ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4
 ");
 
+function sync_nilai_maksimal_tugas(PDO $pdo, int $id_tugas): void {
+    try {
+        $stSum = $pdo->prepare("SELECT COALESCE(SUM(bobot), 0) FROM tb_tugas_soal WHERE id_tugas = ?");
+        $stSum->execute([$id_tugas]);
+        $sum_bobot = (int)$stSum->fetchColumn();
+        if ($sum_bobot > 0) {
+            $pdo->prepare("UPDATE tb_tugas SET nilai_maksimal = ? WHERE id = ?")->execute([$sum_bobot, $id_tugas]);
+        }
+    } catch (Throwable $e) {}
+}
+
 // Pastikan kolom kunci_jawaban bertipe TEXT agar muat kunci jawaban Essay / uraian panjang
 try {
     $pdo->exec("ALTER TABLE tb_tugas_soal MODIFY COLUMN kunci_jawaban TEXT NULL");
@@ -407,11 +418,64 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && $can_crud) {
             }
         }
     }
+
+    sync_nilai_maksimal_tugas($pdo, $id_tugas);
 }
 
 $stSoal = $pdo->prepare("SELECT * FROM tb_tugas_soal WHERE id_tugas = ? ORDER BY id ASC");
 $stSoal->execute([$id_tugas]);
 $soal_list = $stSoal->fetchAll(PDO::FETCH_ASSOC);
+
+// Ambil statistik pengerjaan jika ada siswa yang sudah mengumpulkan
+$stSub = $pdo->prepare("SELECT catatan_siswa, nilai FROM tb_tugas_pengumpulan WHERE id_tugas = ? AND tgl_kumpul IS NOT NULL");
+$stSub->execute([$id_tugas]);
+$subs = $stSub->fetchAll(PDO::FETCH_ASSOC);
+$total_sub = count($subs);
+$soal_stat = [];
+if ($total_sub > 0 && !empty($soal_list)) {
+    foreach ($soal_list as $idx => $s) {
+        $sId = $s['id'];
+        $tipe = $s['tipe_soal'];
+        $kunci = trim((string)$s['kunci_jawaban']);
+        $b = 0;
+        $w = 0;
+        foreach ($subs as $sub) {
+            $ans = [];
+            if (!empty($sub['catatan_siswa'])) {
+                $dec = json_decode($sub['catatan_siswa'], true);
+                if (is_array($dec)) $ans = $dec;
+            }
+            $j = $ans[$sId] ?? $ans[(string)$sId] ?? null;
+            
+            $is_b = false;
+            if ($tipe === 'Pilihan Ganda') {
+                if ($j !== null && trim((string)$j) !== '' && strcasecmp(trim((string)$j), $kunci) === 0) $is_b = true;
+            } elseif ($tipe === 'Pilihan Ganda Kompleks') {
+                $k_arr = array_filter(array_map('strtoupper', array_map('trim', explode(',', $kunci))));
+                $j_arr = array_filter(array_map('strtoupper', array_map('trim', explode(',', (string)$j))));
+                if (count($k_arr) > 0 && count(array_intersect($k_arr, $j_arr)) === count($k_arr) && count(array_diff($j_arr, $k_arr)) === 0) $is_b = true;
+            } else {
+                if ($j !== null && trim((string)$j) !== '' && $kunci !== '') {
+                    similar_text(strtolower(trim((string)$j)), strtolower($kunci), $pct);
+                    if ($pct >= 70.0) $is_b = true;
+                }
+            }
+            if ($is_b) $b++; else $w++;
+        }
+        $p = round($b / $total_sub, 2);
+        $k_label = $p > 0.70 ? 'Mudah' : ($p >= 0.30 ? 'Sedang' : 'Sukar');
+        $k_badge = $p > 0.70 ? 'badge-success' : ($p >= 0.30 ? 'badge-warning' : 'badge-danger');
+        $soal_stat[$sId] = [
+            'benar' => $b,
+            'salah' => $w,
+            'pct_benar' => round(($b / $total_sub) * 100),
+            'pct_salah' => round(($w / $total_sub) * 100),
+            'p' => $p,
+            'label' => $k_label,
+            'badge' => $k_badge,
+        ];
+    }
+}
 
 $page_title = 'Kelola Soal ' . $tugas['jenis_tugas'];
 $css_libs = [
@@ -438,9 +502,16 @@ include '../templates/sidebar.php';
 
         <div class="section-body">
             <div class="mb-3 d-flex justify-content-between align-items-center flex-wrap" style="gap:8px;">
-                <a href="detail_tugas.php?id=<?= $id_tugas ?>" class="btn btn-dark btn-sm">
-                    <i class="fas fa-arrow-left mr-1"></i> Kembali ke Detail Tugas
-                </a>
+                <div class="d-flex flex-wrap" style="gap:6px;">
+                    <a href="detail_tugas.php?id=<?= $id_tugas ?>" class="btn btn-dark btn-sm">
+                        <i class="fas fa-arrow-left mr-1"></i> Kembali ke Detail Tugas
+                    </a>
+                    <?php if ($total_sub > 0): ?>
+                    <a href="detail_tugas.php?id=<?= $id_tugas ?>#section-analisis-soal" class="btn btn-info btn-sm font-weight-bold">
+                        <i class="fas fa-chart-pie mr-1"></i> Lihat Analisis Butir Soal (<?= $total_sub ?> Responden)
+                    </a>
+                    <?php endif; ?>
+                </div>
                 <?php if ($can_crud): ?>
                 <div class="d-flex" style="gap:6px;">
                     <button type="button" class="btn btn-success btn-sm" data-toggle="modal" data-target="#modalImpor">
@@ -546,7 +617,16 @@ include '../templates/sidebar.php';
                                                 <h6 class="mb-0 font-weight-bold text-dark">
                                                     <span class="badge badge-primary mr-1">Soal No. <?= $idx + 1 ?></span>
                                                     <span class="badge badge-info mr-1"><?= htmlspecialchars($soal['tipe_soal']) ?></span>
-                                                    <span class="badge badge-secondary">Bobot: <?= (int)$soal['bobot'] ?></span>
+                                                    <span class="badge badge-secondary mr-1">Bobot: <?= (int)$soal['bobot'] ?></span>
+                                                    <?php if (!empty($soal_stat[$soal['id']])): ?>
+                                                        <?php $st_item = $soal_stat[$soal['id']]; ?>
+                                                        <span class="badge <?= $st_item['badge'] ?> mr-1" title="Tingkat Kesukaran (P=<?= $st_item['p'] ?>)">
+                                                            <?= $st_item['label'] ?> (P=<?= number_format($st_item['p'], 2) ?>)
+                                                        </span>
+                                                        <span class="badge badge-light border text-dark" title="<?= $st_item['benar'] ?> benar dari <?= $total_sub ?> siswa">
+                                                            <i class="fas fa-check text-success mr-1"></i><?= $st_item['pct_benar'] ?>% Benar
+                                                        </span>
+                                                    <?php endif; ?>
                                                 </h6>
                                             </div>
                                             <?php if ($can_crud): ?>
