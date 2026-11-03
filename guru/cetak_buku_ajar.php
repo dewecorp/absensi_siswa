@@ -33,7 +33,7 @@ if ($guru_id > 0) {
     $nama_guru_val = $stmt_g->fetchColumn() ?: '';
 }
 if ($is_wali && $nama_guru_val) {
-    $stmt_wali = $pdo->prepare("SELECT id_kelas FROM tb_kelas WHERE wali_kelas = ?");
+    $stmt_wali = $pdo->prepare("SELECT id_kelas FROM tb_kelas WHERE LOWER(TRIM(wali_kelas)) = LOWER(TRIM(?)) LIMIT 1");
     $stmt_wali->execute([$nama_guru_val]);
     $wali_kelas_id = $stmt_wali->fetchColumn() ?: null;
 }
@@ -110,11 +110,28 @@ $stmt = $pdo->prepare("
 $stmt->execute($params);
 $buku_rows = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
-// Nama kelas terpilih
+// Nama kelas terpilih / teridentifikasi
 $kelas_name = '';
 if ($f_kelas > 0) {
-    $k = $pdo->query("SELECT nama_kelas FROM tb_kelas WHERE id_kelas = " . (int)$f_kelas)->fetch();
-    $kelas_name = $k['nama_kelas'] ?? '';
+    $stmt_k = $pdo->prepare("SELECT nama_kelas FROM tb_kelas WHERE id_kelas = ? LIMIT 1");
+    $stmt_k->execute([$f_kelas]);
+    $kelas_name = (string)($stmt_k->fetchColumn() ?: '');
+} elseif ($is_wali && $wali_kelas_id) {
+    $stmt_k = $pdo->prepare("SELECT nama_kelas FROM tb_kelas WHERE id_kelas = ? LIMIT 1");
+    $stmt_k->execute([$wali_kelas_id]);
+    $kelas_name = (string)($stmt_k->fetchColumn() ?: '');
+} else {
+    // Untuk guru atau wali tanpa filter spesifik: ambil kelas dari buku yang dicetak, atau kelas ajar guru
+    $buku_kelas_list = array_values(array_unique(array_filter(array_map(static fn($r) => trim((string)($r['nama_kelas'] ?? '')), $buku_rows))));
+    if (!empty($buku_kelas_list)) {
+        $kelas_name = implode(', ', $buku_kelas_list);
+    } elseif ($guru_id > 0 && function_exists('getGuruTaughtClasses')) {
+        $taught = getGuruTaughtClasses($pdo, $guru_id);
+        $taught_names = array_values(array_unique(array_filter(array_map(static fn($c) => trim((string)($c['nama_kelas'] ?? '')), $taught))));
+        if (!empty($taught_names)) {
+            $kelas_name = implode(', ', $taught_names);
+        }
+    }
 }
 
 $report_date = function_exists('formatDateIndonesia') ? formatDateIndonesia(date('Y-m-d')) : date('d F Y');
@@ -127,7 +144,7 @@ $school_city = $school_profile['tempat_jadwal'] ?? 'Jepara';
     <title>Cetak Data Buku Ajar</title>
     <style>
         @page {
-            size: F4;
+            size: 210mm 330mm;
             margin: 12mm 15mm;
         }
 
@@ -330,8 +347,8 @@ $school_city = $school_profile['tempat_jadwal'] ?? 'Jepara';
             <th>Judul Buku</th>
             <th>Penyusun</th>
             <th class="center">Jenis Buku</th>
+            <th class="center">Kelas</th>
             <?php if ($is_admin_or_viewer): ?>
-                <th class="center">Kelas</th>
                 <th>Guru Pengampu</th>
             <?php endif; ?>
         </tr>
@@ -339,7 +356,7 @@ $school_city = $school_profile['tempat_jadwal'] ?? 'Jepara';
     <tbody>
         <?php if (empty($buku_rows)): ?>
             <tr>
-                <td colspan="<?= $is_admin_or_viewer ? '7' : '5' ?>" style="text-align:center; padding:20px; color:#999;">
+                <td colspan="<?= $is_admin_or_viewer ? '7' : '6' ?>" style="text-align:center; padding:20px; color:#999;">
                     Tidak ada data buku ajar.
                 </td>
             </tr>
@@ -351,8 +368,8 @@ $school_city = $school_profile['tempat_jadwal'] ?? 'Jepara';
                     <td><?= htmlspecialchars($r['judul']) ?></td>
                     <td><?= htmlspecialchars($r['penyusun'] ?: '-') ?></td>
                     <td class="center"><?= htmlspecialchars($r['jenis_buku']) ?></td>
+                    <td class="center"><?= htmlspecialchars($r['nama_kelas'] ?? '-') ?></td>
                     <?php if ($is_admin_or_viewer): ?>
-                        <td class="center"><?= htmlspecialchars($r['nama_kelas'] ?? '-') ?></td>
                         <td><?= htmlspecialchars($r['nama_guru'] ?? '-') ?></td>
                     <?php endif; ?>
                 </tr>

@@ -42,7 +42,7 @@ if ($guru_id > 0) {
     $nama_guru_val = $stmt_g->fetchColumn() ?: '';
 }
 if ($is_wali && $nama_guru_val) {
-    $stmt_wali = $pdo->prepare("SELECT id_kelas FROM tb_kelas WHERE wali_kelas = ?");
+    $stmt_wali = $pdo->prepare("SELECT id_kelas FROM tb_kelas WHERE LOWER(TRIM(wali_kelas)) = LOWER(TRIM(?)) LIMIT 1");
     $stmt_wali->execute([$nama_guru_val]);
     $wali_kelas_id = $stmt_wali->fetchColumn() ?: null;
 }
@@ -101,8 +101,24 @@ $buku_rows = $stmt->fetchAll(PDO::FETCH_ASSOC);
 // Kelas name
 $kelas_name = '';
 if ($f_kelas > 0) {
-    $k = $pdo->query("SELECT nama_kelas FROM tb_kelas WHERE id_kelas = " . (int)$f_kelas)->fetch();
-    $kelas_name = $k['nama_kelas'] ?? '';
+    $stmt_k = $pdo->prepare("SELECT nama_kelas FROM tb_kelas WHERE id_kelas = ? LIMIT 1");
+    $stmt_k->execute([$f_kelas]);
+    $kelas_name = (string)($stmt_k->fetchColumn() ?: '');
+} elseif ($is_wali && $wali_kelas_id) {
+    $stmt_k = $pdo->prepare("SELECT nama_kelas FROM tb_kelas WHERE id_kelas = ? LIMIT 1");
+    $stmt_k->execute([$wali_kelas_id]);
+    $kelas_name = (string)($stmt_k->fetchColumn() ?: '');
+} else {
+    $buku_kelas_list = array_values(array_unique(array_filter(array_map(static fn($r) => trim((string)($r['nama_kelas'] ?? '')), $buku_rows))));
+    if (!empty($buku_kelas_list)) {
+        $kelas_name = implode(', ', $buku_kelas_list);
+    } elseif ($guru_id > 0 && function_exists('getGuruTaughtClasses')) {
+        $taught = getGuruTaughtClasses($pdo, $guru_id);
+        $taught_names = array_values(array_unique(array_filter(array_map(static fn($c) => trim((string)($c['nama_kelas'] ?? '')), $taught))));
+        if (!empty($taught_names)) {
+            $kelas_name = implode(', ', $taught_names);
+        }
+    }
 }
 
 // Spreadsheet
@@ -111,7 +127,7 @@ $sheet = $spreadsheet->getActiveSheet();
 $sheet->setTitle('Data Buku Ajar');
 
 // Jumlah kolom
-$colCount = $is_admin_or_viewer ? 7 : 5; // A=No, B=Mapel, C=Judul, D=Penyusun, E=Jenis (+F=Kelas, +G=Guru)
+$colCount = $is_admin_or_viewer ? 7 : 6; // A=No, B=Mapel, C=Judul, D=Penyusun, E=Jenis, F=Kelas (+G=Guru)
 $lastColLetters = ['','A','B','C','D','E','F','G'];
 $lastCol = $lastColLetters[$colCount];
 
@@ -156,9 +172,9 @@ $sheet->setCellValue('B' . $headerRow, 'MATA PELAJARAN');
 $sheet->setCellValue('C' . $headerRow, 'JUDUL BUKU');
 $sheet->setCellValue('D' . $headerRow, 'PENYUSUN');
 $sheet->setCellValue('E' . $headerRow, 'JENIS BUKU');
+$sheet->setCellValue('F' . $headerRow, 'KELAS');
 
 if ($is_admin_or_viewer) {
-    $sheet->setCellValue('F' . $headerRow, 'KELAS');
     $sheet->setCellValue('G' . $headerRow, 'GURU PENGINPUT');
 }
 
@@ -177,8 +193,8 @@ $sheet->getColumnDimension('B')->setWidth(18);
 $sheet->getColumnDimension('C')->setWidth(40);
 $sheet->getColumnDimension('D')->setWidth(25);
 $sheet->getColumnDimension('E')->setWidth(12);
+$sheet->getColumnDimension('F')->setWidth(14);
 if ($is_admin_or_viewer) {
-    $sheet->getColumnDimension('F')->setWidth(14);
     $sheet->getColumnDimension('G')->setWidth(22);
 }
 
@@ -198,8 +214,8 @@ if (empty($buku_rows)) {
         $sheet->setCellValue('C' . $row, $r['judul']);
         $sheet->setCellValue('D' . $row, $r['penyusun'] ?: '-');
         $sheet->setCellValue('E' . $row, $r['jenis_buku']);
+        $sheet->setCellValue('F' . $row, $r['nama_kelas'] ?? '-');
         if ($is_admin_or_viewer) {
-            $sheet->setCellValue('F' . $row, $r['nama_kelas'] ?? '-');
             $sheet->setCellValue('G' . $row, $r['nama_guru'] ?? '-');
         }
 
@@ -212,9 +228,7 @@ if (empty($buku_rows)) {
         $sheet->getStyle('A' . $row . ':' . $lastCol . $row)->applyFromArray($dataStyle);
         $sheet->getStyle('A' . $row)->getAlignment()->setHorizontal(Alignment::HORIZONTAL_CENTER);
         $sheet->getStyle('E' . $row)->getAlignment()->setHorizontal(Alignment::HORIZONTAL_CENTER);
-        if ($is_admin_or_viewer) {
-            $sheet->getStyle('F' . $row)->getAlignment()->setHorizontal(Alignment::HORIZONTAL_CENTER);
-        }
+        $sheet->getStyle('F' . $row)->getAlignment()->setHorizontal(Alignment::HORIZONTAL_CENTER);
         $row++;
     }
 }

@@ -187,7 +187,7 @@ endif;
                         <h1>Kehadiran Harian Kelas <?php echo $wali_kelas ? htmlspecialchars($wali_kelas['nama_kelas']) : 'Tidak Ada'; ?></h1>
                         <div class="section-header-breadcrumb">
                             <div class="breadcrumb-item active"><a href="dashboard.php">Dashboard</a></div>
-                            <div class="breadcrumb-item">Kehadiran Harian Kelas Terpilih</div>
+                            <div class="breadcrumb-item">Kehadiran Harian</div>
                         </div>
                     </div>
 
