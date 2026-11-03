@@ -335,10 +335,11 @@
 .mapp-agenda-list {
     display: flex;
     flex-direction: column;
-    gap: 9px;
-    max-height: 380px;
+    gap: 11px;
+    max-height: 420px;
     overflow-y: auto;
-    padding-right: 2px;
+    padding: 6px 8px 12px 8px;
+    margin: -6px -8px -6px -8px;
 }
 
 .mapp-agenda-item {
@@ -346,48 +347,48 @@
     gap: 12px;
     align-items: center;
     background: #ffffff;
-    border: none !important;
-    border-left: none !important;
+    border: 1px solid #eef2f6 !important;
     border-radius: 14px !important;
-    padding: 10px 12px;
-    transition: all .2s cubic-bezier(.4, 0, .2, 1);
-    box-shadow: 0 8px 24px rgba(15, 23, 42, 0.12), 0 2px 6px rgba(15, 23, 42, 0.06) !important;
+    padding: 10px 14px;
+    transition: all .2s ease;
+    box-shadow: 0 4px 14px rgba(15, 23, 42, 0.06), 0 1px 3px rgba(15, 23, 42, 0.04) !important;
 }
 
 .mapp-agenda-item:hover {
-    transform: translateY(-3px);
-    box-shadow: 0 14px 30px rgba(15, 23, 42, 0.18) !important;
+    transform: translateY(-2px);
+    border-color: #cbd5e1 !important;
+    box-shadow: 0 8px 20px rgba(15, 23, 42, 0.1), 0 2px 6px rgba(15, 23, 42, 0.05) !important;
 }
 
 .mapp-agenda-clock {
-    flex: 0 0 68px;
-    min-width: 68px;
+    flex: 0 0 66px;
+    min-width: 66px;
     display: flex;
     flex-direction: column;
     align-items: center;
     justify-content: center;
     background: linear-gradient(180deg, #eff6ff 0%, #dbeafe 100%);
-    border: 1.5px solid #bfdbfe;
-    border-radius: 13px;
+    border: 1px solid #bfdbfe;
+    border-radius: 12px;
     padding: 7px 6px;
-    line-height: 1.1;
-    box-shadow: 0 2px 6px rgba(37, 99, 235, .08);
+    line-height: 1.15;
+    box-shadow: 0 2px 5px rgba(37, 99, 235, 0.08);
 }
 
 .mapp-agenda-clock .jam {
-    font-size: 10px;
-    font-weight: 800;
+    font-size: 9.5px;
+    font-weight: 700;
     text-transform: uppercase;
     color: #2563eb;
-    letter-spacing: .6px;
+    letter-spacing: .5px;
 }
 
 .mapp-agenda-clock .val {
-    font-size: 20px;
+    font-size: 18px;
     font-weight: 900;
     color: #1e3a8a;
     margin-top: 2px;
-    letter-spacing: -0.5px;
+    letter-spacing: -0.4px;
 }
 
 .mapp-agenda-body {
@@ -399,9 +400,9 @@
 }
 
 .mapp-agenda-mapel {
-    font-size: 13.5px;
-    font-weight: 800;
-    color: #0f172a;
+    font-size: 14px;
+    font-weight: 700;
+    color: #1e293b;
     line-height: 1.3;
     margin-bottom: 4px;
 }
