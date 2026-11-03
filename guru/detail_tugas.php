@@ -601,26 +601,45 @@ include '../templates/sidebar.php';
                 background: #ffffff;
                 border-radius: 14px;
                 border: 1px solid #edf2f7;
-                padding: 12px 14px;
-                box-shadow: 0 2px 10px rgba(0, 0, 0, 0.03);
-                display: flex;
-                align-items: center;
-                gap: 12px;
+                padding: 10px 12px;
+                box-shadow: 0 2px 8px rgba(15, 23, 42, 0.04);
                 transition: transform 0.18s ease, box-shadow 0.18s ease;
-                height: 100%;
+                display: flex;
+                flex-direction: column;
+                justify-content: space-between;
+                min-height: 78px;
             }
             .app-stat-tile:hover {
                 transform: translateY(-2px);
-                box-shadow: 0 6px 16px rgba(0, 0, 0, 0.06);
+                box-shadow: 0 6px 16px rgba(15, 23, 42, 0.08);
+            }
+            .app-stat-tile .tile-head {
+                display: flex;
+                align-items: center;
+                justify-content: space-between;
+                gap: 6px;
+                margin-bottom: 4px;
+            }
+            .app-stat-tile .tile-title {
+                font-size: 10.5px;
+                text-transform: uppercase;
+                letter-spacing: 0.3px;
+                color: #64748b;
+                font-weight: 700;
+                white-space: nowrap;
+                overflow: hidden;
+                text-overflow: ellipsis;
+                line-height: 1.2;
+                flex: 1;
             }
             .app-stat-tile .tile-icon {
-                width: 42px;
-                height: 42px;
-                border-radius: 12px;
+                width: 28px;
+                height: 28px;
+                border-radius: 8px;
                 display: flex;
                 align-items: center;
                 justify-content: center;
-                font-size: 17px;
+                font-size: 12px;
                 flex-shrink: 0;
             }
             .tile-icon.primary { background: #eff6ff; color: #2563eb; }
@@ -630,26 +649,20 @@ include '../templates/sidebar.php';
             .tile-icon.info    { background: #f5f3ff; color: #7c3aed; }
             .tile-icon.secondary { background: #f8fafc; color: #64748b; }
 
-            .app-stat-tile .tile-title {
-                font-size: 11px;
-                text-transform: uppercase;
-                letter-spacing: 0.4px;
-                color: #64748b;
-                font-weight: 600;
-                margin-bottom: 2px;
-                line-height: 1.2;
-            }
             .app-stat-tile .tile-value {
-                font-size: 18px;
+                font-size: 20px;
                 font-weight: 800;
                 color: #1e293b;
-                line-height: 1.2;
+                line-height: 1.1;
                 margin-bottom: 0;
             }
             .app-stat-tile .tile-sub {
                 font-size: 11px;
                 color: #94a3b8;
                 margin-top: 2px;
+                white-space: nowrap;
+                overflow: hidden;
+                text-overflow: ellipsis;
             }
 
             /* Question Analysis Mobile Card */
@@ -890,56 +903,60 @@ include '../templates/sidebar.php';
                             <div class="row">
                                 <div class="col-6 mb-3">
                                     <div class="app-stat-tile">
-                                        <div class="tile-icon secondary"><i class="fas fa-users"></i></div>
-                                        <div class="overflow-hidden">
-                                            <div class="tile-title">Total Siswa</div>
-                                            <div class="tile-value text-dark"><?= $jml_siswa ?></div>
+                                        <div class="tile-head">
+                                            <span class="tile-title" title="Total Siswa">Total Siswa</span>
+                                            <div class="tile-icon secondary"><i class="fas fa-users"></i></div>
                                         </div>
+                                        <div class="tile-value text-dark"><?= $jml_siswa ?></div>
                                     </div>
                                 </div>
                                 <div class="col-6 mb-3">
                                     <div class="app-stat-tile">
-                                        <div class="tile-icon success"><i class="fas fa-check-circle"></i></div>
-                                        <div class="overflow-hidden">
-                                            <div class="tile-title">Sudah</div>
-                                            <div class="tile-value text-success"><?= $sudah_kumpul ?></div>
+                                        <div class="tile-head">
+                                            <span class="tile-title" title="Sudah Kumpul">Sudah</span>
+                                            <div class="tile-icon success"><i class="fas fa-check-circle"></i></div>
                                         </div>
+                                        <div class="tile-value text-success"><?= $sudah_kumpul ?></div>
                                     </div>
                                 </div>
                                 <div class="col-6 mb-3">
                                     <div class="app-stat-tile">
-                                        <div class="tile-icon danger"><i class="fas fa-times-circle"></i></div>
-                                        <div class="overflow-hidden">
-                                            <div class="tile-title">Belum</div>
-                                            <div class="tile-value text-danger"><?= $belum_kumpul ?></div>
+                                        <div class="tile-head">
+                                            <span class="tile-title" title="Belum Kumpul">Belum</span>
+                                            <div class="tile-icon danger"><i class="fas fa-times-circle"></i></div>
                                         </div>
+                                        <div class="tile-value text-danger"><?= $belum_kumpul ?></div>
                                     </div>
                                 </div>
                                 <div class="col-6 mb-3">
                                     <div class="app-stat-tile">
-                                        <div class="tile-icon warning"><i class="fas fa-history"></i></div>
-                                        <div class="overflow-hidden">
-                                            <div class="tile-title">Terlambat</div>
-                                            <div class="tile-value text-warning"><?= $terlambat ?></div>
+                                        <div class="tile-head">
+                                            <span class="tile-title" title="Terlambat">Terlambat</span>
+                                            <div class="tile-icon warning"><i class="fas fa-history"></i></div>
                                         </div>
+                                        <div class="tile-value text-warning"><?= $terlambat ?></div>
                                     </div>
                                 </div>
-                                <div class="col-6">
+                                <div class="col-6 mb-3">
                                     <div class="app-stat-tile">
-                                        <div class="tile-icon info"><i class="fas fa-clipboard-check"></i></div>
-                                        <div class="overflow-hidden">
-                                            <div class="tile-title"><?= in_array($tugas['jenis_tugas'], ['Kuis', 'CBT'], true) ? 'Mengerjakan' : 'Diperiksa' ?></div>
-                                            <div class="tile-value text-info"><?= $sudah_diperiksa ?></div>
+                                        <div class="tile-head">
+                                            <span class="tile-title" title="<?= in_array($tugas['jenis_tugas'], ['Kuis', 'CBT'], true) ? 'Dinilai' : 'Diperiksa' ?>">
+                                                <?= in_array($tugas['jenis_tugas'], ['Kuis', 'CBT'], true) ? 'Dinilai' : 'Diperiksa' ?>
+                                            </span>
+                                            <div class="tile-icon info"><i class="fas fa-clipboard-check"></i></div>
                                         </div>
+                                        <div class="tile-value text-info"><?= $sudah_diperiksa ?></div>
                                     </div>
                                 </div>
-                                <div class="col-6">
+                                <div class="col-6 mb-3">
                                     <div class="app-stat-tile">
-                                        <div class="tile-icon secondary"><i class="fas fa-clock"></i></div>
-                                        <div class="overflow-hidden">
-                                            <div class="tile-title"><?= in_array($tugas['jenis_tugas'], ['Kuis', 'CBT'], true) ? 'Belum Ujian' : 'Belum Dicek' ?></div>
-                                            <div class="tile-value text-muted"><?= $belum_diperiksa ?></div>
+                                        <div class="tile-head">
+                                            <span class="tile-title" title="<?= in_array($tugas['jenis_tugas'], ['Kuis', 'CBT'], true) ? 'Belum Ujian' : 'Belum Dicek' ?>">
+                                                <?= in_array($tugas['jenis_tugas'], ['Kuis', 'CBT'], true) ? 'Belum Ujian' : 'Belum Dicek' ?>
+                                            </span>
+                                            <div class="tile-icon secondary"><i class="fas fa-clock"></i></div>
                                         </div>
+                                        <div class="tile-value text-muted"><?= $belum_diperiksa ?></div>
                                     </div>
                                 </div>
                             </div>
@@ -974,31 +991,27 @@ include '../templates/sidebar.php';
                         <div class="row mb-3">
                             <div class="col-12 col-sm-6 col-lg-3 mb-2">
                                 <div class="app-stat-tile">
-                                    <div class="tile-icon primary">
-                                        <i class="fas fa-users"></i>
+                                    <div class="tile-head">
+                                        <span class="tile-title" title="Partisipasi Siswa">Partisipasi Siswa</span>
+                                        <div class="tile-icon primary"><i class="fas fa-users"></i></div>
                                     </div>
-                                    <div class="overflow-hidden flex-grow-1">
-                                        <div class="tile-title">Partisipasi Siswa</div>
-                                        <div class="tile-value text-primary">
-                                            <?= $total_responden_cbt ?> <small class="text-muted font-weight-normal" style="font-size: 12px;">/ <?= $jml_siswa ?></small>
-                                        </div>
-                                        <div class="tile-sub">
-                                            <span class="badge badge-primary py-0 px-2" style="font-size: 10px; border-radius: 10px;"><?= round(($total_responden_cbt / max(1, $jml_siswa)) * 100) ?>% Mengerjakan</span>
-                                        </div>
+                                    <div class="tile-value text-primary">
+                                        <?= $total_responden_cbt ?> <small class="text-muted font-weight-normal" style="font-size: 13px;">/ <?= $jml_siswa ?></small>
+                                    </div>
+                                    <div class="tile-sub">
+                                        <span class="badge badge-primary py-0 px-2" style="font-size: 10px; border-radius: 10px;"><?= round(($total_responden_cbt / max(1, $jml_siswa)) * 100) ?>% Mengerjakan</span>
                                     </div>
                                 </div>
                             </div>
                             <div class="col-12 col-sm-6 col-lg-3 mb-2">
                                 <div class="app-stat-tile">
-                                    <div class="tile-icon info">
-                                        <i class="fas fa-chart-line"></i>
+                                    <div class="tile-head">
+                                        <span class="tile-title" title="Rata-rata Nilai">Rata-rata Nilai</span>
+                                        <div class="tile-icon info"><i class="fas fa-chart-line"></i></div>
                                     </div>
-                                    <div class="overflow-hidden flex-grow-1">
-                                        <div class="tile-title">Rata-rata Nilai</div>
-                                        <div class="tile-value text-dark"><?= $avg_nilai_cbt ?></div>
-                                        <div class="tile-sub text-truncate">
-                                            <span class="text-muted" style="font-size: 11px;">Min: <strong><?= $min_nilai_cbt ?></strong> • Max: <strong><?= $max_nilai_cbt ?></strong></span>
-                                        </div>
+                                    <div class="tile-value text-dark"><?= $avg_nilai_cbt ?></div>
+                                    <div class="tile-sub text-truncate">
+                                        <span class="text-muted" style="font-size: 11px;">Min: <strong><?= $min_nilai_cbt ?></strong> • Max: <strong><?= $max_nilai_cbt ?></strong></span>
                                     </div>
                                 </div>
                             </div>
