@@ -595,6 +595,218 @@ include '../templates/sidebar.php';
         </div>
 
         <div class="section-body">
+            <style>
+            /* Modern Mobile App Style Cards */
+            .app-stat-tile {
+                background: #ffffff;
+                border-radius: 14px;
+                border: 1px solid #edf2f7;
+                padding: 12px 14px;
+                box-shadow: 0 2px 10px rgba(0, 0, 0, 0.03);
+                display: flex;
+                align-items: center;
+                gap: 12px;
+                transition: transform 0.18s ease, box-shadow 0.18s ease;
+                height: 100%;
+            }
+            .app-stat-tile:hover {
+                transform: translateY(-2px);
+                box-shadow: 0 6px 16px rgba(0, 0, 0, 0.06);
+            }
+            .app-stat-tile .tile-icon {
+                width: 42px;
+                height: 42px;
+                border-radius: 12px;
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                font-size: 17px;
+                flex-shrink: 0;
+            }
+            .tile-icon.primary { background: #eff6ff; color: #2563eb; }
+            .tile-icon.success { background: #ecfdf5; color: #059669; }
+            .tile-icon.danger  { background: #fef2f2; color: #dc2626; }
+            .tile-icon.warning { background: #fffbeb; color: #d97706; }
+            .tile-icon.info    { background: #f5f3ff; color: #7c3aed; }
+            .tile-icon.secondary { background: #f8fafc; color: #64748b; }
+
+            .app-stat-tile .tile-title {
+                font-size: 11px;
+                text-transform: uppercase;
+                letter-spacing: 0.4px;
+                color: #64748b;
+                font-weight: 600;
+                margin-bottom: 2px;
+                line-height: 1.2;
+            }
+            .app-stat-tile .tile-value {
+                font-size: 18px;
+                font-weight: 800;
+                color: #1e293b;
+                line-height: 1.2;
+                margin-bottom: 0;
+            }
+            .app-stat-tile .tile-sub {
+                font-size: 11px;
+                color: #94a3b8;
+                margin-top: 2px;
+            }
+
+            /* Question Analysis Mobile Card */
+            .mobile-soal-card {
+                background: #ffffff;
+                border-radius: 16px;
+                border: 1px solid #e2e8f0;
+                box-shadow: 0 4px 18px rgba(15, 23, 42, 0.05);
+                padding: 16px;
+                margin-bottom: 14px;
+                transition: all 0.2s ease;
+            }
+            .mobile-soal-card:hover {
+                box-shadow: 0 8px 24px rgba(15, 23, 42, 0.08);
+                border-color: #cbd5e1;
+            }
+            .mobile-soal-header {
+                display: flex;
+                align-items: center;
+                justify-content: space-between;
+                gap: 8px;
+                margin-bottom: 10px;
+            }
+            .soal-number-pill {
+                background: linear-gradient(135deg, #4f46e5 0%, #3b82f6 100%);
+                color: #ffffff;
+                font-size: 12px;
+                font-weight: 700;
+                padding: 4px 10px;
+                border-radius: 20px;
+                box-shadow: 0 2px 6px rgba(79, 70, 229, 0.25);
+                display: inline-flex;
+                align-items: center;
+            }
+            .soal-type-pill {
+                background: #f1f5f9;
+                color: #334155;
+                font-size: 11.5px;
+                font-weight: 600;
+                padding: 4px 10px;
+                border-radius: 20px;
+                border: 1px solid #e2e8f0;
+            }
+            .soal-text-box {
+                background: #f8fafc;
+                border-left: 3.5px solid #4f46e5;
+                padding: 10px 13px;
+                border-radius: 4px 12px 12px 4px;
+                font-size: 13.5px;
+                line-height: 1.5;
+                color: #1e293b;
+                margin-bottom: 12px;
+                font-weight: 500;
+            }
+            .soal-meta-grid {
+                display: grid;
+                grid-template-columns: repeat(auto-fit, minmax(90px, 1fr));
+                gap: 8px;
+                margin-bottom: 12px;
+            }
+            .soal-meta-item {
+                background: #ffffff;
+                border: 1px solid #f1f5f9;
+                border-radius: 10px;
+                padding: 8px 10px;
+                display: flex;
+                align-items: center;
+                gap: 8px;
+                box-shadow: 0 1px 3px rgba(0,0,0,0.02);
+            }
+            .soal-meta-item .meta-icon {
+                font-size: 15px;
+                flex-shrink: 0;
+            }
+            .soal-meta-item .meta-label {
+                font-size: 10px;
+                text-transform: uppercase;
+                font-weight: 700;
+                color: #94a3b8;
+                line-height: 1;
+            }
+            .soal-meta-item .meta-value {
+                font-size: 12.5px;
+                font-weight: 700;
+                color: #1e293b;
+                margin-top: 2px;
+                line-height: 1.2;
+            }
+            .soal-perf-box {
+                background: #f8fafc;
+                border-radius: 12px;
+                padding: 10px 12px;
+                margin-bottom: 12px;
+                border: 1px solid #edf2f7;
+            }
+            .soal-perf-bar {
+                height: 8px;
+                border-radius: 8px;
+                background: #fee2e2;
+                overflow: hidden;
+                margin: 8px 0;
+            }
+            .soal-perf-bar-fill {
+                height: 100%;
+                background: #10b981;
+                border-radius: 8px;
+                transition: width 0.4s ease;
+            }
+            .app-chip {
+                display: inline-flex;
+                align-items: center;
+                background: #ffffff;
+                border: 1px solid #e2e8f0;
+                border-radius: 8px;
+                padding: 3px 8px;
+                font-size: 11.5px;
+                gap: 5px;
+            }
+            .app-chip.active {
+                background: #ecfdf5;
+                border-color: #a7f3d0;
+                color: #065f46;
+                font-weight: 600;
+            }
+            .app-chip .chip-letter {
+                font-weight: 800;
+            }
+            .app-chip.active .chip-letter {
+                color: #059669;
+            }
+            .app-chip .chip-count {
+                color: #64748b;
+                font-size: 11px;
+            }
+            .app-chip.active .chip-count {
+                color: #047857;
+            }
+            .btn-app-detail {
+                border-radius: 12px;
+                font-weight: 600;
+                font-size: 13px;
+                padding: 9px 14px;
+                display: flex;
+                align-items: center;
+                justify-content: space-between;
+                background: #eef2ff;
+                color: #4338ca;
+                border: 1px solid #c7d2fe;
+                transition: all 0.2s ease;
+            }
+            .btn-app-detail:hover, .btn-app-detail:active {
+                background: #4338ca;
+                color: #ffffff;
+                border-color: #4338ca;
+                box-shadow: 0 4px 12px rgba(67, 56, 202, 0.25);
+            }
+            </style>
             <div class="mb-3 d-flex justify-content-between align-items-center flex-wrap" style="gap:8px;">
                 <a href="tugas.php" class="btn btn-dark btn-sm"><i class="fas fa-arrow-left mr-1"></i> Kembali ke Daftar Tugas</a>
                 <?php if (in_array($tugas['jenis_tugas'], ['Kuis', 'CBT'], true)): ?>
@@ -677,42 +889,60 @@ include '../templates/sidebar.php';
                         <div class="card-body">
                             <div class="row">
                                 <div class="col-6 mb-3">
-                                    <div class="border rounded p-3 text-center">
-                                        <div class="text-muted small">Total Siswa</div>
-                                        <h3 class="mb-0 text-dark"><?= $jml_siswa ?></h3>
+                                    <div class="app-stat-tile">
+                                        <div class="tile-icon secondary"><i class="fas fa-users"></i></div>
+                                        <div class="overflow-hidden">
+                                            <div class="tile-title">Total Siswa</div>
+                                            <div class="tile-value text-dark"><?= $jml_siswa ?></div>
+                                        </div>
                                     </div>
                                 </div>
                                 <div class="col-6 mb-3">
-                                    <div class="border rounded p-3 text-center">
-                                        <div class="text-muted small">Sudah</div>
-                                        <h3 class="mb-0 text-success"><?= $sudah_kumpul ?></h3>
+                                    <div class="app-stat-tile">
+                                        <div class="tile-icon success"><i class="fas fa-check-circle"></i></div>
+                                        <div class="overflow-hidden">
+                                            <div class="tile-title">Sudah</div>
+                                            <div class="tile-value text-success"><?= $sudah_kumpul ?></div>
+                                        </div>
                                     </div>
                                 </div>
                                 <div class="col-6 mb-3">
-                                    <div class="border rounded p-3 text-center">
-                                        <div class="text-muted small">Belum</div>
-                                        <h3 class="mb-0 text-danger"><?= $belum_kumpul ?></h3>
+                                    <div class="app-stat-tile">
+                                        <div class="tile-icon danger"><i class="fas fa-times-circle"></i></div>
+                                        <div class="overflow-hidden">
+                                            <div class="tile-title">Belum</div>
+                                            <div class="tile-value text-danger"><?= $belum_kumpul ?></div>
+                                        </div>
                                     </div>
                                 </div>
                                 <div class="col-6 mb-3">
-                                    <div class="border rounded p-3 text-center">
-                                        <div class="text-muted small">Terlambat</div>
-                                        <h3 class="mb-0 text-warning"><?= $terlambat ?></h3>
+                                    <div class="app-stat-tile">
+                                        <div class="tile-icon warning"><i class="fas fa-history"></i></div>
+                                        <div class="overflow-hidden">
+                                            <div class="tile-title">Terlambat</div>
+                                            <div class="tile-value text-warning"><?= $terlambat ?></div>
+                                        </div>
                                     </div>
                                 </div>
-                                 <div class="col-6">
-                                     <div class="border rounded p-3 text-center">
-                                         <div class="text-muted small"><?= in_array($tugas['jenis_tugas'], ['Kuis', 'CBT'], true) ? 'Sudah Mengerjakan' : 'Sudah Diperiksa' ?></div>
-                                         <h3 class="mb-0 text-info"><?= $sudah_diperiksa ?></h3>
-                                     </div>
-                                 </div>
-                                  <div class="col-6">
-                                      <div class="border rounded p-3 text-center">
-                                          <div class="text-muted small"><?= in_array($tugas['jenis_tugas'], ['Kuis', 'CBT'], true) ? 'Belum Mengerjakan' : 'Belum Diperiksa' ?></div>
-                                          <h3 class="mb-0 text-secondary"><?= $belum_diperiksa ?></h3>
-                                      </div>
-                                  </div>
-                             </div>
+                                <div class="col-6">
+                                    <div class="app-stat-tile">
+                                        <div class="tile-icon info"><i class="fas fa-clipboard-check"></i></div>
+                                        <div class="overflow-hidden">
+                                            <div class="tile-title"><?= in_array($tugas['jenis_tugas'], ['Kuis', 'CBT'], true) ? 'Mengerjakan' : 'Diperiksa' ?></div>
+                                            <div class="tile-value text-info"><?= $sudah_diperiksa ?></div>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="col-6">
+                                    <div class="app-stat-tile">
+                                        <div class="tile-icon secondary"><i class="fas fa-clock"></i></div>
+                                        <div class="overflow-hidden">
+                                            <div class="tile-title"><?= in_array($tugas['jenis_tugas'], ['Kuis', 'CBT'], true) ? 'Belum Ujian' : 'Belum Dicek' ?></div>
+                                            <div class="tile-value text-muted"><?= $belum_diperiksa ?></div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
                         </div>
                     </div>
                 </div>
@@ -740,36 +970,60 @@ include '../templates/sidebar.php';
                             <p class="text-muted small mb-0">Analisis butir soal otomatis ditampilkan setelah ada siswa yang menyelesaikan dan mengumpulkan ujian ini.</p>
                         </div>
                     <?php else: ?>
-                        <!-- Mini KPI Summary -->
+                        <!-- Mini KPI Summary - Modern Mobile App View -->
                         <div class="row mb-3">
-                            <div class="col-6 col-md-3 mb-2">
-                                <div class="border rounded p-2 text-center bg-light">
-                                    <small class="text-muted d-block">Responden</small>
-                                    <h5 class="mb-0 text-primary font-weight-bold"><?= $total_responden_cbt ?> / <?= $jml_siswa ?> <small style="font-size:11px;" class="text-muted">(<?= round(($total_responden_cbt / max(1, $jml_siswa)) * 100) ?>%)</small></h5>
+                            <div class="col-12 col-sm-6 col-lg-3 mb-2">
+                                <div class="app-stat-tile">
+                                    <div class="tile-icon primary">
+                                        <i class="fas fa-users"></i>
+                                    </div>
+                                    <div class="overflow-hidden flex-grow-1">
+                                        <div class="tile-title">Partisipasi Siswa</div>
+                                        <div class="tile-value text-primary">
+                                            <?= $total_responden_cbt ?> <small class="text-muted font-weight-normal" style="font-size: 12px;">/ <?= $jml_siswa ?></small>
+                                        </div>
+                                        <div class="tile-sub">
+                                            <span class="badge badge-primary py-0 px-2" style="font-size: 10px; border-radius: 10px;"><?= round(($total_responden_cbt / max(1, $jml_siswa)) * 100) ?>% Mengerjakan</span>
+                                        </div>
+                                    </div>
                                 </div>
                             </div>
-                            <div class="col-6 col-md-3 mb-2">
-                                <div class="border rounded p-2 text-center bg-light">
-                                    <small class="text-muted d-block">Rata-rata Nilai</small>
-                                    <h5 class="mb-0 text-dark font-weight-bold"><?= $avg_nilai_cbt ?> <small style="font-size:11px;" class="text-muted">(Min: <?= $min_nilai_cbt ?>, Max: <?= $max_nilai_cbt ?>)</small></h5>
+                            <div class="col-12 col-sm-6 col-lg-3 mb-2">
+                                <div class="app-stat-tile">
+                                    <div class="tile-icon info">
+                                        <i class="fas fa-chart-line"></i>
+                                    </div>
+                                    <div class="overflow-hidden flex-grow-1">
+                                        <div class="tile-title">Rata-rata Nilai</div>
+                                        <div class="tile-value text-dark"><?= $avg_nilai_cbt ?></div>
+                                        <div class="tile-sub text-truncate">
+                                            <span class="text-muted" style="font-size: 11px;">Min: <strong><?= $min_nilai_cbt ?></strong> • Max: <strong><?= $max_nilai_cbt ?></strong></span>
+                                        </div>
+                                    </div>
                                 </div>
                             </div>
-                            <div class="col-4 col-md-2 mb-2">
-                                <div class="border rounded p-2 text-center bg-light">
-                                    <small class="text-success font-weight-bold d-block">Mudah</small>
-                                    <h5 class="mb-0 text-success font-weight-bold"><?= $rekap_kesukaran['Mudah'] ?> <small style="font-size:11px;">Soal</small></h5>
-                                </div>
-                            </div>
-                            <div class="col-4 col-md-2 mb-2">
-                                <div class="border rounded p-2 text-center bg-light">
-                                    <small class="text-warning font-weight-bold d-block">Sedang</small>
-                                    <h5 class="mb-0 text-warning font-weight-bold"><?= $rekap_kesukaran['Sedang'] ?> <small style="font-size:11px;">Soal</small></h5>
-                                </div>
-                            </div>
-                            <div class="col-4 col-md-2 mb-2">
-                                <div class="border rounded p-2 text-center bg-light">
-                                    <small class="text-danger font-weight-bold d-block">Sukar</small>
-                                    <h5 class="mb-0 text-danger font-weight-bold"><?= $rekap_kesukaran['Sukar'] ?> <small style="font-size:11px;">Soal</small></h5>
+                            <div class="col-12 col-lg-6 mb-2">
+                                <div class="app-stat-tile p-2">
+                                    <div class="w-100">
+                                        <div class="d-flex justify-content-between align-items-center px-2 pt-1 mb-2">
+                                            <div class="tile-title mb-0">Tingkat Kesukaran Soal</div>
+                                            <span class="badge badge-light border text-muted py-0 px-2" style="font-size: 10.5px;">Total <?= count($soal_list) ?> Soal</span>
+                                        </div>
+                                        <div class="d-flex justify-content-around align-items-center text-center">
+                                            <div class="px-2 py-1 rounded" style="background: #ecfdf5; flex: 1; margin: 0 3px;">
+                                                <small class="text-success font-weight-bold d-block" style="font-size: 11px;"><i class="fas fa-smile mr-1"></i>Mudah</small>
+                                                <div class="font-weight-bold text-success" style="font-size: 16px;"><?= $rekap_kesukaran['Mudah'] ?> <small style="font-size: 11px; font-weight: normal;">soal</small></div>
+                                            </div>
+                                            <div class="px-2 py-1 rounded" style="background: #fffbeb; flex: 1; margin: 0 3px;">
+                                                <small class="text-warning font-weight-bold d-block" style="font-size: 11px;"><i class="fas fa-meh mr-1"></i>Sedang</small>
+                                                <div class="font-weight-bold text-warning" style="font-size: 16px;"><?= $rekap_kesukaran['Sedang'] ?> <small style="font-size: 11px; font-weight: normal;">soal</small></div>
+                                            </div>
+                                            <div class="px-2 py-1 rounded" style="background: #fef2f2; flex: 1; margin: 0 3px;">
+                                                <small class="text-danger font-weight-bold d-block" style="font-size: 11px;"><i class="fas fa-fire mr-1"></i>Sukar</small>
+                                                <div class="font-weight-bold text-danger" style="font-size: 16px;"><?= $rekap_kesukaran['Sukar'] ?> <small style="font-size: 11px; font-weight: normal;">soal</small></div>
+                                            </div>
+                                        </div>
+                                    </div>
                                 </div>
                             </div>
                         </div>
@@ -853,35 +1107,67 @@ include '../templates/sidebar.php';
                             </table>
                         </div>
 
-                        <!-- Mobile View: Cards Analisis Soal -->
+                        <!-- Mobile View: Cards Analisis Soal (Modern Mobile App UI) -->
                         <div class="d-md-none">
-                            <div class="d-flex flex-column" style="gap: 10px;">
+                            <div class="d-flex flex-column" style="gap: 12px;">
                                 <?php foreach ($analisis_soal as $item): ?>
-                                <div class="card mb-2 border shadow-sm" style="border-radius: 12px;">
-                                    <div class="card-body p-3">
-                                        <div class="d-flex justify-content-between align-items-center mb-2">
-                                            <div class="d-flex align-items-center" style="gap:6px;">
-                                                <span class="badge badge-primary font-weight-bold">Soal #<?= $item['no'] ?></span>
-                                                <span class="badge badge-light border"><?= htmlspecialchars($item['tipe_soal']) ?></span>
-                                            </div>
-                                            <span class="badge <?= $item['kesukaran_badge'] ?>"><?= $item['kesukaran_label'] ?> (P=<?= number_format($item['p_val'], 2) ?>)</span>
+                                <div class="mobile-soal-card">
+                                    <div class="mobile-soal-header">
+                                        <div class="d-flex align-items-center" style="gap: 6px;">
+                                            <span class="soal-number-pill"><i class="fas fa-hashtag mr-1" style="font-size: 10px;"></i><?= $item['no'] ?></span>
+                                            <span class="soal-type-pill"><?= htmlspecialchars($item['tipe_soal']) ?></span>
                                         </div>
-                                        <p class="text-dark font-weight-normal mb-2" style="font-size: 13.5px; line-height: 1.4;">
-                                            <?= htmlspecialchars(strip_tags($item['pertanyaan'])) ?>
-                                        </p>
-                                        <div class="bg-light p-2 rounded mb-2" style="font-size: 12px;">
-                                            <div class="d-flex justify-content-between mb-1">
-                                                <span>Kunci: <strong class="text-success"><?= htmlspecialchars($item['kunci_jawaban']) ?></strong></span>
-                                                <span>Bobot: <strong><?= (int)$item['bobot'] ?></strong></span>
-                                            </div>
-                                            <div class="d-flex justify-content-between">
-                                                <span class="text-success font-weight-bold"><i class="fas fa-check mr-1"></i>Benar: <?= $item['jml_benar'] ?> (<?= $item['pct_benar'] ?>%)</span>
-                                                <span class="text-danger font-weight-bold"><i class="fas fa-times mr-1"></i>Salah: <?= $item['jml_salah'] ?> (<?= $item['pct_salah'] ?>%)</span>
+                                        <span class="badge <?= $item['kesukaran_badge'] ?> py-1 px-2" style="border-radius: 14px; font-size: 11px;">
+                                            <?= $item['kesukaran_label'] ?> (P=<?= number_format($item['p_val'], 2) ?>)
+                                        </span>
+                                    </div>
+
+                                    <div class="soal-text-box">
+                                        <?= htmlspecialchars(strip_tags($item['pertanyaan'])) ?>
+                                    </div>
+
+                                    <div class="soal-meta-grid">
+                                        <div class="soal-meta-item">
+                                            <div class="meta-icon text-success"><i class="fas fa-key"></i></div>
+                                            <div>
+                                                <div class="meta-label">Kunci</div>
+                                                <div class="meta-value text-success"><?= htmlspecialchars($item['kunci_jawaban']) ?></div>
                                             </div>
                                         </div>
-                                        <?php if ($item['tipe_soal'] !== 'Essay'): ?>
-                                            <div class="d-flex flex-wrap align-items-center mb-2" style="gap:4px; font-size:11px;">
-                                                <span class="text-muted mr-1">Distribusi:</span>
+                                        <div class="soal-meta-item">
+                                            <div class="meta-icon text-primary"><i class="fas fa-award"></i></div>
+                                            <div>
+                                                <div class="meta-label">Bobot</div>
+                                                <div class="meta-value"><?= (int)$item['bobot'] ?> Poin</div>
+                                            </div>
+                                        </div>
+                                        <?php if ($item['d_val'] !== null): ?>
+                                        <div class="soal-meta-item">
+                                            <div class="meta-icon text-info"><i class="fas fa-balance-scale"></i></div>
+                                            <div>
+                                                <div class="meta-label">Pembeda</div>
+                                                <div class="meta-value <?= $item['d_badge'] === 'badge-success' ? 'text-success' : ($item['d_badge'] === 'badge-danger' ? 'text-danger' : 'text-dark') ?>" style="font-size: 11px;">
+                                                    <?= $item['d_label'] ?> (<?= number_format($item['d_val'], 2) ?>)
+                                                </div>
+                                            </div>
+                                        </div>
+                                        <?php endif; ?>
+                                    </div>
+
+                                    <div class="soal-perf-box">
+                                        <div class="d-flex justify-content-between align-items-center mb-1" style="font-size: 12px;">
+                                            <span class="text-success font-weight-bold"><i class="fas fa-check-circle mr-1"></i>Benar: <?= $item['jml_benar'] ?> <small class="text-muted">(<?= $item['pct_benar'] ?>%)</small></span>
+                                            <span class="text-danger font-weight-bold"><i class="fas fa-times-circle mr-1"></i>Salah: <?= $item['jml_salah'] ?> <small class="text-muted">(<?= $item['pct_salah'] ?>%)</small></span>
+                                        </div>
+                                        <div class="soal-perf-bar">
+                                            <div class="soal-perf-bar-fill" style="width: <?= $item['pct_benar'] ?>%;"></div>
+                                        </div>
+                                    </div>
+
+                                    <?php if ($item['tipe_soal'] !== 'Essay'): ?>
+                                        <div class="mb-3">
+                                            <div class="text-muted small font-weight-bold mb-1" style="font-size: 10.5px; letter-spacing: 0.3px;">DISTRIBUSI OPSI:</div>
+                                            <div class="d-flex flex-wrap" style="gap: 5px;">
                                                 <?php 
                                                 $kunci_opts = array_map('trim', explode(',', strtoupper($item['kunci_jawaban'])));
                                                 foreach (['A', 'B', 'C', 'D', 'E'] as $opt_k): 
@@ -889,19 +1175,22 @@ include '../templates/sidebar.php';
                                                         $is_k = in_array($opt_k, $kunci_opts, true);
                                                         $cnt = $item['distribusi'][$opt_k] ?? 0;
                                                 ?>
-                                                    <span class="badge <?= $is_k ? 'badge-success' : 'badge-light border' ?>">
-                                                        <?= $opt_k ?>: <?= $cnt ?><?= $is_k ? '✓' : '' ?>
-                                                    </span>
+                                                    <div class="app-chip <?= $is_k ? 'active' : '' ?>">
+                                                        <span class="chip-letter"><?= $opt_k ?><?= $is_k ? '✓' : '' ?></span>
+                                                        <span class="chip-count"><?= $cnt ?> siswa</span>
+                                                    </div>
                                                 <?php 
                                                     endif;
                                                 endforeach; 
                                                 ?>
                                             </div>
-                                        <?php endif; ?>
-                                        <button type="button" class="btn btn-outline-info btn-sm btn-block btn-detail-analisis" data-json='<?= htmlspecialchars(json_encode($item), ENT_QUOTES, 'UTF-8') ?>'>
-                                            <i class="fas fa-search-plus mr-1"></i> Detail Analisis Butir Soal
-                                        </button>
-                                    </div>
+                                        </div>
+                                    <?php endif; ?>
+
+                                    <button type="button" class="btn btn-app-detail w-100 btn-detail-analisis" data-json='<?= htmlspecialchars(json_encode($item), ENT_QUOTES, 'UTF-8') ?>'>
+                                        <span><i class="fas fa-chart-pie mr-2 text-primary"></i>Detail Analisis Butir Soal</span>
+                                        <i class="fas fa-chevron-right text-muted" style="font-size: 12px;"></i>
+                                    </button>
                                 </div>
                                 <?php endforeach; ?>
                             </div>
