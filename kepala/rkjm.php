@@ -627,7 +627,7 @@ include '../templates/sidebar.php';
         <div class="modal-content rkjm-modal">
             <form id="monitoringForm">
                 <div class="modal-header">
-                    <h5 class="modal-title">Catat Monitoring dan Evaluasi</h5>
+                    <h5 class="modal-title" id="monitoringModalTitle">Catat Monitoring dan Evaluasi</h5>
                     <button type="button" class="close" data-dismiss="modal" aria-label="Tutup"><span aria-hidden="true">&times;</span></button>
                 </div>
                 <div class="modal-body">
@@ -641,6 +641,7 @@ include '../templates/sidebar.php';
                                 <?php endforeach; ?>
                             </select>
                         </div>
+                        <div class="col-md-4 mb-2"><label>Tanggal Pelaksanaan</label><input type="date" class="form-control" name="tanggal_pelaksanaan"></div>
                         <div class="col-md-4 mb-2"><label>Status Pelaksanaan</label>
                             <select class="form-control" name="status_pelaksanaan">
                                 <?php foreach ($prog_status_opts as $k => $v): ?>
@@ -648,7 +649,6 @@ include '../templates/sidebar.php';
                                 <?php endforeach; ?>
                             </select>
                         </div>
-                        <div class="col-md-4 mb-2"><label>Tanggal Evaluasi</label><input type="date" class="form-control" name="tanggal_evaluasi"></div>
                         <div class="col-md-6 mb-2"><label>Target Tahun Berjalan</label><textarea class="form-control" name="target_tahun_berjalan" rows="2"></textarea></div>
                         <div class="col-md-6 mb-2"><label>Realisasi</label><textarea class="form-control" name="realisasi" rows="2"></textarea></div>
                         <div class="col-md-4 mb-2"><label>Persentase Capaian (%)</label><input type="number" step="0.01" min="0" max="100" class="form-control" name="persentase_capaian" placeholder="Kosongkan jika kualitatif"></div>
@@ -658,9 +658,11 @@ include '../templates/sidebar.php';
                                 <option>Sangat Baik</option><option>Baik</option><option>Cukup</option><option>Kurang</option>
                             </select>
                         </div>
-                        <div class="col-md-4 mb-2"><label>Petugas Evaluasi</label><input type="text" class="form-control" name="petugas_evaluasi"></div>
+                        <div class="col-md-4 mb-2"><label>Realisasi Biaya (Rp)</label><input type="number" step="1" min="0" class="form-control" name="realisasi_biaya" placeholder="Kosongkan jika tidak ada"></div>
                         <div class="col-md-6 mb-2"><label>Kendala</label><textarea class="form-control" name="kendala" rows="2"></textarea></div>
                         <div class="col-md-6 mb-2"><label>Tindak Lanjut</label><textarea class="form-control" name="tindak_lanjut" rows="2"></textarea></div>
+                        <div class="col-md-6 mb-2"><label>Petugas Evaluasi</label><input type="text" class="form-control" name="petugas_evaluasi"></div>
+                        <div class="col-md-6 mb-2"><label>Tanggal Evaluasi</label><input type="date" class="form-control" name="tanggal_evaluasi"></div>
                         <div class="col-12 mb-2"><label>Catatan Evaluasi</label><textarea class="form-control" name="catatan_evaluasi" rows="2"></textarea></div>
                     </div>
                 </div>
@@ -920,6 +922,7 @@ include '../templates/sidebar.php';
 
         // Detail
         var currentDetailId = 0;
+        var lastDetail = null;
         $(document).on('click', '.btn-rkjm-detail', function(){
             currentDetailId = $(this).data('id');
             $('#detailBody').html('<div class="text-center text-muted py-4"><i class="fas fa-spinner fa-spin mr-2"></i>Memuat...</div>');
@@ -937,6 +940,7 @@ include '../templates/sidebar.php';
         });
 
         function esc(s){ return $('<div>').text(s === null || s === undefined ? '' : s).html(); }
+        function fmtDateIndo(s){ if (!s) return ''; var p = String(s).split('-'); return p.length === 3 ? p[2]+'/'+p[1]+'/'+p[0] : s; }
         function row(label, val){ return '<tr><th style="width:32%;vertical-align:top">'+label+'</th><td style="white-space:pre-line">'+esc(val || '-')+'</td></tr>'; }
 
         function renderDetail(d){
@@ -966,26 +970,44 @@ include '../templates/sidebar.php';
             });
             html += '</tbody></table></div>';
 
-            html += '<div class="d-flex justify-content-between align-items-center mt-3"><h6 class="font-weight-bold mb-0">Monitoring & Evaluasi</h6>';
-            html += '<button type="button" class="btn btn-sm btn-primary" id="btn-add-monitoring" data-id="'+d.id+'"><i class="fas fa-plus mr-1"></i>Catat</button></div>';
-            html += '<div class="table-responsive mt-2"><table class="table table-sm table-bordered"><thead><tr><th>Tahun</th><th>Status</th><th>Capaian</th><th>Realisasi</th><th>Kendala</th><th>Tindak Lanjut</th><th></th></tr></thead><tbody>';
-            if (!d.monitoring || !d.monitoring.length) { html += '<tr><td colspan="7" class="text-center text-muted">Belum ada catatan monitoring.</td></tr>'; }
-            (d.monitoring||[]).forEach(function(m){
-                var cap = m.persentase_capaian !== null && m.persentase_capaian !== undefined && m.persentase_capaian !== '' ? (m.persentase_capaian+'%') : (m.penilaian_kualitatif || '-');
-                html += '<tr><td>'+esc(m.tahun_kalender||'-')+'</td><td>'+esc(m.status_label||'-')+'</td><td>'+esc(cap)+'</td><td style="white-space:pre-line">'+esc(m.realisasi||'-')+'</td><td style="white-space:pre-line">'+esc(m.kendala||'-')+'</td><td style="white-space:pre-line">'+esc(m.tindak_lanjut||'-')+'</td><td class="text-nowrap">'+(RKJM.editable ? '<button type="button" class="btn btn-warning btn-sm px-2 mr-1 btn-mon-edit" data-id="'+esc(m.id)+'" title="Edit"><i class="fas fa-edit"></i></button> <button type="button" class="btn btn-danger btn-sm px-2 btn-mon-delete" data-id="'+esc(m.id)+'" title="Hapus"><i class="fas fa-trash"></i></button>' : '')+'</td></tr>';
+            html += '<div class="d-flex justify-content-between align-items-center mt-3 mb-2">';
+            html += '<h6 class="font-weight-bold mb-0">Monitoring dan Evaluasi</h6>';
+            html += (RKJM.editable ? '<button type="button" class="btn btn-sm btn-info" id="btn-add-monitoring" data-id="'+d.id+'"><i class="fas fa-plus mr-1"></i>Catat Monitoring Program</button>' : '');
+            html += '</div>';
+            html += '<div class="table-responsive"><table class="table table-sm table-bordered"><thead><tr>';
+            html += '<th>Tanggal</th><th>Tahun</th><th>Status</th><th>Target</th><th>Realisasi</th><th>Capaian</th><th>Biaya</th><th>Kendala</th><th>Tindak Lanjut</th>';
+            html += (RKJM.editable ? '<th></th>' : '');
+            html += '</tr></thead><tbody>';
+            if (!d.monitoring || !d.monitoring.length) {
+                var cols = RKJM.editable ? 10 : 9;
+                html += '<tr><td colspan="'+cols+'" class="text-center text-muted">Belum ada catatan monitoring.</td></tr>';
+            }
+            (d.monitoring || []).forEach(function(m){
+                var cap = (m.persentase_capaian !== null && m.persentase_capaian !== undefined && m.persentase_capaian !== '') ? (m.persentase_capaian + '%') : (m.penilaian_kualitatif || '-');
+                var tgl = m.tanggal_pelaksanaan ? fmtDateIndo(m.tanggal_pelaksanaan) : (m.tanggal_evaluasi ? fmtDateIndo(m.tanggal_evaluasi) : '-');
+                html += '<tr>';
+                html += '<td><small>'+esc(tgl)+'</small></td>';
+                html += '<td><small>'+esc(m.tahun_kalender || '-')+'</small></td>';
+                html += '<td><small>'+esc(m.status_label || '-')+'</small></td>';
+                html += '<td style="white-space:pre-line">'+esc(m.target_tahun_berjalan || '-')+'</td>';
+                html += '<td style="white-space:pre-line">'+esc(m.realisasi || '-')+'</td>';
+                html += '<td>'+esc(cap)+'</td>';
+                html += '<td class="text-nowrap">'+ (m.realisasi_biaya ? 'Rp ' + fmtRupiahValue(m.realisasi_biaya) : '-') +'</td>';
+                html += '<td style="white-space:pre-line">'+esc(m.kendala || '-')+'</td>';
+                html += '<td style="white-space:pre-line">'+esc(m.tindak_lanjut || '-')+'</td>';
+                if (RKJM.editable) {
+                    html += '<td class="text-nowrap">';
+                    html += '<button type="button" class="btn btn-warning btn-sm px-2 mr-1 btn-mon-edit" data-id="'+m.id+'" title="Edit"><i class="fas fa-edit"></i></button>';
+                    html += '<button type="button" class="btn btn-danger btn-sm px-2 btn-mon-delete" data-id="'+m.id+'" title="Hapus"><i class="fas fa-trash"></i></button>';
+                    html += '</td>';
+                }
+                html += '</tr>';
             });
             html += '</tbody></table></div>';
             $('#detailBody').html(html);
         }
 
         // Monitoring
-        $(document).on('click', '#btn-add-monitoring', function(){
-            var pid = $(this).data('id');
-            $('#monitoringForm')[0].reset();
-            $('#monitoringForm').find('[name=id]').val(0).end().find('[name=program_id]').val(pid);
-            $('#monitoringModal').modal('show');
-        });
-        var lastDetail = null;
         $(document).on('click', '.btn-mon-edit', function(){
             if (!lastDetail) return;
             var mid = parseInt($(this).data('id'), 10);
@@ -997,11 +1019,21 @@ include '../templates/sidebar.php';
             f.find('[name=id]').val(m.id);
             f.find('[name=program_id]').val(m.program_id);
             f.find('[name=tahun_kalender]').val(m.tahun_kalender || '');
+            f.find('[name=tanggal_pelaksanaan]').val(m.tanggal_pelaksanaan || '');
             f.find('[name=status_pelaksanaan]').val(m.status_pelaksanaan || 'belum_dimulai');
             f.find('[name=tanggal_evaluasi]').val(m.tanggal_evaluasi || '');
             ['target_tahun_berjalan','realisasi','kendala','tindak_lanjut','petugas_evaluasi','catatan_evaluasi'].forEach(function(k){ f.find('[name='+k+']').val(m[k] || ''); });
+            f.find('[name=realisasi_biaya]').val(m.realisasi_biaya ? fmtRupiahValue(m.realisasi_biaya) : '');
             f.find('[name=persentase_capaian]').val(m.persentase_capaian !== null ? m.persentase_capaian : '');
             f.find('[name=penilaian_kualitatif]').val(m.penilaian_kualitatif || '');
+            $('#monitoringModalTitle').text('Edit Monitoring');
+            $('#monitoringModal').modal('show');
+        });
+        $(document).on('click', '#btn-add-monitoring', function(){
+            var pid = $(this).data('id');
+            $('#monitoringForm')[0].reset();
+            $('#monitoringForm').find('[name=id]').val(0).end().find('[name=program_id]').val(pid);
+            $('#monitoringModalTitle').text('Catat Monitoring');
             $('#monitoringModal').modal('show');
         });
         $('#monitoringForm').on('submit', function(e){

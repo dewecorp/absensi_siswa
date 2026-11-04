@@ -280,6 +280,49 @@ try {
             $row['targets'] = $targets;
             $row['monitoring'] = $monitoring;
             $row['years'] = $years;
+
+            // Ambil monitoring RKT yang terhubung ke program RKJM ini
+            $rktMon = $pdo->prepare("
+                SELECT
+                    rd.tahun          AS rkt_tahun,
+                    rp.nama_program   AS rkt_nama_program,
+                    rp.id             AS rkt_program_id,
+                    m.id              AS id,
+                    m.tanggal_pelaksanaan,
+                    m.status_pelaksanaan,
+                    m.target,
+                    m.realisasi,
+                    m.persentase_capaian,
+                    m.penilaian_kualitatif,
+                    m.realisasi_biaya,
+                    m.kendala,
+                    m.tindak_lanjut,
+                    m.output_aktual,
+                    m.petugas_evaluasi,
+                    m.catatan_evaluasi,
+                    a.nama_kegiatan
+                FROM rkt_monitoring m
+                INNER JOIN rkt_programs rp ON rp.id = m.program_id
+                INNER JOIN rkt_documents rd ON rd.id = rp.document_id
+                LEFT  JOIN rkt_activities a ON a.id = m.activity_id
+                WHERE rp.rkjm_program_id = ?
+                ORDER BY rd.tahun ASC, m.tanggal_pelaksanaan DESC, m.id DESC
+            ");
+            $rktMon->execute([$id]);
+            $rktMonData = $rktMon->fetchAll(PDO::FETCH_ASSOC);
+            $rktLabels = [
+                'belum_dimulai'    => 'Belum Dimulai',
+                'berjalan'         => 'Berjalan',
+                'selesai'          => 'Selesai',
+                'tertunda'         => 'Tertunda',
+                'tidak_terlaksana' => 'Tidak Terlaksana',
+            ];
+            foreach ($rktMonData as &$rm) {
+                $rm['status_label'] = $rktLabels[$rm['status_pelaksanaan']] ?? $rm['status_pelaksanaan'];
+            }
+            unset($rm);
+            $row['rkt_monitoring'] = $rktMonData;
+
             rkjmJson(['success' => true, 'data' => $row]);
         }
 
@@ -400,6 +443,7 @@ try {
             if ($added === 0) {
                 rkjmJson(['success' => false, 'message' => 'Semua template yang dipilih sudah ada pada RKJM ini (' . $skipped . ' duplikat).']);
             }
+            rkjmSeedMonitoringExamples($pdo);
             logActivity($pdo, $userId, 'Terapkan Template RKJM', $added . ' program ditambahkan');
             rkjmJson(['success' => true, 'message' => $added . ' program ditambahkan.', 'added' => $added, 'skipped' => $skipped]);
         }
@@ -421,19 +465,24 @@ try {
                 $pct = max(0, min(100, (float)$pctRaw));
             }
             $tahun = (int)($_POST['tahun_kalender'] ?? 0) ?: null;
-            $tgl = trim((string)($_POST['tanggal_evaluasi'] ?? '')) ?: null;
+            $tglPelaksanaan = trim((string)($_POST['tanggal_pelaksanaan'] ?? '')) ?: null;
+            $tglEvaluasi = trim((string)($_POST['tanggal_evaluasi'] ?? '')) ?: null;
+            $realisasiBiayaRaw = trim((string)($_POST['realisasi_biaya'] ?? ''));
+            $realisasiBiaya = $realisasiBiayaRaw !== '' ? max(0, (float)$realisasiBiayaRaw) : null;
             $data = [
-                'tahun_kalender' => $tahun,
-                'target_tahun_berjalan' => trim((string)($_POST['target_tahun_berjalan'] ?? '')),
-                'realisasi' => trim((string)($_POST['realisasi'] ?? '')),
-                'persentase_capaian' => $pct,
+                'tahun_kalender'       => $tahun,
+                'tanggal_pelaksanaan'  => $tglPelaksanaan,
+                'target_tahun_berjalan'=> trim((string)($_POST['target_tahun_berjalan'] ?? '')),
+                'realisasi'            => trim((string)($_POST['realisasi'] ?? '')),
+                'persentase_capaian'   => $pct,
                 'penilaian_kualitatif' => trim((string)($_POST['penilaian_kualitatif'] ?? '')) ?: null,
-                'status_pelaksanaan' => $status,
-                'kendala' => trim((string)($_POST['kendala'] ?? '')),
-                'tindak_lanjut' => trim((string)($_POST['tindak_lanjut'] ?? '')),
-                'tanggal_evaluasi' => $tgl,
-                'petugas_evaluasi' => trim((string)($_POST['petugas_evaluasi'] ?? '')),
-                'catatan_evaluasi' => trim((string)($_POST['catatan_evaluasi'] ?? '')),
+                'status_pelaksanaan'   => $status,
+                'kendala'              => trim((string)($_POST['kendala'] ?? '')),
+                'tindak_lanjut'        => trim((string)($_POST['tindak_lanjut'] ?? '')),
+                'realisasi_biaya'      => $realisasiBiaya,
+                'tanggal_evaluasi'     => $tglEvaluasi,
+                'petugas_evaluasi'     => trim((string)($_POST['petugas_evaluasi'] ?? '')),
+                'catatan_evaluasi'     => trim((string)($_POST['catatan_evaluasi'] ?? '')),
             ];
 
             $pdo->beginTransaction();
