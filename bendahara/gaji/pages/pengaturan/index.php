@@ -67,7 +67,7 @@ if ($savedTahunAjaran !== '' && !in_array($savedTahunAjaran, $tahunAjaranOptions
                                     <?php echo csrfField(); ?>
                                     
                                     <!-- Periode & Tahun Ajaran -->
-                                    <h6 class="section-title mb-3 mt-4" style="color: #667eea; font-weight: 600; border-bottom: 2px solid #667eea; padding-bottom: 8px;">
+                                    <h6 class="mb-3 mt-4" style="color: #667eea; font-weight: 600; border-bottom: 2px solid #667eea; padding-bottom: 8px;">
                                         <i class="fas fa-calendar-alt"></i> Periode & Tahun Ajaran
                                     </h6>
                                     <div class="row mb-4">
@@ -120,13 +120,13 @@ if ($savedTahunAjaran !== '' && !in_array($savedTahunAjaran, $tahunAjaranOptions
                                     </div>
                                     
                                     <!-- Pengaturan Keuangan -->
-                                    <h6 class="section-title mb-3 mt-4" style="color: #667eea; font-weight: 600; border-bottom: 2px solid #667eea; padding-bottom: 8px;">
+                                    <h6 class="mb-3 mt-4" style="color: #667eea; font-weight: 600; border-bottom: 2px solid #667eea; padding-bottom: 8px;">
                                         <i class="fas fa-money-bill-wave"></i> Pengaturan Keuangan
                                     </h6>
                                     <div class="row mb-4">
                                         <div class="col-md-6">
                                             <div class="form-group">
-                                                <label><strong>Jumlah Honor Per Jam</strong></label>
+                                                 <label><strong>Jumlah Honor Per Jam</strong></label>
                                                 <div class="input-group">
                                                     <div class="input-group-prepend">
                                                         <span class="input-group-text">Rp</span>
@@ -140,7 +140,7 @@ if ($savedTahunAjaran !== '' && !in_array($savedTahunAjaran, $tahunAjaranOptions
                                     </div>
                                     
                                     <!-- Pengaturan Slip Gaji -->
-                                    <h6 class="section-title mb-3 mt-4" style="color: #667eea; font-weight: 600; border-bottom: 2px solid #667eea; padding-bottom: 8px;">
+                                    <h6 class="mb-3 mt-4" style="color: #667eea; font-weight: 600; border-bottom: 2px solid #667eea; padding-bottom: 8px;">
                                         <i class="fas fa-file-invoice"></i> Pengaturan Slip Gaji
                                     </h6>
                                     <div class="row mb-4">
