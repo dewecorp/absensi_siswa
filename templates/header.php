@@ -400,8 +400,49 @@ if (getUserLevel() === 'siswa' && isset($_SESSION['user_id'])) {
         .section-title,
         label,
         p,
-        .main-content span:not(.badge):not(.pres-badge-tingkat):not(.pres-chip-count):not(.jam-slot-tag) {
+        .main-content span:not(.badge):not(.pres-badge-tingkat):not(.pres-chip-count):not(.jam-slot-tag):not(.btn span):not(.btn *):not(.dt-button span):not(.dt-button *) {
             color: #0f172a;
+        }
+
+        /* Enforce white text across all solid/colored buttons in Stisla/SIMAD */
+        .btn:not(.btn-outline-primary):not(.btn-outline-secondary):not(.btn-outline-success):not(.btn-outline-danger):not(.btn-outline-warning):not(.btn-outline-info):not(.btn-outline-dark):not(.btn-outline-light):not(.btn-link),
+        .btn:not(.btn-outline-primary):not(.btn-outline-secondary):not(.btn-outline-success):not(.btn-outline-danger):not(.btn-outline-warning):not(.btn-outline-info):not(.btn-outline-dark):not(.btn-outline-light):not(.btn-link) *,
+        .btn:not(.btn-outline-primary):not(.btn-outline-secondary):not(.btn-outline-success):not(.btn-outline-danger):not(.btn-outline-warning):not(.btn-outline-info):not(.btn-outline-dark):not(.btn-outline-light):not(.btn-link) i,
+        .btn:not(.btn-outline-primary):not(.btn-outline-secondary):not(.btn-outline-success):not(.btn-outline-danger):not(.btn-outline-warning):not(.btn-outline-info):not(.btn-outline-dark):not(.btn-outline-light):not(.btn-link) span,
+        .btn-primary,
+        .btn-primary *,
+        .btn-success,
+        .btn-success *,
+        .btn-danger,
+        .btn-danger *,
+        .btn-warning,
+        .btn-warning *,
+        .btn-info,
+        .btn-info *,
+        .btn-dark,
+        .btn-dark *,
+        .dt-button,
+        .dt-button * {
+            color: #ffffff !important;
+        }
+
+        .btn:not(.btn-outline-primary):not(.btn-outline-secondary):not(.btn-outline-success):not(.btn-outline-danger):not(.btn-outline-warning):not(.btn-outline-info):not(.btn-outline-dark):not(.btn-outline-light):not(.btn-link):hover,
+        .btn:not(.btn-outline-primary):not(.btn-outline-secondary):not(.btn-outline-success):not(.btn-outline-danger):not(.btn-outline-warning):not(.btn-outline-info):not(.btn-outline-dark):not(.btn-outline-light):not(.btn-link):hover *,
+        .btn-primary:hover,
+        .btn-primary:hover *,
+        .btn-success:hover,
+        .btn-success:hover *,
+        .btn-danger:hover,
+        .btn-danger:hover *,
+        .btn-warning:hover,
+        .btn-warning:hover *,
+        .btn-info:hover,
+        .btn-info:hover *,
+        .btn-dark:hover,
+        .btn-dark:hover *,
+        .dt-button:hover,
+        .dt-button:hover * {
+            color: #ffffff !important;
         }
 
         /* Enforce dark high contrast text on statistic widgets */

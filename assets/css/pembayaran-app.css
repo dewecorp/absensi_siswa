@@ -129,22 +129,41 @@
 
 /* ---------- Buttons ---------- */
 .pembayaran-app .btn {
-    border-radius: 12px;
-    font-weight: 700;
+    border-radius: 4px;
+    font-weight: 600;
     padding: .5rem .9rem;
     display: inline-flex;
     align-items: center;
     justify-content: center;
     gap: 6px;
+    color: #fff !important;
 }
 
-.pembayaran-app .btn-sm {
-    border-radius: 10px;
-    padding: .35rem .7rem;
+.pembayaran-app .btn * {
+    color: #fff !important;
 }
 
 .pembayaran-app .btn i {
     font-size: .85em;
+    color: #fff !important;
+}
+
+.pembayaran-app .btn span {
+    color: #fff !important;
+}
+
+.pembayaran-app .btn:hover,
+.pembayaran-app .btn:hover *,
+.pembayaran-app .btn:focus,
+.pembayaran-app .btn:focus *,
+.pembayaran-app .btn:active,
+.pembayaran-app .btn:active * {
+    color: #fff !important;
+}
+
+.pembayaran-app .btn-sm {
+    border-radius: 3px;
+    padding: .35rem .7rem;
 }
 
 .pembayaran-app .btn:active {

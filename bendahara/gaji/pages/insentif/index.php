@@ -153,12 +153,14 @@ foreach ($legger_detail_rows as $row) {
                                                         </span>
                                                     </td>
                                                     <td>
-                                                        <button class="btn btn-sm btn-info btn-edit-insentif" data-id="<?php echo $i['id']; ?>" data-toggle="tooltip" title="Edit">
-                                                            <i class="fas fa-edit"></i>
-                                                        </button>
-                                                        <button class="btn btn-sm btn-danger" onclick="confirmDelete('<?php echo BASE_URL; ?>pages/insentif/delete?id=<?php echo $i['id']; ?>')" data-toggle="tooltip" title="Hapus">
-                                                            <i class="fas fa-trash"></i>
-                                                        </button>
+                                                        <div class="table-actions-stisla">
+                                                            <button class="btn btn-sm btn-warning btn-edit-insentif" data-id="<?php echo $i['id']; ?>" data-toggle="tooltip" title="Edit">
+                                                                <i class="fas fa-edit"></i>
+                                                            </button>
+                                                            <button class="btn btn-sm btn-danger" onclick="confirmDelete('<?php echo BASE_URL; ?>pages/insentif/delete?id=<?php echo $i['id']; ?>')" data-toggle="tooltip" title="Hapus">
+                                                                <i class="fas fa-trash"></i>
+                                                            </button>
+                                                        </div>
                                                     </td>
                                                 </tr>
                                             <?php endforeach; ?>
@@ -791,9 +793,18 @@ function editInsentif(id) {
             if ($.fn.DataTable.isDataTable('#tableInsentif')) {
                 $('#tableInsentif').DataTable().destroy();
             }
+            if ($.fn.dataTable && $.fn.dataTable.Buttons) {
+                $.fn.dataTable.Buttons.defaults.dom.button.className = 'btn btn-sm';
+            }
             var table = $('#tableInsentif').DataTable({
                 dom: 'Bfrtip',
-                buttons: [
+                buttons: {
+                    dom: {
+                        button: {
+                            className: 'btn btn-sm'
+                        }
+                    },
+                    buttons: [
                     {
                         extend: 'excel',
                         text: '<i class="fas fa-file-excel"></i> Excel',
@@ -872,7 +883,8 @@ function editInsentif(id) {
                             } catch (e) {}
                         }
                     }
-                ],
+                    ]
+                },
                 language: { url: 'https://cdn.datatables.net/plug-ins/1.11.5/i18n/id.json' },
                 order: [[1, 'asc']],
                 stateSave: false,
@@ -888,6 +900,7 @@ function editInsentif(id) {
                 if (buttonsContainer.parent().attr('id') !== 'tableInsentif_buttons') {
                     buttonsContainer.appendTo(targetContainer);
                 }
+                buttonsContainer.find('.btn-success, .btn-danger, .btn-info, .buttons-excel, .buttons-pdf, .buttons-print').removeClass('btn-secondary');
                 buttonsContainer.css({ display: 'flex', 'flex-wrap': 'wrap', gap: '5px' });
                 buttonsContainer.find('.dt-button').css({ margin: '0', display: 'inline-block' });
             }
@@ -907,7 +920,13 @@ function editInsentif(id) {
             }
             var table2 = $('#tableLeggerInsentif').DataTable({
                 dom: 'Bfrtip',
-                buttons: [
+                buttons: {
+                    dom: {
+                        button: {
+                            className: 'btn btn-sm'
+                        }
+                    },
+                    buttons: [
                     {
                         extend: 'excel',
                         text: '<i class="fas fa-file-excel"></i> Excel',
@@ -950,7 +969,8 @@ function editInsentif(id) {
                             } catch (e) {}
                         }
                     }
-                ],
+                    ]
+                },
                 language: { url: 'https://cdn.datatables.net/plug-ins/1.11.5/i18n/id.json' },
                 order: [[1, 'asc']],
                 stateSave: false,
@@ -966,6 +986,7 @@ function editInsentif(id) {
                 if (buttonsContainer2.parent().attr('id') !== 'tableLeggerInsentif_buttons') {
                     buttonsContainer2.appendTo(targetContainer2);
                 }
+                buttonsContainer2.find('.btn-success, .btn-danger, .btn-info, .buttons-excel, .buttons-pdf, .buttons-print').removeClass('btn-secondary');
                 buttonsContainer2.css({ display: 'flex', 'flex-wrap': 'wrap', gap: '5px' });
                 buttonsContainer2.find('.dt-button').css({ margin: '0', display: 'inline-block' });
             }

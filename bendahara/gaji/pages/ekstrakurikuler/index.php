@@ -48,12 +48,14 @@ $ekstrakurikuler = $result ? $result->fetch_all(MYSQLI_ASSOC) : [];
                                                     <td><?php echo htmlspecialchars($e['jenis_ekstrakurikuler']); ?></td>
                                                     <td><?php echo htmlspecialchars($e['waktu']); ?></td>
                                                     <td>
-                                                        <button class="btn btn-sm btn-info btn-edit" data-id="<?php echo $e['id']; ?>" onclick="editEkstrakurikuler(<?php echo $e['id']; ?>)">
-                                                            <i class="fas fa-edit"></i>
-                                                        </button>
-                                                        <button class="btn btn-sm btn-danger" onclick="confirmDelete('<?php echo BASE_URL; ?>pages/ekstrakurikuler/delete?id=<?php echo $e['id']; ?>')">
-                                                            <i class="fas fa-trash"></i>
-                                                        </button>
+                                                        <div class="table-actions-stisla">
+                                                            <button class="btn btn-sm btn-warning btn-edit" data-id="<?php echo $e['id']; ?>" onclick="editEkstrakurikuler(<?php echo $e['id']; ?>)">
+                                                                <i class="fas fa-edit"></i>
+                                                            </button>
+                                                            <button class="btn btn-sm btn-danger" onclick="confirmDelete('<?php echo BASE_URL; ?>pages/ekstrakurikuler/delete?id=<?php echo $e['id']; ?>')">
+                                                                <i class="fas fa-trash"></i>
+                                                            </button>
+                                                        </div>
                                                     </td>
                                                 </tr>
                                             <?php endforeach; ?>

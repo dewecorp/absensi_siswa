@@ -132,6 +132,10 @@ unset($g);
                 $('#tableGajiPokok').DataTable().destroy();
             }
             
+            if ($.fn.dataTable && $.fn.dataTable.Buttons) {
+                $.fn.dataTable.Buttons.defaults.dom.button.className = 'btn btn-sm';
+            }
+
             // Initialize DataTable with export buttons
             var table = $('#tableGajiPokok').DataTable({
                 dom: '<"row"<"col-sm-12 col-md-6"B><"col-sm-12 col-md-6"f>>rtip',
@@ -218,6 +222,7 @@ unset($g);
                     if (buttonsContainer.parent().attr('id') !== 'tableGajiPokok_buttons') {
                         buttonsContainer.appendTo(targetContainer);
                     }
+                    buttonsContainer.find('.btn-success, .btn-danger, .btn-info, .buttons-excel, .buttons-pdf, .buttons-print').removeClass('btn-secondary');
                     buttonsContainer.css({
                         'display': 'flex',
                         'flex-wrap': 'wrap',

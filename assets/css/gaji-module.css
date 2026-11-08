@@ -258,14 +258,337 @@
     }
 }
 
-@media (max-width: 767.98px) {
-    .dataTables_wrapper > .dt-buttons {
-        float: none !important;
-        margin-bottom: 10px !important;
-    }
-
-    .dataTables_wrapper > .dataTables_filter input {
-        min-width: 0;
-    }
+/* ------------------------------------------------------------
+   4. Stisla Actions & DataTables Export Buttons
+   ------------------------------------------------------------ */
+/* Paksa semua tombol di modul gaji teks dan ikon berwarna putih */
+.gaji-app .btn,
+.gaji-app .btn:hover,
+.gaji-app .btn:focus,
+.gaji-app .btn:active,
+.btn-primary,
+.btn-success,
+.btn-danger,
+.btn-warning,
+.btn-info,
+.btn-secondary,
+.btn-dark {
+    color: #fff !important;
 }
+
+.gaji-app .btn i,
+.btn-primary i,
+.btn-success i,
+.btn-danger i,
+.btn-warning i,
+.btn-info i,
+.btn-secondary i,
+.btn-dark i {
+    color: #fff !important;
+}
+
+.table-actions-stisla {
+    display: inline-flex !important;
+    flex-direction: row !important;
+    flex-wrap: nowrap !important;
+    align-items: center !important;
+    justify-content: flex-start !important;
+    gap: 6px !important;
+    margin: 0 !important;
+}
+
+.table-actions-stisla .btn {
+    width: 32px !important;
+    min-width: 32px !important;
+    height: 32px !important;
+    min-height: 32px !important;
+    padding: 0 !important;
+    display: inline-flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    border-radius: 4px !important;
+    line-height: 1 !important;
+    flex-shrink: 0 !important;
+    color: #fff !important;
+}
+
+.table-actions-stisla .btn i {
+    margin: 0 !important;
+    font-size: 13px !important;
+    color: #fff !important;
+}
+
+/* DataTables export buttons consistent with Stisla */
+.dataTables_wrapper .dt-buttons .btn,
+.dataTables_wrapper .dt-buttons .dt-button,
+.dt-buttons .btn,
+.dt-buttons .dt-button,
+#tableGajiPokok_buttons .btn,
+#tableGajiPokok_buttons .dt-button,
+#tableTunjangan_buttons .btn,
+#tableTunjangan_buttons .dt-button,
+#tablePotongan_buttons .btn,
+#tablePotongan_buttons .dt-button,
+#tableInsentif_buttons .btn,
+#tableInsentif_buttons .dt-button,
+#tableLeggerInsentif_buttons .btn,
+#tableLeggerInsentif_buttons .dt-button,
+button.dt-button,
+div.dt-button,
+a.dt-button {
+    border-radius: 4px !important;
+    font-size: 12px !important;
+    font-weight: 600 !important;
+    letter-spacing: .3px !important;
+    padding: 5px 15px !important;
+    line-height: 1.5 !important;
+    box-shadow: 0 2px 6px rgba(0, 0, 0, .1) !important;
+    color: #fff !important;
+}
+
+.dataTables_wrapper .dt-buttons .btn *,
+.dataTables_wrapper .dt-buttons .dt-button *,
+.dt-buttons .btn *,
+.dt-buttons .dt-button *,
+#tableGajiPokok_buttons *,
+#tableTunjangan_buttons *,
+#tablePotongan_buttons *,
+#tableInsentif_buttons *,
+#tableLeggerInsentif_buttons *,
+button.dt-button *,
+div.dt-button *,
+a.dt-button * {
+    color: #fff !important;
+}
+
+.dataTables_wrapper .dt-buttons .btn i,
+.dataTables_wrapper .dt-buttons .dt-button i,
+.dt-buttons .btn i,
+.dt-buttons .dt-button i,
+#tableGajiPokok_buttons i,
+#tableTunjangan_buttons i,
+#tablePotongan_buttons i,
+#tableInsentif_buttons i,
+#tableLeggerInsentif_buttons i {
+    color: #fff !important;
+    margin-right: 4px !important;
+}
+
+/* Secondary / default fallback button (never override active colored buttons) */
+.dataTables_wrapper .dt-buttons .btn.btn-secondary:not(.btn-success):not(.btn-danger):not(.btn-info):not(.btn-warning):not(.btn-primary):not(.buttons-excel):not(.buttons-pdf):not(.buttons-print),
+.dataTables_wrapper .dt-buttons .dt-button.btn-secondary:not(.btn-success):not(.btn-danger):not(.btn-info):not(.btn-warning):not(.btn-primary):not(.buttons-excel):not(.buttons-pdf):not(.buttons-print),
+.dt-buttons .btn.btn-secondary:not(.btn-success):not(.btn-danger):not(.btn-info):not(.btn-warning):not(.btn-primary):not(.buttons-excel):not(.buttons-pdf):not(.buttons-print),
+.dt-buttons .dt-button.btn-secondary:not(.btn-success):not(.btn-danger):not(.btn-info):not(.btn-warning):not(.btn-primary):not(.buttons-excel):not(.buttons-pdf):not(.buttons-print),
+#tableGajiPokok_buttons .btn.btn-secondary:not(.btn-success):not(.btn-danger):not(.btn-info):not(.btn-warning):not(.btn-primary):not(.buttons-excel):not(.buttons-pdf):not(.buttons-print),
+#tableTunjangan_buttons .btn.btn-secondary:not(.btn-success):not(.btn-danger):not(.btn-info):not(.btn-warning):not(.btn-primary):not(.buttons-excel):not(.buttons-pdf):not(.buttons-print),
+#tablePotongan_buttons .btn.btn-secondary:not(.btn-success):not(.btn-danger):not(.btn-info):not(.btn-warning):not(.btn-primary):not(.buttons-excel):not(.buttons-pdf):not(.buttons-print),
+#tableInsentif_buttons .btn.btn-secondary:not(.btn-success):not(.btn-danger):not(.btn-info):not(.btn-warning):not(.btn-primary):not(.buttons-excel):not(.buttons-pdf):not(.buttons-print),
+#tableLeggerInsentif_buttons .btn.btn-secondary:not(.btn-success):not(.btn-danger):not(.btn-info):not(.btn-warning):not(.btn-primary):not(.buttons-excel):not(.buttons-pdf):not(.buttons-print) {
+    box-shadow: 0 2px 6px #e1e5e8 !important;
+    background-color: #6c757d !important;
+    border-color: #6c757d !important;
+    color: #fff !important;
+}
+
+.dataTables_wrapper .dt-buttons .btn.btn-secondary:not(.btn-success):not(.btn-danger):not(.btn-info):not(.btn-warning):not(.btn-primary):hover,
+.dt-buttons .btn.btn-secondary:not(.btn-success):not(.btn-danger):not(.btn-info):not(.btn-warning):not(.btn-primary):hover {
+    background-color: #5a6268 !important;
+    border-color: #545b62 !important;
+    color: #fff !important;
+}
+
+/* Excel / Success button (Green) */
+.dataTables_wrapper .dt-buttons .btn.btn-success,
+.dataTables_wrapper .dt-buttons .dt-button.btn-success,
+.dt-buttons .btn.btn-success,
+.dt-buttons .dt-button.btn-success,
+.dt-buttons .buttons-excel,
+#tableGajiPokok_buttons .btn-success,
+#tableGajiPokok_buttons .buttons-excel,
+#tableTunjangan_buttons .btn-success,
+#tableTunjangan_buttons .buttons-excel,
+#tablePotongan_buttons .btn-success,
+#tablePotongan_buttons .buttons-excel,
+#tableInsentif_buttons .btn-success,
+#tableInsentif_buttons .buttons-excel,
+#tableLeggerInsentif_buttons .btn-success,
+#tableLeggerInsentif_buttons .buttons-excel {
+    box-shadow: 0 2px 6px #81d694 !important;
+    background-color: #47c363 !important;
+    border-color: #47c363 !important;
+    color: #fff !important;
+}
+
+.dataTables_wrapper .dt-buttons .btn.btn-success:hover,
+.dataTables_wrapper .dt-buttons .dt-button.btn-success:hover,
+.dt-buttons .btn.btn-success:hover,
+.dt-buttons .dt-button.btn-success:hover,
+.dt-buttons .buttons-excel:hover,
+#tableGajiPokok_buttons .btn-success:hover,
+#tableGajiPokok_buttons .buttons-excel:hover,
+#tableTunjangan_buttons .btn-success:hover,
+#tableTunjangan_buttons .buttons-excel:hover,
+#tablePotongan_buttons .btn-success:hover,
+#tablePotongan_buttons .buttons-excel:hover,
+#tableInsentif_buttons .btn-success:hover,
+#tableInsentif_buttons .buttons-excel:hover,
+#tableLeggerInsentif_buttons .btn-success:hover,
+#tableLeggerInsentif_buttons .buttons-excel:hover {
+    background-color: #3bb557 !important;
+    border-color: #3bb557 !important;
+    color: #fff !important;
+}
+
+/* PDF / Danger button (Red) */
+.dataTables_wrapper .dt-buttons .btn.btn-danger,
+.dataTables_wrapper .dt-buttons .dt-button.btn-danger,
+.dt-buttons .btn.btn-danger,
+.dt-buttons .dt-button.btn-danger,
+.dt-buttons .buttons-pdf,
+#tableGajiPokok_buttons .btn-danger,
+#tableGajiPokok_buttons .buttons-pdf,
+#tableTunjangan_buttons .btn-danger,
+#tableTunjangan_buttons .buttons-pdf,
+#tablePotongan_buttons .btn-danger,
+#tablePotongan_buttons .buttons-pdf,
+#tableInsentif_buttons .btn-danger,
+#tableInsentif_buttons .buttons-pdf,
+#tableLeggerInsentif_buttons .btn-danger,
+#tableLeggerInsentif_buttons .buttons-pdf {
+    box-shadow: 0 2px 6px #fd9b96 !important;
+    background-color: #fc544b !important;
+    border-color: #fc544b !important;
+    color: #fff !important;
+}
+
+.dataTables_wrapper .dt-buttons .btn.btn-danger:hover,
+.dataTables_wrapper .dt-buttons .dt-button.btn-danger:hover,
+.dt-buttons .btn.btn-danger:hover,
+.dt-buttons .dt-button.btn-danger:hover,
+.dt-buttons .buttons-pdf:hover,
+#tableGajiPokok_buttons .btn-danger:hover,
+#tableGajiPokok_buttons .buttons-pdf:hover,
+#tableTunjangan_buttons .btn-danger:hover,
+#tableTunjangan_buttons .buttons-pdf:hover,
+#tablePotongan_buttons .btn-danger:hover,
+#tablePotongan_buttons .buttons-pdf:hover,
+#tableInsentif_buttons .btn-danger:hover,
+#tableInsentif_buttons .buttons-pdf:hover,
+#tableLeggerInsentif_buttons .btn-danger:hover,
+#tableLeggerInsentif_buttons .buttons-pdf:hover {
+    background-color: #fb160a !important;
+    border-color: #fb160a !important;
+    color: #fff !important;
+}
+
+/* Print / Info button (Blue/Cyan) */
+.dataTables_wrapper .dt-buttons .btn.btn-info,
+.dataTables_wrapper .dt-buttons .dt-button.btn-info,
+.dt-buttons .btn.btn-info,
+.dt-buttons .dt-button.btn-info,
+.dt-buttons .buttons-print,
+#tableGajiPokok_buttons .btn-info,
+#tableGajiPokok_buttons .buttons-print,
+#tableTunjangan_buttons .btn-info,
+#tableTunjangan_buttons .buttons-print,
+#tablePotongan_buttons .btn-info,
+#tablePotongan_buttons .buttons-print,
+#tableInsentif_buttons .btn-info,
+#tableInsentif_buttons .buttons-print,
+#tableLeggerInsentif_buttons .btn-info,
+#tableLeggerInsentif_buttons .buttons-print {
+    box-shadow: 0 2px 6px #82d3f8 !important;
+    background-color: #3abaf4 !important;
+    border-color: #3abaf4 !important;
+    color: #fff !important;
+}
+
+.dataTables_wrapper .dt-buttons .btn.btn-info:hover,
+.dataTables_wrapper .dt-buttons .dt-button.btn-info:hover,
+.dt-buttons .btn.btn-info:hover,
+.dt-buttons .dt-button.btn-info:hover,
+.dt-buttons .buttons-print:hover,
+#tableGajiPokok_buttons .btn-info:hover,
+#tableGajiPokok_buttons .buttons-print:hover,
+#tableTunjangan_buttons .btn-info:hover,
+#tableTunjangan_buttons .buttons-print:hover,
+#tablePotongan_buttons .btn-info:hover,
+#tablePotongan_buttons .buttons-print:hover,
+#tableInsentif_buttons .btn-info:hover,
+#tableInsentif_buttons .buttons-print:hover,
+#tableLeggerInsentif_buttons .btn-info:hover,
+#tableLeggerInsentif_buttons .buttons-print:hover {
+    background-color: #10a8f2 !important;
+    border-color: #10a8f2 !important;
+    color: #fff !important;
+}
+
+/* Warning button */
+.dataTables_wrapper .dt-buttons .btn.btn-warning,
+.dataTables_wrapper .dt-buttons .dt-button.btn-warning,
+.dt-buttons .btn.btn-warning,
+.dt-buttons .dt-button.btn-warning,
+#tableGajiPokok_buttons .btn-warning,
+#tableTunjangan_buttons .btn-warning,
+#tablePotongan_buttons .btn-warning,
+#tableInsentif_buttons .btn-warning,
+#tableLeggerInsentif_buttons .btn-warning {
+    box-shadow: 0 2px 6px #ffc473 !important;
+    background-color: #ffa426 !important;
+    border-color: #ffa426 !important;
+    color: #fff !important;
+}
+
+.dataTables_wrapper .dt-buttons .btn.btn-warning:hover,
+.dataTables_wrapper .dt-buttons .dt-button.btn-warning:hover,
+.dt-buttons .btn.btn-warning:hover,
+.dt-buttons .dt-button.btn-warning:hover,
+#tableGajiPokok_buttons .btn-warning:hover,
+#tableTunjangan_buttons .btn-warning:hover,
+#tablePotongan_buttons .btn-warning:hover,
+#tableInsentif_buttons .btn-warning:hover,
+#tableLeggerInsentif_buttons .btn-warning:hover {
+    background-color: #ff9400 !important;
+    border-color: #ff9400 !important;
+    color: #fff !important;
+}
+
+/* Primary button */
+.dataTables_wrapper .dt-buttons .btn.btn-primary,
+.dataTables_wrapper .dt-buttons .dt-button.btn-primary,
+.dt-buttons .btn.btn-primary,
+.dt-buttons .dt-button.btn-primary,
+#tableGajiPokok_buttons .btn-primary,
+#tableTunjangan_buttons .btn-primary,
+#tablePotongan_buttons .btn-primary,
+#tableInsentif_buttons .btn-primary,
+#tableLeggerInsentif_buttons .btn-primary {
+    box-shadow: 0 2px 6px #acb5f6 !important;
+    background-color: #6777ef !important;
+    border-color: #6777ef !important;
+    color: #fff !important;
+}
+
+.dataTables_wrapper .dt-buttons .btn.btn-primary:hover,
+.dataTables_wrapper .dt-buttons .dt-button.btn-primary:hover,
+.dt-buttons .btn.btn-primary:hover,
+.dt-buttons .dt-button.btn-primary:hover,
+#tableGajiPokok_buttons .btn-primary:hover,
+#tableTunjangan_buttons .btn-primary:hover,
+#tablePotongan_buttons .btn-primary:hover,
+#tableInsentif_buttons .btn-primary:hover,
+#tableLeggerInsentif_buttons .btn-primary:hover {
+    background-color: #394eea !important;
+    border-color: #394eea !important;
+    color: #fff !important;
+}
+
+.dataTables_wrapper .dataTables_filter input {
+    height: 35px !important;
+    padding: 6px 12px !important;
+    font-size: 13px !important;
+    border-radius: 4px !important;
+    border: 1px solid #e4e6fc !important;
+}
+
 

@@ -69,12 +69,14 @@ $pembina_list = $result_pembina ? $result_pembina->fetch_all(MYSQLI_ASSOC) : [];
                                                         </span>
                                                     </td>
                                                     <td>
-                                                        <button class="btn btn-sm btn-info btn-edit" data-id="<?php echo $h['id']; ?>" onclick="editHonor(<?php echo $h['id']; ?>)">
-                                                            <i class="fas fa-edit"></i>
-                                                        </button>
-                                                        <button class="btn btn-sm btn-danger" onclick="confirmDelete('<?php echo BASE_URL; ?>pages/honor/delete?id=<?php echo $h['id']; ?>')">
-                                                            <i class="fas fa-trash"></i>
-                                                        </button>
+                                                        <div class="table-actions-stisla">
+                                                            <button class="btn btn-sm btn-warning btn-edit" data-id="<?php echo $h['id']; ?>" onclick="editHonor(<?php echo $h['id']; ?>)">
+                                                                <i class="fas fa-edit"></i>
+                                                            </button>
+                                                            <button class="btn btn-sm btn-danger" onclick="confirmDelete('<?php echo BASE_URL; ?>pages/honor/delete?id=<?php echo $h['id']; ?>')">
+                                                                <i class="fas fa-trash"></i>
+                                                            </button>
+                                                        </div>
                                                     </td>
                                                 </tr>
                                             <?php endforeach; ?>

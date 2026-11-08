@@ -104,17 +104,33 @@
 
 /* ---------- Tombol ---------- */
 .gaji-app .btn {
-    border-radius: 12px;
-    font-weight: 700;
+    border-radius: 4px;
+    font-weight: 600;
     padding: .5rem .9rem;
     display: inline-flex;
     align-items: center;
     justify-content: center;
     gap: 6px;
+    color: #fff !important;
+}
+
+.gaji-app .btn i {
+    color: #fff !important;
+}
+
+.gaji-app .btn:hover,
+.gaji-app .btn:focus,
+.gaji-app .btn:active {
+    color: #fff !important;
+}
+
+.gaji-app .card-header-action .btn,
+.gaji-app .btn-round {
+    border-radius: 30px !important;
 }
 
 .gaji-app .btn-sm {
-    border-radius: 10px;
+    border-radius: 3px;
     padding: .35rem .7rem;
 }
 
@@ -243,10 +259,10 @@ body.modal-open .modal .modal-footer {
 
     .gaji-app .dataTables_wrapper .dt-buttons .dt-button {
         flex: 1 1 auto;
-        border-radius: 12px !important;
+        border-radius: 4px !important;
         margin: 0 !important;
-        min-height: 40px;
-        font-weight: 700;
+        min-height: 34px;
+        font-weight: 600;
     }
 
     .gaji-app .dataTables_wrapper .dataTables_info,

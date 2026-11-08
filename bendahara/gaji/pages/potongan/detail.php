@@ -64,12 +64,14 @@ $guru = $conn->query($sql)->fetch_all(MYSQLI_ASSOC);
                                                     <td><?php echo htmlspecialchars($d['nama_lengkap']); ?></td>
                                                     <td><?php echo formatRupiah($d['jumlah']); ?></td>
                                                     <td>
-                                                        <button class="btn btn-sm btn-info" onclick="editDetail(<?php echo $d['id']; ?>)">
-                                                            <i class="fas fa-edit"></i>
-                                                        </button>
-                                                        <button class="btn btn-sm btn-danger" onclick="confirmDelete('<?php echo BASE_URL; ?>pages/potongan/delete_detail?id=<?php echo $d['id']; ?>')">
-                                                            <i class="fas fa-trash"></i>
-                                                        </button>
+                                                        <div class="table-actions-stisla">
+                                                            <button class="btn btn-sm btn-warning" onclick="editDetail(<?php echo $d['id']; ?>)">
+                                                                <i class="fas fa-edit"></i>
+                                                            </button>
+                                                            <button class="btn btn-sm btn-danger" onclick="confirmDelete('<?php echo BASE_URL; ?>pages/potongan/delete_detail?id=<?php echo $d['id']; ?>')">
+                                                                <i class="fas fa-trash"></i>
+                                                            </button>
+                                                        </div>
                                                     </td>
                                                 </tr>
                                             <?php endforeach; ?>

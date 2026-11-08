@@ -98,12 +98,14 @@ $all_guru = $conn->query($sql)->fetch_all(MYSQLI_ASSOC);
                                                         </span>
                                                     </td>
                                                     <td>
-                                                        <button class="btn btn-sm btn-info btn-edit-potongan" data-id="<?php echo $p['id']; ?>" onclick="if(typeof editPotongan==='function'){editPotongan(<?php echo $p['id']; ?>);}" data-toggle="tooltip" title="Edit">
-                                                            <i class="fas fa-edit"></i>
-                                                        </button>
-                                                        <button class="btn btn-sm btn-danger" onclick="confirmDelete('<?php echo BASE_URL; ?>pages/potongan/delete?id=<?php echo $p['id']; ?>')" data-toggle="tooltip" title="Hapus">
-                                                            <i class="fas fa-trash"></i>
-                                                        </button>
+                                                        <div class="table-actions-stisla">
+                                                            <button class="btn btn-sm btn-warning btn-edit-potongan" data-id="<?php echo $p['id']; ?>" onclick="if(typeof editPotongan==='function'){editPotongan(<?php echo $p['id']; ?>);}" data-toggle="tooltip" title="Edit">
+                                                                <i class="fas fa-edit"></i>
+                                                            </button>
+                                                            <button class="btn btn-sm btn-danger" onclick="confirmDelete('<?php echo BASE_URL; ?>pages/potongan/delete?id=<?php echo $p['id']; ?>')" data-toggle="tooltip" title="Hapus">
+                                                                <i class="fas fa-trash"></i>
+                                                            </button>
+                                                        </div>
                                                     </td>
                                                 </tr>
                                             <?php endforeach; ?>
@@ -860,10 +862,20 @@ function editPotongan(id) {
             if ($.fn.DataTable.isDataTable('#tablePotongan')) {
                 $('#tablePotongan').DataTable().destroy();
             }
+
+            if ($.fn.dataTable && $.fn.dataTable.Buttons) {
+                $.fn.dataTable.Buttons.defaults.dom.button.className = 'btn btn-sm';
+            }
             
             var table = $('#tablePotongan').DataTable({
                 dom: 'Bfrtip',
-                buttons: [
+                buttons: {
+                    dom: {
+                        button: {
+                            className: 'btn btn-sm'
+                        }
+                    },
+                    buttons: [
                     { 
                         extend: 'excel', 
                         text: '<i class="fas fa-file-excel"></i> Excel', 
@@ -957,7 +969,8 @@ function editPotongan(id) {
                             }
                         }
                     }
-                ],
+                    ]
+                },
                 language: { url: 'https://cdn.datatables.net/plug-ins/1.11.5/i18n/id.json' },
                 order: [[1, 'asc']],
                 stateSave: false,
@@ -983,6 +996,7 @@ function editPotongan(id) {
                 if (buttonsContainer.parent().attr('id') !== 'tablePotongan_buttons') {
                     buttonsContainer.appendTo(targetContainer);
                 }
+                buttonsContainer.find('.btn-success, .btn-danger, .btn-info, .buttons-excel, .buttons-pdf, .buttons-print').removeClass('btn-secondary');
                 buttonsContainer.css({
                     'display': 'flex',
                     'flex-wrap': 'wrap',

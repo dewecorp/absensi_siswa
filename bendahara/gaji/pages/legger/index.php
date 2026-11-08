@@ -472,10 +472,20 @@ var tableLegger;
             if ($.fn.DataTable.isDataTable('#tableLeggerData')) {
                 $('#tableLeggerData').DataTable().destroy();
             }
+
+            if ($.fn.dataTable && $.fn.dataTable.Buttons) {
+                $.fn.dataTable.Buttons.defaults.dom.button.className = 'btn btn-sm';
+            }
             
             tableLegger = $('#tableLeggerData').DataTable({
                 dom: 'Bfrtip',
-                buttons: [
+                buttons: {
+                    dom: {
+                        button: {
+                            className: 'btn btn-sm'
+                        }
+                    },
+                    buttons: [
                     { 
                         text: '<i class="fas fa-file-excel"></i> Excel', 
                         className: 'btn btn-success btn-sm',
@@ -484,20 +494,21 @@ var tableLegger;
                         }
                     },
                     { 
-                        text: '<i class="fas fa-file-pdf"></i> PDF',
+                        text: '<i class="fas fa-file-pdf"></i> PDF', 
                         className: 'btn btn-danger btn-sm',
                         action: function (e, dt, node, config) {
                             window.open('<?php echo $gaji_page_base; ?>cetak_legger?periode=<?php echo $periode; ?>', '_blank');
                         }
                     },
                     { 
-                        text: '<i class="fas fa-print"></i> Print',
+                        text: '<i class="fas fa-print"></i> Print', 
                         className: 'btn btn-info btn-sm',
                         action: function (e, dt, node, config) {
                             window.open('<?php echo $gaji_page_base; ?>cetak_legger?periode=<?php echo $periode; ?>', '_blank');
                         }
                     }
-                ],
+                    ]
+                },
                 language: { 
                     url: 'https://cdn.datatables.net/plug-ins/1.11.5/i18n/id.json',
                     info: "Menampilkan _START_ sampai _END_ dari _TOTAL_ data",
@@ -507,6 +518,7 @@ var tableLegger;
                 order: [[1, 'asc']],
                 info: true
             });
+            tableLegger.buttons().container().find('.btn-success, .btn-danger, .btn-info, .buttons-excel, .buttons-pdf, .buttons-print').removeClass('btn-secondary');
             
             // Handle Generate Legger button - use off() first to prevent duplicate bindings
             $('#btnGenerateLegger').off('click').on('click', function(e) {
