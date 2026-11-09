@@ -561,6 +561,41 @@ if (getUserLevel() === 'siswa' && isset($_SESSION['user_id'])) {
             border-color: rgba(255, 255, 255, 0.8) !important;
         }
 
+        /* Glassmorphism Page Header (.section-header) */
+        .section .section-header {
+            background: linear-gradient(135deg, rgba(255, 255, 255, 0.78) 0%, rgba(255, 255, 255, 0.58) 100%) !important;
+            backdrop-filter: blur(16px) saturate(180%) !important;
+            -webkit-backdrop-filter: blur(16px) saturate(180%) !important;
+            border: 1px solid rgba(255, 255, 255, 0.75) !important;
+            border-top: 1.5px solid rgba(255, 255, 255, 0.95) !important;
+            box-shadow: 0 8px 32px 0 rgba(31, 38, 135, 0.08), 0 2px 6px rgba(0, 0, 0, 0.02), inset 0 1px 1px rgba(255, 255, 255, 0.85) !important;
+            border-radius: 16px !important;
+            position: relative !important;
+        }
+        .section .section-header h1 {
+            color: #1e293b !important;
+            font-weight: 700 !important;
+            letter-spacing: -0.3px !important;
+        }
+        .section .section-header .section-header-breadcrumb .breadcrumb-item,
+        .section .section-header .section-header-breadcrumb .breadcrumb-item a {
+            color: #475569 !important;
+            font-weight: 600 !important;
+        }
+        .section .section-header .section-header-breadcrumb .breadcrumb-item.active {
+            color: #2563eb !important;
+        }
+        .section .section-header .section-header-back .btn {
+            background: rgba(255, 255, 255, 0.6) !important;
+            backdrop-filter: blur(8px) !important;
+            -webkit-backdrop-filter: blur(8px) !important;
+            border: 1px solid rgba(255, 255, 255, 0.75) !important;
+        }
+        .section .section-header .section-header-back .btn:hover {
+            background: #2563eb !important;
+            color: #fff !important;
+        }
+
         .text-muted {
             color: #475569 !important;
         }

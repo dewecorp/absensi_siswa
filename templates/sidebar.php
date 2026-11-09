@@ -2166,24 +2166,33 @@ if (!function_exists('get_bottom_nav_quick_links')) {
         .main-sidebar .sidebar-menu li a:hover i {
             color: #2563eb !important;
         }
-        /* Modern Active Menu Styling: Pill Gradient + Glow Shadow + Left Indicator Pill */
+        /* Glassmorphism Active Menu Styling */
         .main-sidebar .sidebar-menu li.active > a,
         .main-sidebar .sidebar-menu > li.active:not(.dropdown) > a {
             color: #ffffff !important;
             font-weight: 700 !important;
-            background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%) !important;
-            box-shadow: 0 6px 18px rgba(37, 99, 235, 0.35) !important;
+            background: linear-gradient(135deg, rgba(59, 130, 246, 0.9) 0%, rgba(37, 99, 235, 0.78) 100%) !important;
+            backdrop-filter: blur(12px) saturate(180%) !important;
+            -webkit-backdrop-filter: blur(12px) saturate(180%) !important;
+            border: 1px solid rgba(255, 255, 255, 0.45) !important;
+            border-top: 1.5px solid rgba(255, 255, 255, 0.75) !important;
+            box-shadow: 0 8px 24px -2px rgba(37, 99, 235, 0.38), inset 0 1px 2px rgba(255, 255, 255, 0.55) !important;
             position: relative !important;
         }
         .main-sidebar .sidebar-menu li.active > a i,
         .main-sidebar .sidebar-menu > li.active:not(.dropdown) > a i {
             color: #ffffff !important;
             transform: scale(1.08) !important;
+            filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.2)) !important;
         }
         .main-sidebar .sidebar-menu > li.dropdown.active > a.has-dropdown {
-            background: #eff6ff !important;
+            background: linear-gradient(135deg, rgba(239, 246, 255, 0.85) 0%, rgba(219, 234, 254, 0.65) 100%) !important;
+            backdrop-filter: blur(10px) saturate(160%) !important;
+            -webkit-backdrop-filter: blur(10px) saturate(160%) !important;
             color: #2563eb !important;
-            box-shadow: none !important;
+            border: 1px solid rgba(191, 219, 254, 0.75) !important;
+            border-top: 1.5px solid rgba(255, 255, 255, 0.95) !important;
+            box-shadow: 0 4px 14px rgba(37, 99, 235, 0.08), inset 0 1px 1px rgba(255, 255, 255, 0.85) !important;
         }
         .main-sidebar .sidebar-menu > li.dropdown.active > a.has-dropdown i {
             color: #2563eb !important;
@@ -2246,9 +2255,14 @@ if (!function_exists('get_bottom_nav_quick_links')) {
         }
         .main-sidebar .sidebar-menu ul.dropdown-menu li a.active,
         .main-sidebar .sidebar-menu ul.dropdown-menu li.active > a {
-            color: #2563eb !important;
+            color: #1d4ed8 !important;
             font-weight: 700 !important;
-            background: #eff6ff !important;
+            background: linear-gradient(135deg, rgba(239, 246, 255, 0.85) 0%, rgba(219, 234, 254, 0.6) 100%) !important;
+            backdrop-filter: blur(10px) saturate(160%) !important;
+            -webkit-backdrop-filter: blur(10px) saturate(160%) !important;
+            border: 1px solid rgba(191, 219, 254, 0.7) !important;
+            border-top: 1.5px solid rgba(255, 255, 255, 0.95) !important;
+            box-shadow: 0 4px 14px rgba(37, 99, 235, 0.1), inset 0 1px 1px rgba(255, 255, 255, 0.8) !important;
             position: relative !important;
         }
         .main-sidebar .sidebar-menu ul.dropdown-menu li a.active::before,
@@ -2258,11 +2272,12 @@ if (!function_exists('get_bottom_nav_quick_links')) {
             left: 32px !important;
             top: 50% !important;
             transform: translateY(-50%) !important;
-            width: 6px !important;
-            height: 6px !important;
+            width: 7px !important;
+            height: 7px !important;
             border-radius: 50% !important;
             background: #2563eb !important;
-            box-shadow: 0 0 8px rgba(37, 99, 235, 0.6) !important;
+            box-shadow: 0 0 10px rgba(37, 99, 235, 0.85), 0 0 4px #2563eb !important;
+            border: 1.5px solid rgba(255, 255, 255, 0.95) !important;
         }
         .main-sidebar .sidebar-menu li.nav-logout {
             padding: 4px 10px !important;
