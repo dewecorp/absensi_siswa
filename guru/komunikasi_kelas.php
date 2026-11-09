@@ -169,26 +169,6 @@ $js_libs = [];
 
 $js_page = [<<<'JS'
 $(document).ready(function() {
-    $('#cari-kartu-komunikasi').on('input', function() {
-        var query = $(this).val().toLowerCase().trim();
-        var visibleCount = 0;
-        $('.komunikasi-card-col').each(function() {
-            var cardText = $(this).text().toLowerCase();
-            if (cardText.indexOf(query) !== -1) {
-                $(this).show();
-                visibleCount++;
-            } else {
-                $(this).hide();
-            }
-        });
-        if (visibleCount === 0 && query !== '') {
-            $('#no-komunikasi-search').show();
-        } else {
-            $('#no-komunikasi-search').hide();
-        }
-        $('#count-kartu-komunikasi').text(visibleCount);
-    });
-
     $('#btnTambahPesan').on('click', function() {
         $('#formKomunikasiAction').val('tambah');
         $('#komunikasiId').val('');
@@ -393,19 +373,13 @@ include '../templates/sidebar.php';
                         <h4 class="mb-0 font-weight-bold text-dark"><i class="fas fa-bullhorn text-primary mr-2"></i>Papan Komunikasi &amp; Pengumuman Kelas</h4>
                         <small class="text-muted">Menampilkan <span id="count-kartu-komunikasi" class="font-weight-bold text-primary"><?= count($rows) ?></span> pengumuman / pesan</small>
                     </div>
-                    <div class="d-flex align-items-center flex-wrap" style="gap: 8px;">
-                        <div class="input-group input-group-sm" style="width: 220px;">
-                            <div class="input-group-prepend">
-                                <span class="input-group-text bg-light border-right-0"><i class="fas fa-search text-muted"></i></span>
-                            </div>
-                            <input type="text" id="cari-kartu-komunikasi" class="form-control form-control-sm border-left-0" placeholder="Cari judul / pesan...">
-                        </div>
-                        <?php if ($can_crud): ?>
+                    <?php if ($can_crud): ?>
+                    <div>
                         <button type="button" class="btn btn-primary btn-sm px-3 font-weight-bold" id="btnTambahPesan" style="border-radius: 6px;">
                             <i class="fas fa-plus mr-1"></i> Buat Pesan / Pengumuman
                         </button>
-                        <?php endif; ?>
                     </div>
+                    <?php endif; ?>
                 </div>
                 <div class="card-body bg-light p-3 p-md-4" style="border-radius: 0 0 14px 14px;">
                     <?php if (empty($rows)): ?>
@@ -416,12 +390,6 @@ include '../templates/sidebar.php';
                         </div>
                     <?php else: ?>
                         <div class="row" id="container-kartu-komunikasi" style="row-gap: 16px;">
-                            <div class="col-12" id="no-komunikasi-search" style="display: none;">
-                                <div class="text-center py-5 bg-white rounded shadow-sm border">
-                                    <i class="fas fa-search fa-2x text-muted mb-2"></i>
-                                    <p class="text-muted small mb-0">Tidak ada komunikasi kelas yang cocok dengan kata kunci pencarian.</p>
-                                </div>
-                            </div>
                             <?php foreach ($rows as $i => $r): ?>
                                 <?php
                                 $tot_penerima = (int)$r['total_penerima'];
