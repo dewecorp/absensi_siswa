@@ -254,10 +254,10 @@
   position: sticky !important;
   top: 0 !important;
   z-index: 10 !important;
-  background: linear-gradient(180deg, rgba(15, 28, 63, 0.95) 0%, rgba(18, 32, 75, 0.90) 100%) !important;
+  background: linear-gradient(180deg, rgba(79, 99, 231, 0.96) 0%, rgba(61, 80, 214, 0.92) 100%) !important;
   backdrop-filter: blur(12px) !important;
   -webkit-backdrop-filter: blur(12px) !important;
-  border-bottom: 1px solid rgba(255, 255, 255, 0.08) !important;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.14) !important;
 }
 /* Select2 di modal samakan rounded + scroll halus */
 .modal .select2-dropdown {

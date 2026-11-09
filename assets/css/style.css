@@ -3015,9 +3015,9 @@ pre {
   width: 250px;
   z-index: 880;
   left: 0;
-  background: linear-gradient(160deg, #0f1c3f 0%, #1a2d6b 40%, #0e1a4a 70%, #131f52 100%);
-  box-shadow: 4px 0 32px rgba(10, 20, 80, 0.45), inset -1px 0 0 rgba(255,255,255,0.07);
-  border-right: 1px solid rgba(255,255,255,0.09);
+  background: linear-gradient(165deg, #4f63e7 0%, #3d50d6 45%, #2e40bf 100%);
+  box-shadow: 4px 0 24px rgba(46, 64, 191, 0.25), inset -1px 0 0 rgba(255,255,255,0.12);
+  border-right: 1px solid rgba(255,255,255,0.15);
 }
 
 .main-sidebar,
@@ -3041,10 +3041,10 @@ body.sidebar-mini .main-sidebar {
   box-shadow: none;
 }
 body.sidebar-mini .main-sidebar:after {
-  box-shadow: 4px 0 32px rgba(10, 20, 80, 0.45);
+  box-shadow: 4px 0 24px rgba(46, 64, 191, 0.25);
   content: " ";
   position: fixed;
-  background: linear-gradient(160deg, #0f1c3f 0%, #1a2d6b 40%, #0e1a4a 100%);
+  background: linear-gradient(165deg, #4f63e7 0%, #3d50d6 45%, #2e40bf 100%);
   width: 65px;
   height: 100%;
   left: 0;

@@ -2129,15 +2129,15 @@ if (!function_exists('get_bottom_nav_quick_links')) {
 
 <div class="main-sidebar">
     <style>
-        /* ── Dark Glass Sidebar ─────────────────────────────────── */
+        /* ── Glass Sidebar (Konsisten dengan Biru Header #6777ef) ─── */
 
         /* Brand / logo area */
         .main-sidebar .sidebar-brand,
         .main-sidebar .sidebar-brand-sm {
-            background: linear-gradient(180deg, rgba(15, 28, 63, 0.95) 0%, rgba(18, 32, 75, 0.90) 100%) !important;
+            background: linear-gradient(180deg, rgba(79, 99, 231, 0.96) 0%, rgba(61, 80, 214, 0.92) 100%) !important;
             backdrop-filter: blur(12px) !important;
             -webkit-backdrop-filter: blur(12px) !important;
-            border-bottom: 1px solid rgba(255,255,255,0.08) !important;
+            border-bottom: 1px solid rgba(255,255,255,0.14) !important;
         }
         .main-sidebar .sidebar-brand a,
         .main-sidebar .sidebar-brand span {
@@ -2145,13 +2145,13 @@ if (!function_exists('get_bottom_nav_quick_links')) {
             letter-spacing: .5px !important;
             font-weight: 700 !important;
             font-size: 13px !important;
-            text-shadow: 0 1px 3px rgba(0,0,0,.5) !important;
+            text-shadow: 0 1px 3px rgba(0,0,0,.35) !important;
             opacity: 1 !important;
         }
 
         /* Section headers */
         .main-sidebar .sidebar-menu li.menu-header {
-            color: rgba(148, 180, 255, 0.65) !important;
+            color: rgba(255, 255, 255, 0.60) !important;
             font-weight: 700 !important;
             letter-spacing: 1.3px !important;
             font-size: 10px !important;
@@ -2173,7 +2173,7 @@ if (!function_exists('get_bottom_nav_quick_links')) {
             display: flex !important;
             align-items: center !important;
             white-space: nowrap !important;
-            color: rgba(203, 219, 255, 0.82) !important;
+            color: rgba(255, 255, 255, 0.88) !important;
             font-weight: 500 !important;
             border-radius: 10px !important;
             padding: 10px 14px !important;
@@ -2184,7 +2184,7 @@ if (!function_exists('get_bottom_nav_quick_links')) {
 
         /* Icon */
         .main-sidebar .sidebar-menu li a i {
-            color: rgba(147, 185, 255, 0.75) !important;
+            color: rgba(255, 255, 255, 0.80) !important;
             font-size: 15px !important;
             width: 24px !important;
             margin-right: 14px !important;
@@ -2193,53 +2193,52 @@ if (!function_exists('get_bottom_nav_quick_links')) {
 
         /* Hover — glass white tint */
         .main-sidebar .sidebar-menu li a:hover {
-            color: #fff !important;
-            background: rgba(255, 255, 255, 0.10) !important;
+            color: #ffffff !important;
+            background: rgba(255, 255, 255, 0.16) !important;
             backdrop-filter: blur(8px) !important;
             -webkit-backdrop-filter: blur(8px) !important;
-            box-shadow: inset 0 1px 0 rgba(255,255,255,0.15) !important;
+            box-shadow: inset 0 1px 0 rgba(255,255,255,0.22) !important;
         }
         .main-sidebar .sidebar-menu li a:hover i {
-            color: #93c5fd !important;
+            color: #ffffff !important;
         }
 
-        /* Active single item — bright glass pill */
+        /* Active single item — white glass pill */
         .main-sidebar .sidebar-menu li.active > a,
         .main-sidebar .sidebar-menu > li.active:not(.dropdown) > a {
-            color: #ffffff !important;
+            color: #1e3a8a !important;
             font-weight: 700 !important;
-            background: linear-gradient(135deg, rgba(99,164,255,0.38) 0%, rgba(59,130,246,0.28) 100%) !important;
-            backdrop-filter: blur(14px) saturate(180%) !important;
-            -webkit-backdrop-filter: blur(14px) saturate(180%) !important;
-            border: 1px solid rgba(147, 197, 253, 0.30) !important;
-            border-top: 1px solid rgba(255,255,255,0.22) !important;
-            box-shadow: 0 4px 18px rgba(37,99,235,0.28), inset 0 1px 0 rgba(255,255,255,0.18) !important;
+            background: rgba(255, 255, 255, 0.95) !important;
+            backdrop-filter: blur(14px) !important;
+            -webkit-backdrop-filter: blur(14px) !important;
+            border: 1px solid rgba(255, 255, 255, 0.90) !important;
+            box-shadow: 0 4px 16px rgba(15, 23, 42, 0.20), inset 0 1px 0 #ffffff !important;
             position: relative !important;
         }
         .main-sidebar .sidebar-menu li.active > a i,
         .main-sidebar .sidebar-menu > li.active:not(.dropdown) > a i {
-            color: #bfdbfe !important;
+            color: #2563eb !important;
         }
 
         /* Active dropdown parent */
         .main-sidebar .sidebar-menu > li.dropdown.active > a.has-dropdown {
-            color: #93c5fd !important;
-            background: rgba(255,255,255,0.08) !important;
-            border: 1px solid rgba(147,197,253,0.18) !important;
-            border-top: 1px solid rgba(255,255,255,0.14) !important;
+            color: #ffffff !important;
+            font-weight: 600 !important;
+            background: rgba(255, 255, 255, 0.18) !important;
+            border: 1px solid rgba(255, 255, 255, 0.22) !important;
             box-shadow: none !important;
         }
         .main-sidebar .sidebar-menu > li.dropdown.active > a.has-dropdown i {
-            color: #93c5fd !important;
+            color: #ffffff !important;
         }
 
         /* Submenu wrapper */
         .main-sidebar .sidebar-menu ul.dropdown-menu {
-            background: rgba(255,255,255,0.045) !important;
+            background: rgba(0, 0, 0, 0.12) !important;
             border-radius: 10px !important;
             margin: 2px 0 4px 0 !important;
             padding: 4px 0 !important;
-            border: 1px solid rgba(255,255,255,0.07) !important;
+            border: 1px solid rgba(255,255,255,0.12) !important;
         }
 
         /* Submenu links */
@@ -2248,7 +2247,7 @@ if (!function_exists('get_bottom_nav_quick_links')) {
             align-items: center !important;
             justify-content: space-between !important;
             padding: 8px 14px 8px 44px !important;
-            color: rgba(186, 210, 255, 0.78) !important;
+            color: rgba(255, 255, 255, 0.85) !important;
             font-weight: 500 !important;
             border-radius: 8px !important;
             transition: all .15s ease !important;
@@ -2265,21 +2264,20 @@ if (!function_exists('get_bottom_nav_quick_links')) {
 
         /* Submenu hover */
         .main-sidebar .sidebar-menu ul.dropdown-menu li a:hover {
-            color: #fff !important;
-            background: rgba(255,255,255,0.10) !important;
+            color: #ffffff !important;
+            background: rgba(255, 255, 255, 0.14) !important;
         }
 
         /* Submenu active */
         .main-sidebar .sidebar-menu ul.dropdown-menu li a.active,
         .main-sidebar .sidebar-menu ul.dropdown-menu li.active > a {
-            color: #ffffff !important;
+            color: #1e3a8a !important;
             font-weight: 700 !important;
-            background: linear-gradient(135deg, rgba(99,164,255,0.35) 0%, rgba(59,130,246,0.22) 100%) !important;
+            background: rgba(255, 255, 255, 0.92) !important;
             backdrop-filter: blur(10px) !important;
             -webkit-backdrop-filter: blur(10px) !important;
-            border: 1px solid rgba(147,197,253,0.25) !important;
-            border-top: 1px solid rgba(255,255,255,0.18) !important;
-            box-shadow: 0 2px 10px rgba(37,99,235,0.18), inset 0 1px 0 rgba(255,255,255,0.12) !important;
+            border: 1px solid #ffffff !important;
+            box-shadow: 0 2px 10px rgba(15, 23, 42, 0.18) !important;
             position: relative !important;
         }
 
@@ -2294,8 +2292,8 @@ if (!function_exists('get_bottom_nav_quick_links')) {
             width: 6px !important;
             height: 6px !important;
             border-radius: 50% !important;
-            background: #60a5fa !important;
-            box-shadow: 0 0 8px rgba(96,165,250,0.9) !important;
+            background: #2563eb !important;
+            box-shadow: 0 0 6px rgba(37, 99, 235, 0.8) !important;
         }
 
         /* Badge */
@@ -2314,7 +2312,7 @@ if (!function_exists('get_bottom_nav_quick_links')) {
             margin-left: auto !important;
             margin-right: 2px !important;
             flex-shrink: 0 !important;
-            background: rgba(239,68,68,0.85) !important;
+            background: rgba(239,68,68,0.92) !important;
             color: #fff !important;
             box-shadow: 0 0 10px rgba(239,68,68,0.5) !important;
         }
@@ -2336,26 +2334,26 @@ if (!function_exists('get_bottom_nav_quick_links')) {
             padding: 4px 10px !important;
         }
         .main-sidebar .sidebar-menu li.nav-logout > a.nav-link {
-            color: #fca5a5 !important;
+            color: #fee2e2 !important;
             font-weight: 700 !important;
-            background: rgba(239,68,68,0.12) !important;
+            background: rgba(239,68,68,0.22) !important;
             border-radius: 8px !important;
-            border: 1px solid rgba(239,68,68,0.28) !important;
+            border: 1px solid rgba(255,255,255,0.22) !important;
         }
         .main-sidebar .sidebar-menu li.nav-logout > a.nav-link i {
-            color: #fca5a5 !important;
+            color: #fee2e2 !important;
         }
         .main-sidebar .sidebar-menu li.nav-logout > a.nav-link:hover {
-            background: rgba(239,68,68,0.28) !important;
+            background: rgba(239,68,68,0.40) !important;
             color: #fff !important;
         }
         .main-sidebar .sidebar-menu li.nav-logout > a.nav-link:hover i {
             color: #fff !important;
         }
 
-        /* NiceScroll track di sidebar gelap */
+        /* NiceScroll track */
         .main-sidebar .nicescroll-rails > div {
-            background: rgba(255,255,255,0.18) !important;
+            background: rgba(255,255,255,0.28) !important;
         }
     </style>
     <aside id="sidebar-wrapper">
