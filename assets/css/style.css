@@ -3009,14 +3009,15 @@ pre {
 }
 /* 4.4 Layout */
 .main-sidebar {
-  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.03);
   position: fixed;
   top: 0;
   height: 100%;
   width: 250px;
-  background-color: #fff;
   z-index: 880;
   left: 0;
+  background: linear-gradient(160deg, #0f1c3f 0%, #1a2d6b 40%, #0e1a4a 70%, #131f52 100%);
+  box-shadow: 4px 0 32px rgba(10, 20, 80, 0.45), inset -1px 0 0 rgba(255,255,255,0.07);
+  border-right: 1px solid rgba(255,255,255,0.09);
 }
 
 .main-sidebar,
@@ -3040,10 +3041,10 @@ body.sidebar-mini .main-sidebar {
   box-shadow: none;
 }
 body.sidebar-mini .main-sidebar:after {
-  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.03);
+  box-shadow: 4px 0 32px rgba(10, 20, 80, 0.45);
   content: " ";
   position: fixed;
-  background-color: #fff;
+  background: linear-gradient(160deg, #0f1c3f 0%, #1a2d6b 40%, #0e1a4a 100%);
   width: 65px;
   height: 100%;
   left: 0;
@@ -3106,23 +3107,25 @@ body.sidebar-mini .main-sidebar .sidebar-menu > li.active > a {
 }
 body.sidebar-mini .main-sidebar .sidebar-menu > li ul.dropdown-menu {
   position: absolute;
-  background-color: #fff;
+  background: linear-gradient(160deg, #152060 0%, #1a2d6b 100%);
+  border: 1px solid rgba(255,255,255,0.10);
   left: 65px;
   top: 10px;
   width: 200px;
   display: none;
-  box-shadow: 0 0 30px rgba(0, 0, 0, 0.03);
+  box-shadow: 4px 4px 24px rgba(10,20,80,0.4);
 }
 body.sidebar-mini .main-sidebar .sidebar-menu > li ul.dropdown-menu li > a:focus,
 body.sidebar-mini .main-sidebar .sidebar-menu > li ul.dropdown-menu li.active > a,
 body.sidebar-mini .main-sidebar .sidebar-menu > li ul.dropdown-menu li.active > a:hover {
   color: #fff;
-  background-color: #6777ef !important;
+  background-color: rgba(99,164,255,0.30) !important;
 }
 body.sidebar-mini .main-sidebar .sidebar-menu > li ul.dropdown-menu li a {
   height: 40px;
   padding: 0 20px;
-  background-color: #fff;
+  background-color: transparent;
+  color: rgba(186,210,255,0.82);
 }
 body.sidebar-mini .main-sidebar .sidebar-menu > li ul.dropdown-menu li a.has-dropdown:after {
   content: "\f054";
@@ -3352,7 +3355,7 @@ body.layout-3 .main-footer {
   text-transform: uppercase;
   letter-spacing: 1.5px;
   font-weight: 700;
-  color: #000;
+  color: #e2e8f0;
 }
 .main-sidebar .sidebar-user {
   display: inline-block;
@@ -3396,7 +3399,7 @@ body.layout-3 .main-footer {
   padding: 0 20px;
   width: 100%;
   letter-spacing: 0.3px;
-  color: #78828a;
+  color: rgba(203, 219, 255, 0.82);
   text-decoration: none;
 }
 .main-sidebar .sidebar-menu li a .badge {
@@ -3414,21 +3417,21 @@ body.layout-3 .main-footer {
   width: 100%;
 }
 .main-sidebar .sidebar-menu li a:hover {
-  background-color: #f8fafb;
+  background-color: rgba(255,255,255,0.08);
 }
 .main-sidebar .sidebar-menu li.active a {
-  color: #6777ef;
+  color: #fff;
   font-weight: 600;
-  background-color: #f8fafb;
+  background-color: rgba(99,164,255,0.22);
 }
 .main-sidebar .sidebar-menu li.active a.has-dropdown:after {
   transform: translate(0, -50%) rotate(90deg);
 }
 .main-sidebar .sidebar-menu li.active ul.dropdown-menu {
-  background-color: #f8fafb;
+  background-color: rgba(255,255,255,0.04);
 }
 .main-sidebar .sidebar-menu > li.nav-item.dropdown.active > a {
-  color: #6777ef;
+  color: #93c5fd;
   font-weight: 600;
   background-color: transparent;
 }
