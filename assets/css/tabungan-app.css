@@ -16,23 +16,8 @@
 }
 
 /* ---------- Judul halaman ---------- */
-.tabungan-app .section-header {
-    padding-bottom: 10px;
-}
-
-.tabungan-app .section-header h1 {
-    font-size: 1.15rem;
-    font-weight: 800;
-    color: var(--tb-ink);
-    letter-spacing: -.01em;
-}
-
-.tabungan-app .section-header-breadcrumb .breadcrumb-item,
-.tabungan-app .section-header-breadcrumb .breadcrumb-item a {
-    font-size: .8rem;
-    font-weight: 600;
-    color: var(--tb-muted);
-}
+/* Header halaman mengikuti style global (templates/header.php) agar seragam
+   dengan halaman lain: tinggi, ukuran judul, dan breadcrumb sama. */
 
 /* ---------- Kartu ---------- */
 .tabungan-app .card {
@@ -699,10 +684,6 @@ body.modal-open .modal .modal-footer {
    Mobile: tampilan seperti aplikasi
    ============================================================ */
 @media (max-width: 991.98px) {
-    .tabungan-app .section-header h1 {
-        font-size: 1.05rem;
-    }
-
     .tabungan-app .card-body {
         padding: 14px;
     }

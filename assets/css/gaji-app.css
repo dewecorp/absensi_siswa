@@ -15,23 +15,8 @@
 }
 
 /* ---------- Judul halaman ---------- */
-.gaji-app .section-header {
-    padding-bottom: 10px;
-}
-
-.gaji-app .section-header h1 {
-    font-size: 1.15rem;
-    font-weight: 800;
-    color: var(--gj-ink);
-    letter-spacing: -.01em;
-}
-
-.gaji-app .section-header-breadcrumb .breadcrumb-item,
-.gaji-app .section-header-breadcrumb .breadcrumb-item a {
-    font-size: .8rem;
-    font-weight: 600;
-    color: var(--gj-muted);
-}
+/* Header halaman mengikuti style global (templates/header.php) agar seragam
+   dengan halaman lain: tinggi, ukuran judul, dan breadcrumb sama. */
 
 /* ---------- Kartu ---------- */
 .gaji-app .card {
@@ -198,10 +183,6 @@ body.modal-open .modal .modal-footer {
    Mobile: tampilan seperti aplikasi
    ============================================================ */
 @media (max-width: 991.98px) {
-    .gaji-app .section-header h1 {
-        font-size: 1.05rem;
-    }
-
     .gaji-app .card-body {
         padding: 14px;
     }

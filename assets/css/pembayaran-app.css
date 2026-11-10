@@ -11,23 +11,8 @@
     --pb-muted: #64748b;
 }
 
-.pembayaran-app .section-header {
-    padding-bottom: 10px;
-}
-
-.pembayaran-app .section-header h1 {
-    font-size: 1.15rem;
-    font-weight: 800;
-    color: var(--pb-ink);
-    letter-spacing: -.01em;
-}
-
-.pembayaran-app .section-header-breadcrumb .breadcrumb-item,
-.pembayaran-app .section-header-breadcrumb .breadcrumb-item a {
-    font-size: .8rem;
-    font-weight: 600;
-    color: var(--pb-muted);
-}
+/* Header halaman mengikuti style global (templates/header.php) agar seragam
+   dengan halaman lain: tinggi, ukuran judul, dan breadcrumb sama. */
 
 /* ---------- Cards ---------- */
 .pembayaran-app .card {
@@ -528,10 +513,6 @@ body.modal-open .modal .modal-footer {
 
 /* ---------- Mobile: tabel berubah jadi kartu ---------- */
 @media (max-width: 991.98px) {
-    .pembayaran-app .section-header h1 {
-        font-size: 1.05rem;
-    }
-
     .pembayaran-app .card-body {
         padding: 14px;
     }
