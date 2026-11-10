@@ -4395,3 +4395,39 @@ if (!function_exists('richTextToPlain')) {
         return trim($text);
     }
 }
+
+if (!function_exists('getJumlahJamMengajarMap')) {
+    /**
+     * Peta jumlah jam mengajar per guru berdasarkan jadwal reguler.
+     * Satu baris jadwal reguler dengan jam pelajaran bernomor (1, 2, 3, ...)
+     * dihitung satu jam. Slot istirahat/upacara (jam_ke A/B/C) dan jadwal
+     * Ramadhan tidak dihitung sebagai jam mengajar.
+     *
+     * @return array<int,int> [id_guru => jumlah jam mengajar]
+     */
+    function getJumlahJamMengajarMap(PDO $pdo): array
+    {
+        $map = [];
+        try {
+            $rows = $pdo->query("
+                SELECT guru_id, COUNT(*) AS jumlah
+                FROM tb_jadwal_pelajaran
+                WHERE jenis = 'Reguler'
+                  AND guru_id IS NOT NULL AND guru_id > 0
+                  AND TRIM(jam_ke) REGEXP '^[0-9]+$'
+                GROUP BY guru_id
+            ")->fetchAll(PDO::FETCH_ASSOC);
+        } catch (Throwable $e) {
+            return [];
+        }
+
+        foreach ($rows as $row) {
+            $gid = (int)($row['guru_id'] ?? 0);
+            if ($gid > 0) {
+                $map[$gid] = (int)($row['jumlah'] ?? 0);
+            }
+        }
+
+        return $map;
+    }
+}

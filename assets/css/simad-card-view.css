@@ -148,6 +148,13 @@ table.simad-card-view {
     box-sizing: border-box !important;
 }
 
+/* Netralkan tinggi baris tabel global (style.css: height 60px) agar isi kartu rapat */
+.simad-card-view tbody tr td {
+    height: auto !important;
+    min-height: 0 !important;
+    line-height: 1.4 !important;
+}
+
 .simad-card-view tbody tr:hover {
     transform: translateY(-3px) !important;
     box-shadow: 0 10px 22px rgba(15, 23, 42, .08) !important;
@@ -321,10 +328,11 @@ table.simad-card-view {
     display: flex !important;
     align-items: flex-start !important;
     justify-content: space-between !important;
-    padding: 6px 0 !important;
+    padding: 4px 0 !important;
     border: none !important;
     border-bottom: 1px dashed #f1f5f9 !important;
     font-size: 0.81rem !important;
+    line-height: 1.35 !important;
     color: #334155 !important;
     width: 100% !important;
     min-width: 0 !important;

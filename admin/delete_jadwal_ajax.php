@@ -1,6 +1,7 @@
 <?php
 require_once '../config/database.php';
 require_once '../config/functions.php';
+require_once '../config/gaji_sync.php';
 
 // Ensure session is started
 if (session_status() == PHP_SESSION_NONE) {
@@ -26,6 +27,9 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
     try {
         $stmt = $pdo->prepare("DELETE FROM tb_jadwal_pelajaran WHERE id_jadwal = ?");
         $stmt->execute([$id_jadwal]);
+
+        // Jam mengajar berubah -> sinkronkan ke modul gaji
+        gaji_sync_guru_modul($pdo);
 
         echo json_encode(['status' => 'success']);
     } catch (Exception $e) {

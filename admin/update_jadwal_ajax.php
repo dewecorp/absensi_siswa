@@ -1,6 +1,7 @@
 <?php
 require_once '../config/database.php';
 require_once '../config/functions.php';
+require_once '../config/gaji_sync.php';
 
 // Ensure session is started
 if (session_status() == PHP_SESSION_NONE) {
@@ -31,6 +32,7 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
             
             $stmt = $pdo->prepare("UPDATE tb_jadwal_pelajaran SET $column = ? WHERE id_jadwal = ?");
             $stmt->execute([$val, $id_jadwal]);
+            gaji_sync_guru_modul($pdo);
             echo json_encode(['status' => 'success']);
         } catch (PDOException $e) {
             // Check for duplicate entry (SQLSTATE 23000)
@@ -99,6 +101,7 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
                 if (empty($value)) {
                      $del = $pdo->prepare("DELETE FROM tb_jadwal_pelajaran WHERE id_jadwal = ?");
                      $del->execute([$existing['id_jadwal']]);
+                     gaji_sync_guru_modul($pdo);
                      echo json_encode(['status' => 'success', 'message' => 'Jadwal dihapus']);
                      exit;
                 }
@@ -111,6 +114,7 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
                 $update = $pdo->prepare("UPDATE tb_jadwal_pelajaran SET $column = ? WHERE id_jadwal = ?");
                 $update->execute([$value, $existing['id_jadwal']]);
             }
+            gaji_sync_guru_modul($pdo);
         } else {
             // Insert
             // We need both mapel and guru to insert if schema is NOT NULL.
@@ -139,6 +143,7 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
                 $insert = $pdo->prepare("INSERT INTO tb_jadwal_pelajaran (kelas_id, hari, jam_ke, jenis, $column) VALUES (?, ?, ?, ?, ?)");
                 $insert->execute([$kelas_id, $hari, $jam_ke, $jenis, $value]);
             }
+            gaji_sync_guru_modul($pdo);
         }
 
         echo json_encode(['status' => 'success']);

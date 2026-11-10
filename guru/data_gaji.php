@@ -7,6 +7,9 @@ if (!isAuthorized(['guru', 'wali'])) {
     redirect('../login.php');
 }
 
+// Pastikan jumlah jam mengajar & identitas guru di modul gaji selalu sinkron
+gaji_sync_guru_modul($pdo);
+
 $school_profile = getSchoolProfile($pdo);
 
 if ($_SESSION['level'] == 'guru' || $_SESSION['level'] == 'wali') {

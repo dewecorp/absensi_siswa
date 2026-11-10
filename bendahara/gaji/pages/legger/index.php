@@ -478,7 +478,10 @@ var tableLegger;
             }
             
             tableLegger = $('#tableLeggerData').DataTable({
-                dom: 'Bfrtip',
+                // Legger ditampilkan utuh tanpa pagination
+                paging: false,
+                pageLength: -1,
+                dom: 'Bfrti',
                 buttons: {
                     dom: {
                         button: {

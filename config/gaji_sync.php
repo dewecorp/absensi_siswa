@@ -260,6 +260,18 @@ if (!function_exists('gaji_sync_guru_modul')) {
             return $stat;
         }
 
+        // Jumlah jam mengajar dari jadwal reguler (dihitung sekali per sinkronisasi)
+        $jamMap = function_exists('getJumlahJamMengajarMap') ? getJumlahJamMengajarMap($pdo) : [];
+
+        // Honor per jam untuk menghitung ulang gaji pokok berjalan
+        $honorPerJam = 0.0;
+        try {
+            $s = $pdo->query("SELECT honor_per_jam FROM settings LIMIT 1")->fetch(PDO::FETCH_ASSOC);
+            $honorPerJam = (float)($s['honor_per_jam'] ?? 0);
+        } catch (Throwable $e) {
+            $honorPerJam = 0.0;
+        }
+
         foreach ($teachers as $teacher) {
             $id_guru = (int)($teacher['id_guru'] ?? 0);
             if ($id_guru <= 0) {
@@ -282,7 +294,6 @@ if (!function_exists('gaji_sync_guru_modul')) {
 
             if (!$sebelum) {
                 $stat['dibuat']++;
-                continue;
             }
 
             // Segarkan identitas dasar bila berubah di SIMAD
@@ -305,6 +316,14 @@ if (!function_exists('gaji_sync_guru_modul')) {
                 $params[] = $jk;
             }
 
+            // Sinkronkan jumlah jam mengajar dari jadwal reguler SIMAD
+            $jamTarget = (int)($jamMap[$id_guru] ?? 0);
+            $jamSekarang = (int)($row['jumlah_jam_mengajar'] ?? 0);
+            if ($jamTarget !== $jamSekarang) {
+                $set[] = 'jumlah_jam_mengajar = ?';
+                $params[] = $jamTarget;
+            }
+
             if ($set) {
                 $params[] = (int)$row['id'];
                 try {
@@ -312,6 +331,24 @@ if (!function_exists('gaji_sync_guru_modul')) {
                     $st->execute($params);
                     if ($st->rowCount() > 0) {
                         $stat['diperbarui']++;
+                    }
+                } catch (Throwable $e) {
+                    // abaikan
+                }
+            }
+
+            // Hitung ulang gaji pokok berjalan (jumlah jam x honor per jam)
+            if ($honorPerJam > 0 && $jamTarget > 0) {
+                try {
+                    $st = $pdo->prepare("SELECT id, jumlah FROM gaji_pokok WHERE guru_id = ? AND (periode = '' OR periode IS NULL) ORDER BY id DESC LIMIT 1");
+                    $st->execute([(int)$row['id']]);
+                    $gp = $st->fetch(PDO::FETCH_ASSOC);
+                    if ($gp) {
+                        $target = $jamTarget * $honorPerJam;
+                        if (abs((float)($gp['jumlah'] ?? 0) - $target) > 0.01) {
+                            $up = $pdo->prepare("UPDATE gaji_pokok SET jumlah = ? WHERE id = ?");
+                            $up->execute([$target, (int)$gp['id']]);
+                        }
                     }
                 } catch (Throwable $e) {
                     // abaikan

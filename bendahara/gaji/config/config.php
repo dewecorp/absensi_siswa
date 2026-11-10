@@ -55,6 +55,12 @@ if (!isset($conn) || !($conn instanceof mysqli)) {
     $conn->set_charset('utf8mb4');
 }
 
+// Sinkronkan identitas guru & jumlah jam mengajar (jadwal reguler) ke tabel `guru`.
+require_once __DIR__ . '/../../../config/gaji_sync.php';
+if (isset($pdo) && $pdo instanceof PDO) {
+    gaji_sync_guru_modul($pdo);
+}
+
 // Kompatibilitas variabel sesi lama SIGaji.
 if (empty($_SESSION['nama_lengkap'])) {
     $_SESSION['nama_lengkap'] = $_SESSION['nama'] ?? $_SESSION['username'] ?? 'Pengguna';

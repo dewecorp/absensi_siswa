@@ -748,6 +748,9 @@ echo "<!-- DEBUG: Before data fetching -->\n";
 // Fetch all teachers with their wali kelas information
 $teachers = fetchTeachersWithWaliKelas($pdo);
 
+// Jumlah jam mengajar per guru, dihitung dari jadwal reguler
+$jam_mengajar_map = getJumlahJamMengajarMap($pdo);
+
 // Calculate teacher statistics
 $total_guru = count($teachers);
 $total_laki = 0;
@@ -1043,7 +1046,7 @@ $(document).ready(function() {
             $('#table-1').DataTable({
                 \"order\": [[3, \"asc\"]],
                 \"columnDefs\": [
-                    { \"sortable\": false, \"targets\": [1, 2, 15] } // Disable sorting for checkbox, foto, and action columns
+                    { \"sortable\": false, \"targets\": [1, 2, 16] } // Disable sorting for checkbox, foto, and action columns
                 ],
                 \"paging\": true,
                 \"lengthChange\": true,
@@ -1270,6 +1273,7 @@ echo "<!-- DEBUG: After template inclusion -->\n";
                                                         <th>TMT</th>
                                                         <th>Masa Bakti</th>
                                                         <th>Mengajar</th>
+                                                        <th>Jumlah Jam</th>
                                                         <th>Jabatan</th>
                                                         <th>Wali Kelas</th>
                                                         <th>Password</th>
@@ -1338,6 +1342,7 @@ echo "<!-- DEBUG: After template inclusion -->\n";
                                                         <td data-label="TMT"><?php echo !empty($teacher['tmt']) ? date('d-m-Y', strtotime($teacher['tmt'])) : '-'; ?></td>
                                                         <td data-label="Masa Bakti"><?php echo calculateMasaBakti($teacher['tmt'] ?? null); ?></td>
                                                         <td data-label="Mengajar"><?php echo htmlspecialchars($mengajar_display ?: '-'); ?></td>
+                                                        <td data-label="Jumlah Jam" data-order="<?php echo (int)($jam_mengajar_map[(int)$teacher['id_guru']] ?? 0); ?>"><?php echo (int)($jam_mengajar_map[(int)$teacher['id_guru']] ?? 0); ?> jam</td>
                                                         <td data-label="Jabatan"><?php echo !empty($teacher['jabatan']) ? htmlspecialchars($teacher['jabatan']) : '-'; ?></td>
                                                         <td data-label="Wali Kelas"><?php echo htmlspecialchars($teacher['kelas_wali'] ?? '-'); ?></td>
                                                         <td data-label="Password"><?php echo !empty($teacher['password_plain']) ? htmlspecialchars($teacher['password_plain']) : ($teacher['password'] ? '***' : 'Belum Diatur'); ?></td>
