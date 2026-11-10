@@ -41,6 +41,22 @@ if ($is_admin_or_kepala) {
 }
 $allowed_kelas_ids = array_map('intval', array_column($daftar_kelas, 'id_kelas'));
 
+// Filter
+$f_kelas = isset($_GET['kelas']) && $_GET['kelas'] !== '' ? (int)$_GET['kelas'] : null;
+$f_search = trim((string)($_GET['q'] ?? ''));
+
+$buildRedirectUrl = static function (?int $kelasId = null) use ($session_type, $f_kelas): string {
+    $q = [];
+    if ($session_type !== '') {
+        $q['session_type'] = $session_type;
+    }
+    $targetKelas = $kelasId ?: $f_kelas;
+    if ($targetKelas) {
+        $q['kelas'] = $targetKelas;
+    }
+    return 'kelompok_belajar.php' . (!empty($q) ? '?' . http_build_query($q) : '');
+};
+
 // Handle CRUD POST
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     if (!$can_crud) {
@@ -49,7 +65,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             'title' => 'Akses Ditolak',
             'text' => 'Hanya Wali Kelas dan Admin yang berhak mengelola kelompok belajar.'
         ];
-        header("Location: kelompok_belajar.php" . ($session_type ? "?session_type=" . urlencode($session_type) : ""));
+        header("Location: " . $buildRedirectUrl());
         exit;
     }
     $action = $_POST['action'] ?? '';
@@ -83,7 +99,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 'title' => 'Akses Ditolak',
                 'text' => 'Anda tidak memiliki hak akses untuk kelas yang dipilih.'
             ];
-            header("Location: kelompok_belajar.php" . ($session_type ? "?session_type=" . urlencode($session_type) : ""));
+            header("Location: " . $buildRedirectUrl());
             exit;
         }
 
@@ -141,7 +157,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 ];
             }
         }
-        header("Location: kelompok_belajar.php" . ($session_type ? "?session_type=" . urlencode($session_type) : ""));
+        header("Location: " . $buildRedirectUrl($id_kelas));
         exit;
     } elseif ($action === 'hapus') {
         $id_kelompok = (int)($_POST['id_kelompok'] ?? 0);
@@ -160,7 +176,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 'text' => $e->getMessage()
             ];
         }
-        header("Location: kelompok_belajar.php" . ($session_type ? "?session_type=" . urlencode($session_type) : ""));
+        header("Location: " . $buildRedirectUrl());
         exit;
     }
 }
@@ -168,10 +184,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 // Flash toast via session
 $swal_toast = $_SESSION['swal_toast'] ?? null;
 unset($_SESSION['swal_toast']);
-
-// Filter
-$f_kelas = isset($_GET['kelas']) && $_GET['kelas'] !== '' ? (int)$_GET['kelas'] : null;
-$f_search = trim((string)($_GET['q'] ?? ''));
 
 // Siswa hanya untuk kelas yang diajar guru (atau semua bila admin/kepala)
 if ($is_admin_or_kepala) {
@@ -188,50 +200,55 @@ if ($is_admin_or_kepala) {
 }
 
 // Query data kelompok
-$sql = "
-    SELECT 
-        kb.id_kelompok,
-        kb.nama_kelompok,
-        kb.id_kelas,
-        kb.id_ketua,
-        kb.keterangan,
-        kb.created_at,
-        k.nama_kelas,
-        sk.nama_siswa AS nama_ketua,
-        sk.foto AS foto_ketua
-    FROM tb_kelompok_belajar kb
-    LEFT JOIN tb_kelas k ON kb.id_kelas = k.id_kelas
-    LEFT JOIN tb_siswa sk ON kb.id_ketua = sk.id_siswa
-    WHERE 1=1
-";
-$params = [];
+// Untuk Admin/Kepala: wajib pilih kelas terlebih dahulu. Jika belum memilih kelas, data dikosongkan.
+if ($is_admin_or_kepala && !$f_kelas) {
+    $kelompok_list = [];
+} else {
+    $sql = "
+        SELECT 
+            kb.id_kelompok,
+            kb.nama_kelompok,
+            kb.id_kelas,
+            kb.id_ketua,
+            kb.keterangan,
+            kb.created_at,
+            k.nama_kelas,
+            sk.nama_siswa AS nama_ketua,
+            sk.foto AS foto_ketua
+        FROM tb_kelompok_belajar kb
+        LEFT JOIN tb_kelas k ON kb.id_kelas = k.id_kelas
+        LEFT JOIN tb_siswa sk ON kb.id_ketua = sk.id_siswa
+        WHERE 1=1
+    ";
+    $params = [];
 
-// Pembatasan data untuk Guru/Wali: hanya kelompok dari kelas yang diajar atau yang dia buat
-if (!$is_admin_or_kepala) {
-    if (!empty($allowed_kelas_ids)) {
-        $ph = implode(',', array_fill(0, count($allowed_kelas_ids), '?'));
-        $sql .= " AND (kb.id_kelas IN ($ph) OR kb.id_guru = ?)";
-        $params = array_merge($params, $allowed_kelas_ids, [$guru_id]);
-    } else {
-        $sql .= " AND kb.id_guru = ?";
-        $params[] = $guru_id;
+    // Pembatasan data untuk Wali: hanya kelompok dari kelas yang diampu atau yang dibuat
+    if (!$is_admin_or_kepala) {
+        if (!empty($allowed_kelas_ids)) {
+            $ph = implode(',', array_fill(0, count($allowed_kelas_ids), '?'));
+            $sql .= " AND (kb.id_kelas IN ($ph) OR kb.id_guru = ?)";
+            $params = array_merge($params, $allowed_kelas_ids, [$guru_id]);
+        } else {
+            $sql .= " AND kb.id_guru = ?";
+            $params[] = $guru_id;
+        }
     }
-}
 
-if ($f_kelas) {
-    $sql .= " AND kb.id_kelas = ?";
-    $params[] = $f_kelas;
-}
-if ($f_search !== '') {
-    $sql .= " AND (kb.nama_kelompok LIKE ? OR sk.nama_siswa LIKE ?)";
-    $params[] = "%$f_search%";
-    $params[] = "%$f_search%";
-}
-$sql .= " ORDER BY kb.id_kelompok DESC";
+    if ($f_kelas) {
+        $sql .= " AND kb.id_kelas = ?";
+        $params[] = $f_kelas;
+    }
+    if ($f_search !== '') {
+        $sql .= " AND (kb.nama_kelompok LIKE ? OR sk.nama_siswa LIKE ?)";
+        $params[] = "%$f_search%";
+        $params[] = "%$f_search%";
+    }
+    $sql .= " ORDER BY kb.id_kelompok DESC";
 
-$stmt = $pdo->prepare($sql);
-$stmt->execute($params);
-$kelompok_list = $stmt->fetchAll(PDO::FETCH_ASSOC);
+    $stmt = $pdo->prepare($sql);
+    $stmt->execute($params);
+    $kelompok_list = $stmt->fetchAll(PDO::FETCH_ASSOC);
+}
 
 // Ambil anggota per kelompok
 $anggota_map = [];
@@ -507,7 +524,7 @@ include '../templates/sidebar.php';
                         <div class="col-md-4 col-sm-6 mb-2 mb-md-0">
                             <label class="sr-only">Kelas</label>
                             <select name="kelas" class="form-control" onchange="this.form.submit()">
-                                <option value=""><?= $is_admin_or_kepala ? 'Semua Kelas' : 'Semua Kelas Diampu' ?></option>
+                                <option value=""><?= $is_admin_or_kepala ? '-- Pilih Kelas --' : 'Semua Kelas Diampu' ?></option>
                                 <?php foreach ($daftar_kelas as $k): ?>
                                     <option value="<?= (int)$k['id_kelas'] ?>" <?= $f_kelas === (int)$k['id_kelas'] ? 'selected' : '' ?>>
                                         Kelas <?= htmlspecialchars($k['nama_kelas']) ?>
@@ -530,6 +547,7 @@ include '../templates/sidebar.php';
             </div>
 
             <!-- Daftar Kartu Kelompok Belajar -->
+            <?php if (!$is_admin_or_kepala || $f_kelas): ?>
             <?php if (empty($kelompok_list)): ?>
                 <div class="card text-center py-5" style="border-radius:16px;border:none;box-shadow:0 4px 18px rgba(0,0,0,0.04);">
                     <div class="card-body">
@@ -653,6 +671,7 @@ include '../templates/sidebar.php';
                         </div>
                     <?php endforeach; ?>
                 </div>
+            <?php endif; ?>
             <?php endif; ?>
         </div>
     </section>
@@ -787,7 +806,7 @@ function muatSiswaBerdasarkanKelas(selectedKetua, selectedAnggota) {
     $anggota.trigger('change');
 }
 
-var defaultKelasId = <?= count($daftar_kelas) === 1 ? json_encode((string)$daftar_kelas[0]['id_kelas']) : '""' ?>;
+var defaultKelasId = <?= $f_kelas ? json_encode((string)$f_kelas) : (count($daftar_kelas) === 1 ? json_encode((string)$daftar_kelas[0]['id_kelas']) : '""') ?>;
 
 function bukaModalTambah() {
     $('#form_action').val('tambah');
