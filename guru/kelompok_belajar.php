@@ -5,14 +5,17 @@ require_once '../config/kelompok_belajar_helper.php';
 
 ensure_kelompok_belajar_schema($pdo);
 
-if (!isAuthorized(['guru', 'wali', 'admin', 'tata_usaha', 'kepala_madrasah'])) {
+if (!isAuthorized(['wali', 'admin', 'kepala_madrasah'])) {
     redirect('../login.php');
 }
 
 $user_level = getUserLevel();
 $session_type = (string)($_GET['session_type'] ?? '');
-$is_admin_or_kepala = in_array($user_level, ['admin', 'kepala_madrasah', 'tata_usaha'], true)
-    || in_array($session_type, ['admin', 'kepala_madrasah', 'tata_usaha'], true);
+$is_admin = ($user_level === 'admin') || ($session_type === 'admin');
+$is_kepala = ($user_level === 'kepala_madrasah') || ($session_type === 'kepala_madrasah');
+$is_admin_or_kepala = $is_admin || $is_kepala;
+$can_crud = in_array($user_level, ['admin', 'wali'], true) && $session_type !== 'kepala_madrasah';
+$dash_url = $is_admin ? '../admin/dashboard.php' : ($is_kepala ? '../kepala/dashboard.php' : '../wali/dashboard.php');
 
 $guru_id = getCurrentGuruId($pdo);
 if ($guru_id <= 0 && isset($_SESSION['user_id'])) {
@@ -20,13 +23,18 @@ if ($guru_id <= 0 && isset($_SESSION['user_id'])) {
 }
 
 // Ambil daftar kelas:
-// - Guru/Wali: hanya kelas yang diajar (menggunakan getGuruTaughtClasses)
-// - Admin/Kepala/TU: semua kelas
+// - Admin/Kepala: semua kelas
+// - Wali: kelas yang diampu sebagai wali kelas (fallback ke kelas yang diajar)
 $all_kelas_master = $pdo->query("SELECT id_kelas, nama_kelas FROM tb_kelas ORDER BY id_kelas ASC")->fetchAll(PDO::FETCH_ASSOC);
 if ($is_admin_or_kepala) {
     $daftar_kelas = $all_kelas_master;
 } else {
-    $daftar_kelas = getGuruTaughtClasses($pdo, $guru_id);
+    $stmtWali = $pdo->prepare("SELECT id_kelas, nama_kelas FROM tb_kelas WHERE wali_kelas = ? OR wali_kelas = (SELECT nama_guru FROM tb_guru WHERE id_guru = ?) ORDER BY id_kelas ASC");
+    $stmtWali->execute([$guru_id, $guru_id]);
+    $daftar_kelas = $stmtWali->fetchAll(PDO::FETCH_ASSOC);
+    if (empty($daftar_kelas)) {
+        $daftar_kelas = getGuruTaughtClasses($pdo, $guru_id);
+    }
     if (empty($daftar_kelas)) {
         $daftar_kelas = $all_kelas_master;
     }
@@ -35,6 +43,15 @@ $allowed_kelas_ids = array_map('intval', array_column($daftar_kelas, 'id_kelas')
 
 // Handle CRUD POST
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+    if (!$can_crud) {
+        $_SESSION['swal_toast'] = [
+            'type' => 'error',
+            'title' => 'Akses Ditolak',
+            'text' => 'Hanya Wali Kelas dan Admin yang berhak mengelola kelompok belajar.'
+        ];
+        header("Location: kelompok_belajar.php" . ($session_type ? "?session_type=" . urlencode($session_type) : ""));
+        exit;
+    }
     $action = $_POST['action'] ?? '';
 
     if ($action === 'tambah' || $action === 'edit') {
@@ -465,16 +482,18 @@ include '../templates/sidebar.php';
             <div>
                 <h1>Kelompok Belajar</h1>
                 <div class="section-header-breadcrumb">
-                    <div class="breadcrumb-item"><a href="dashboard.php">Dashboard</a></div>
-                    <div class="breadcrumb-item">Pembelajaran</div>
+                    <div class="breadcrumb-item"><a href="<?= htmlspecialchars($dash_url) ?>">Dashboard</a></div>
+                    <div class="breadcrumb-item">Pengelolaan Kelas</div>
                     <div class="breadcrumb-item active">Kelompok Belajar</div>
                 </div>
             </div>
+            <?php if ($can_crud): ?>
             <div>
                 <button type="button" class="btn btn-primary" onclick="bukaModalTambah()">
                     <i class="fas fa-plus mr-1"></i> Tambah Kelompok
                 </button>
             </div>
+            <?php endif; ?>
         </div>
 
         <div class="section-body">
@@ -488,7 +507,7 @@ include '../templates/sidebar.php';
                         <div class="col-md-4 col-sm-6 mb-2 mb-md-0">
                             <label class="sr-only">Kelas</label>
                             <select name="kelas" class="form-control" onchange="this.form.submit()">
-                                <option value="">Semua Kelas Diajar</option>
+                                <option value=""><?= $is_admin_or_kepala ? 'Semua Kelas' : 'Semua Kelas Diampu' ?></option>
                                 <?php foreach ($daftar_kelas as $k): ?>
                                     <option value="<?= (int)$k['id_kelas'] ?>" <?= $f_kelas === (int)$k['id_kelas'] ? 'selected' : '' ?>>
                                         Kelas <?= htmlspecialchars($k['nama_kelas']) ?>
@@ -516,10 +535,14 @@ include '../templates/sidebar.php';
                     <div class="card-body">
                         <i class="fas fa-users-slash fa-3x text-secondary mb-3" style="opacity:0.35;"></i>
                         <h5 class="text-dark font-weight-bold">Belum Ada Kelompok Belajar</h5>
-                        <p class="text-muted mb-3">Klik tombol di bawah untuk membuat kelompok belajar baru.</p>
-                        <button type="button" class="btn btn-primary" onclick="bukaModalTambah()">
-                            <i class="fas fa-plus mr-1"></i> Buat Kelompok Sekarang
-                        </button>
+                        <?php if ($can_crud): ?>
+                            <p class="text-muted mb-3">Klik tombol di bawah untuk membuat kelompok belajar baru.</p>
+                            <button type="button" class="btn btn-primary" onclick="bukaModalTambah()">
+                                <i class="fas fa-plus mr-1"></i> Buat Kelompok Sekarang
+                            </button>
+                        <?php else: ?>
+                            <p class="text-muted mb-0">Belum ada data kelompok belajar yang tercatat.</p>
+                        <?php endif; ?>
                     </div>
                 </div>
             <?php else: ?>
@@ -612,6 +635,7 @@ include '../templates/sidebar.php';
                                 <small class="text-muted">
                                     <i class="far fa-clock mr-1"></i><?= date('d/m/Y', strtotime($row['created_at'])) ?>
                                 </small>
+                                <?php if ($can_crud): ?>
                                 <div class="btn-group" role="group">
                                     <button type="button" class="btn btn-sm btn-outline-primary"
                                             title="Edit Kelompok"
@@ -624,6 +648,7 @@ include '../templates/sidebar.php';
                                         <i class="fas fa-trash-alt mr-1"></i> Hapus
                                     </button>
                                 </div>
+                                <?php endif; ?>
                             </div>
                         </div>
                     <?php endforeach; ?>
@@ -662,7 +687,7 @@ include '../templates/sidebar.php';
                                 <option value="<?= (int)$k['id_kelas'] ?>">Kelas <?= htmlspecialchars($k['nama_kelas']) ?></option>
                             <?php endforeach; ?>
                         </select>
-                        <small class="text-muted">Daftar kelas hanya menampilkan kelas yang Anda ajar.</small>
+                        <small class="text-muted"><?= $is_admin_or_kepala ? 'Pilih kelas untuk memfilter daftar siswa.' : 'Menampilkan kelas yang Anda ampu sebagai wali kelas.' ?></small>
                     </div>
 
                     <div class="form-group">
@@ -762,6 +787,8 @@ function muatSiswaBerdasarkanKelas(selectedKetua, selectedAnggota) {
     $anggota.trigger('change');
 }
 
+var defaultKelasId = <?= count($daftar_kelas) === 1 ? json_encode((string)$daftar_kelas[0]['id_kelas']) : '""' ?>;
+
 function bukaModalTambah() {
     $('#form_action').val('tambah');
     $('#form_id_kelompok').val('0');
@@ -769,7 +796,7 @@ function bukaModalTambah() {
     $('#btnSimpan').html('<i class="fas fa-save mr-1"></i> Simpan Kelompok');
     
     $('#inp_nama_kelompok').val('');
-    $('#inp_kelas').val('');
+    $('#inp_kelas').val(defaultKelasId);
     $('#inp_keterangan').val('');
     
     muatSiswaBerdasarkanKelas();
