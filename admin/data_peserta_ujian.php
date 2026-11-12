@@ -767,9 +767,6 @@ require_once '../templates/sidebar.php';
 <style>
 /* Global Crisp Dark Fonts — Hilangkan Font Grey Pudar di Seluruh Sistem */
 body,
-.main-sidebar,
-.main-sidebar .sidebar-menu li a,
-.main-sidebar .sidebar-menu li ul.dropdown-menu li a,
 .main-content,
 .main-content p,
 .main-content label,
@@ -785,45 +782,6 @@ body,
 .section-title,
 .section-lead {
     color: #0f172a !important;
-}
-
-/* Sidebar Menu Font & Headers */
-.main-sidebar .sidebar-menu li.menu-header {
-    color: #475569 !important;
-    font-weight: 700 !important;
-    letter-spacing: 1.4px !important;
-}
-.main-sidebar .sidebar-menu li a {
-    color: #1e293b !important;
-    font-weight: 600 !important;
-}
-.main-sidebar .sidebar-menu li a i {
-    color: #334155 !important;
-}
-.main-sidebar .sidebar-menu li a:hover {
-    color: #6777ef !important;
-    background-color: #f1f5f9 !important;
-}
-.main-sidebar .sidebar-menu li a:hover i {
-    color: #6777ef !important;
-}
-.main-sidebar .sidebar-menu li.active > a {
-    color: #6777ef !important;
-    font-weight: 700 !important;
-    background-color: #eef2ff !important;
-}
-.main-sidebar .sidebar-menu li.active > a i {
-    color: #6777ef !important;
-}
-.main-sidebar .sidebar-menu li ul.dropdown-menu li a {
-    color: #334155 !important;
-    font-weight: 500 !important;
-}
-.main-sidebar .sidebar-menu li ul.dropdown-menu li a:hover,
-.main-sidebar .sidebar-menu li ul.dropdown-menu li.active > a,
-.main-sidebar .sidebar-menu li ul.dropdown-menu li a.active {
-    color: #6777ef !important;
-    font-weight: 700 !important;
 }
 
 /* Seluruh text-muted dibuat kontras gelap (#334155), bukan abu-abu pudar */

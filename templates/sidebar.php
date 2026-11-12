@@ -2209,7 +2209,7 @@ if (!function_exists('get_bottom_nav_quick_links')) {
         /* Active single item — white glass pill */
         .main-sidebar .sidebar-menu li.active > a,
         .main-sidebar .sidebar-menu > li.active:not(.dropdown) > a {
-            color: #1e3a8a !important;
+            color: #2563eb !important;
             font-weight: 700 !important;
             background: rgba(255, 255, 255, 0.95) !important;
             backdrop-filter: blur(14px) !important;
@@ -2274,7 +2274,7 @@ if (!function_exists('get_bottom_nav_quick_links')) {
         /* Submenu active */
         .main-sidebar .sidebar-menu ul.dropdown-menu li a.active,
         .main-sidebar .sidebar-menu ul.dropdown-menu li.active > a {
-            color: #1e3a8a !important;
+            color: #2563eb !important;
             font-weight: 700 !important;
             background: rgba(255, 255, 255, 0.92) !important;
             backdrop-filter: blur(10px) !important;
