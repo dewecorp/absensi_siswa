@@ -3685,15 +3685,18 @@ body:not(.sidebar-mini) .sidebar-style-2 .sidebar-menu li.active ul.dropdown-men
   .mobile-app-header {
     display: flex;
     align-items: center;
-    position: relative;
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
     width: 100%;
-    margin: 0 0 12px 0;
+    margin: 0;
     padding: 8px 16px;
     background: linear-gradient(135deg, #2f6ef0 0%, #5a8ff7 100%);
     border-radius: 0 0 20px 20px;
     box-shadow: 0 4px 14px rgba(47, 110, 240, 0.28);
     color: #ffffff;
-    z-index: 5;
+    z-index: 1000;
   }
   .mobile-app-header .mobile-app-back {
     display: flex;
@@ -3741,15 +3744,13 @@ body:not(.sidebar-mini) .sidebar-style-2 .sidebar-menu li.active ul.dropdown-men
 /* main-content padding mengikuti ada/tidaknya mobile-app-header */
 @media (max-width: 991.98px) {
   body.mobile-has-app-header .main-content {
-    padding-top: 0 !important;
+    padding-top: 82px !important;
   }
   body.mobile-no-app-header .main-content {
-    padding-top: 16px !important;
+    padding-top: 0 !important;
   }
-  /* Cegah scroll horizontal dari elemen dekoratif */
-  .main-content {
-    overflow-x: hidden;
-  }
+  /* Cegah scroll horizontal dari elemen dekoratif.
+     Jangan pakai overflow pada .main-content (merusak sticky header). */
   /* Alert tak meluber di layar sempit */
   .alert {
     max-width: 100%;

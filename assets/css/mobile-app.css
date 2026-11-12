@@ -18,7 +18,10 @@
   }
 
   body { background: var(--mapp-bg) !important; }
-  .main-content { background: var(--mapp-bg); padding-bottom: 96px !important; overflow-x: hidden; }
+  .main-content { background: var(--mapp-bg); }
+  /* padding-bottom harus menang atas padding shorthand inline template */
+  body.mobile-no-app-header .main-content,
+  body.mobile-has-app-header .main-content { padding-bottom: 96px !important; }
   .main-footer { display: none !important; }
   .section .section-header { display: none !important; }
 
@@ -27,9 +30,9 @@
     display: flex; align-items: center; justify-content: space-between; gap: 10px;
     background: linear-gradient(135deg, #6777ef 0%, #3abaf4 100%);
     color: #fff; border-radius: 0 0 24px 24px;
-    padding: 14px 16px 18px; margin: -16px -20px 14px;
+    padding: 14px 16px 18px; margin: 0 -20px 14px;
     box-shadow: 0 8px 20px rgba(47, 110, 240, .28);
-    position: relative; overflow: hidden;
+    position: sticky; top: 0; z-index: 1030; overflow: hidden;
   }
   .mapp-navbar .mapp-brand { display: flex; align-items: center; gap: 10px; min-width: 0; }
   .mapp-navbar .mapp-brand-text { min-width: 0; }
@@ -71,9 +74,9 @@
     display: flex; align-items: center; justify-content: space-between;
     background: linear-gradient(135deg, #6777ef 0%, #3abaf4 100%);
     color: #fff; border-radius: 0 0 24px 24px;
-    padding: 14px 16px 20px; margin: -16px -20px 14px;
+    padding: 14px 16px 20px; margin: 0 -20px 14px;
     box-shadow: 0 8px 20px rgba(47, 110, 240, .28);
-    position: relative; overflow: hidden;
+    position: sticky; top: 0; z-index: 1030; overflow: hidden;
   }
   .mapp-topbar::after {
     content: ''; position: absolute; right: -46px; top: -46px;
@@ -295,7 +298,13 @@
   .mobile-app-header {
     display: flex !important;
     align-items: center !important;
-    position: relative !important;
+    position: fixed !important;
+    top: 0 !important;
+    left: 0 !important;
+    right: 0 !important;
+    width: 100% !important;
+    margin: 0 !important;
+    z-index: 1030 !important;
     background: linear-gradient(135deg, #2f6ef0 0%, #5a8ff7 100%) !important;
     border-radius: 0 0 22px 22px !important;
     padding: 14px 16px 18px !important;
