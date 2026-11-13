@@ -247,6 +247,65 @@ $favicon_version = is_readable($favicon_path) ? (string)filemtime($favicon_path)
             overflow-x: hidden;
         }
 
+        /* Form login: center vertikal + horizontal, tanpa scroll (desktop/tablet) */
+        @media (min-width: 768px) {
+            html,
+            body.login-body {
+                height: 100%;
+                overflow: hidden;
+            }
+            .login-body #app {
+                height: 100%;
+            }
+            .login-body .section {
+                position: fixed;
+                inset: 0;
+                width: auto;
+                height: auto;
+                min-height: 0;
+                margin: 0;
+                padding: 12px 15px;
+                overflow: hidden;
+                display: flex;
+                align-items: center;
+                justify-content: center;
+            }
+            .login-body .section > .col-12 {
+                margin-top: 0;
+                max-height: 100%;
+                display: flex;
+                flex-direction: column;
+                justify-content: center;
+            }
+            .login-body .card {
+                margin: 0 !important;
+            }
+            .login-body .simple-footer {
+                margin: 12px 0 0 !important;
+            }
+        }
+        /* Layar pendek: rapatkan agar tetap muat tanpa scroll */
+        @media (min-width: 768px) and (max-height: 680px) {
+            .login-body .section {
+                padding: 8px 15px;
+            }
+            .login-body .card-header {
+                padding-top: 1rem !important;
+                padding-bottom: 1rem !important;
+            }
+            .login-body .card-header img {
+                width: 64px !important;
+                height: 64px !important;
+                margin-bottom: 0.5rem !important;
+            }
+            .login-body .card-body {
+                padding: 1rem 1.25rem !important;
+            }
+            .login-body .simple-footer {
+                margin-top: 8px !important;
+            }
+        }
+
         /* Responsive images */
         img {
             max-width: 100%;
