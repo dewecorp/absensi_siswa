@@ -422,6 +422,7 @@ switch ($user_level) {
         ];
 
         $master_data_submenu = [
+            ['title' => 'Komite Madrasah', 'url' => '../admin/komite_madrasah.php', 'active' => $current_page === 'komite_madrasah.php'],
             ['title' => 'Data Guru', 'url' => '../admin/data_guru.php', 'active' => $current_page === 'data_guru.php'],
             ['title' => 'Data Jabatan', 'url' => '../admin/data_jabatan.php', 'active' => $current_page === 'data_jabatan.php'],
             ['title' => 'Data Kelas', 'url' => '../admin/data_kelas.php', 'active' => $current_page === 'data_kelas.php'],
@@ -515,7 +516,7 @@ switch ($user_level) {
                 'title' => 'Master Data',
                 'icon' => 'fas fa-database',
                 'submenu' => $master_data_submenu,
-                'active' => in_array($current_page, ['data_guru.php', 'data_kelas.php', 'data_siswa.php', 'data_peserta_ujian.php', 'siswa_baru.php', 'data_alumni.php', 'data_nilai_ujian.php', 'mata_pelajaran.php', 'jam_mengajar.php', 'kenaikan_kelas.php', 'kalender_pendidikan.php', 'data_prestasi_siswa.php'])
+                'active' => in_array($current_page, ['data_guru.php', 'data_kelas.php', 'data_siswa.php', 'data_peserta_ujian.php', 'siswa_baru.php', 'data_alumni.php', 'data_nilai_ujian.php', 'mata_pelajaran.php', 'jam_mengajar.php', 'kenaikan_kelas.php', 'kalender_pendidikan.php', 'data_prestasi_siswa.php', 'komite_madrasah.php'])
             ],
             [
                 'title' => 'Kehadiran',
@@ -800,9 +801,10 @@ switch ($user_level) {
                 'submenu' => [
                     ['title' => 'Mata Pelajaran', 'url' => '../admin/mata_pelajaran.php?session_type=kepala_madrasah', 'active' => $current_page === 'mata_pelajaran.php'],
                     ['title' => 'Kalender Pendidikan', 'url' => '../admin/kalender_pendidikan.php?session_type=kepala_madrasah', 'active' => $current_page === 'kalender_pendidikan.php'],
-                    ['title' => 'Data Siswa Baru', 'url' => '../admin/siswa_baru.php?session_type=kepala_madrasah', 'active' => $current_page === 'siswa_baru.php']
+                    ['title' => 'Data Siswa Baru', 'url' => '../admin/siswa_baru.php?session_type=kepala_madrasah', 'active' => $current_page === 'siswa_baru.php'],
+                    ['title' => 'Komite Madrasah', 'url' => '../admin/komite_madrasah.php?session_type=kepala_madrasah', 'active' => $current_page === 'komite_madrasah.php'],
                 ],
-                'active' => in_array($current_page, ['mata_pelajaran.php', 'kalender_pendidikan.php', 'siswa_baru.php'])
+                'active' => in_array($current_page, ['mata_pelajaran.php', 'kalender_pendidikan.php', 'siswa_baru.php', 'komite_madrasah.php'])
             ],
             [
                 'title' => 'Pembelajaran',
