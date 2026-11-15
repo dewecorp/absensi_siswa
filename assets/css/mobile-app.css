@@ -528,17 +528,19 @@
   body.mobile-no-app-header .mapp-link-card .btn-block:active { transform: scale(.97); }
 
   /* Urutan mobile KHUSUS guru/wali (section.mapp-ordered). Dashboard lain tidak tersentuh.
-     Sapaan > Stat > Kehadiran > Jadwal > Menu > Tautan > Agenda > Ketentuan */
+     Sapaan > Stat > Kehadiran > Jadwal > Pembina Upacara > Menu > Tautan > Agenda > Ketentuan */
   body.mobile-no-app-header section.section.mapp-ordered { display: flex !important; flex-direction: column; }
   body.mobile-no-app-header section.mapp-ordered > .row.mapp-row-profile { order: 0; }
   body.mobile-no-app-header section.mapp-ordered > .row:has(.card-statistic-1) { order: 1; }
+  body.mobile-no-app-header section.mapp-ordered > .row.dash-stat-row { order: 1; }
   body.mobile-no-app-header section.mapp-ordered > .row.align-items-stretch { order: 2; }
   body.mobile-no-app-header section.mapp-ordered > .row.align-items-stretch > .mapp-col-absen { order: -1; }
-  body.mobile-no-app-header section.mapp-ordered > .row.mapp-row-les { order: 3; }
-  body.mobile-no-app-header section.mapp-ordered > .row.d-lg-none { order: 4; }
-  body.mobile-no-app-header section.mapp-ordered > .row:has(.mapp-link-card) { order: 5; }
-  body.mobile-no-app-header section.mapp-ordered > .row:has(.dashboard-agenda-card) { order: 6; }
-  body.mobile-no-app-header section.mapp-ordered > .row:has(.mapp-ketentuan-card) { order: 7; }
+  body.mobile-no-app-header section.mapp-ordered > .row.mapp-row-upacara { order: 3; }
+  body.mobile-no-app-header section.mapp-ordered > .row.mapp-row-les { order: 4; }
+  body.mobile-no-app-header section.mapp-ordered > .row.d-lg-none { order: 5; }
+  body.mobile-no-app-header section.mapp-ordered > .row:has(.mapp-link-card) { order: 6; }
+  body.mobile-no-app-header section.mapp-ordered > .row:has(.dashboard-agenda-card) { order: 7; }
+  body.mobile-no-app-header section.mapp-ordered > .row:has(.mapp-ketentuan-card) { order: 8; }
 
   /* ---------- Box ketentuan / jadwal / absen ala mobile (desktop utuh) ---------- */
   /* Ketentuan: teks peringatan kecil + tiap baris badge jadi baris card */

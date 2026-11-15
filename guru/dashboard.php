@@ -773,61 +773,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     }
                     ?>
 
-                    <?php if (!empty($upacara_schedules)): ?>
-                    <!-- Box Pengingat Jadwal Pembina Upacara -->
-                    <div class="row">
-                        <div class="col-12 mb-4">
-                            <div class="card border-0 shadow-sm" style="border-radius: 12px; background: linear-gradient(135deg, #fff5f5 0%, #ffffff 100%); border-left: 5px solid #dc3545 !important;">
-                                <div class="card-body p-3 p-md-4">
-                                    <div class="d-flex align-items-center justify-content-between flex-wrap" style="gap: 12px;">
-                                        <div class="d-flex align-items-center" style="gap: 14px;">
-                                            <div style="width: 48px; height: 48px; border-radius: 12px; background: rgba(220, 53, 69, 0.12); color: #dc3545; display: flex; align-items: center; justify-content: center; font-size: 22px; flex-shrink: 0;">
-                                                <i class="fas fa-flag"></i>
-                                            </div>
-                                            <div>
-                                                <div class="d-flex align-items-center flex-wrap" style="gap: 8px;">
-                                                    <h5 class="mb-0 font-weight-bold text-dark" style="font-size: 1.05rem;">Pengingat Jadwal Pembina Upacara</h5>
-                                                    <span class="badge badge-danger badge-pill px-2.5 py-1" style="font-size: 10px; font-weight: 700;">Tugas Anda</span>
-                                                </div>
-                                                <p class="text-muted small mb-0 mt-1">Anda memiliki jadwal bertugas sebagai <b>Pembina Upacara</b> mendatang:</p>
-                                            </div>
-                                        </div>
-                                        <a href="../admin/jadwal_pembina_upacara.php?session_type=guru" class="btn btn-outline-danger btn-sm font-weight-bold" style="border-radius: 8px;">
-                                            <i class="fas fa-calendar-alt mr-1"></i> Lihat Semua Jadwal
-                                        </a>
-                                    </div>
-                                    <div class="row mt-3" style="row-gap: 10px;">
-                                        <?php foreach ($upacara_schedules as $upc): ?>
-                                        <?php
-                                            $upc_tgl = formatDateIndonesia($upc['tanggal']);
-                                            $upc_hari = getHariIndonesia($upc['tanggal']);
-                                            $is_today = $upc['tanggal'] === date('Y-m-d');
-                                        ?>
-                                        <div class="col-12 col-md-6 col-lg-4">
-                                            <div class="p-2.5 px-3 rounded border bg-white d-flex align-items-center justify-content-between" style="border-color: <?= $is_today ? '#dc3545' : '#fed7d7' ?> !important; box-shadow: 0 1px 3px rgba(0,0,0,0.04);">
-                                                <div style="min-width: 0;">
-                                                    <div class="font-weight-bold <?= $is_today ? 'text-danger' : 'text-dark' ?>" style="font-size: 13px;">
-                                                        <i class="far fa-calendar-check mr-1 text-danger"></i><?= htmlspecialchars($upc_hari . ', ' . $upc_tgl) ?>
-                                                    </div>
-                                                    <?php if (!empty($upc['keterangan'])): ?>
-                                                    <small class="text-muted text-truncate d-block" style="font-size: 11px;">
-                                                        <?= htmlspecialchars($upc['keterangan']) ?>
-                                                    </small>
-                                                    <?php endif; ?>
-                                                </div>
-                                                <?php if ($is_today): ?>
-                                                <span class="badge badge-danger ml-2 font-weight-bold" style="font-size: 10px;">HARI INI</span>
-                                                <?php endif; ?>
-                                            </div>
-                                        </div>
-                                        <?php endforeach; ?>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                    <?php endif; ?>
-
                     <!-- Baris 1: Box Informasi KBM sejajar dengan Box Jadwal Hari Ini -->
                     <div class="row align-items-stretch">
                         <?php if (!$holiday['is_holiday']): ?>
@@ -1174,6 +1119,66 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                         </div>
                         <?php endif; ?>
                     </div>
+
+                    <?php if (!empty($upacara_schedules)): ?>
+                    <!-- Box Jadwal Pembina Upacara (Mobile Apps Styled) -->
+                    <div class="row mapp-row-upacara">
+                        <div class="col-12 mb-4">
+                            <div class="card w-100 mapp-absen-card">
+                                <div class="card-header d-flex justify-content-between align-items-center flex-wrap" style="gap:8px;">
+                                    <h4 class="mb-0"><i class="fas fa-flag text-danger mr-2"></i>Jadwal Pembina Upacara</h4>
+                                    <a href="../admin/jadwal_pembina_upacara.php?session_type=guru" class="btn btn-outline-danger btn-sm font-weight-bold px-2.5 py-1" style="border-radius: 8px; font-size: 11px;">
+                                        Lihat Semua <i class="fas fa-arrow-right ml-1"></i>
+                                    </a>
+                                </div>
+                                <div class="card-body">
+                                    <div class="d-flex flex-column" style="gap: 8px;">
+                                        <?php foreach ($upacara_schedules as $upc): ?>
+                                        <?php
+                                            $upc_tgl = formatDateIndonesia($upc['tanggal']);
+                                            $upc_hari = getHariIndonesia($upc['tanggal']);
+                                            $today_str = date('Y-m-d');
+                                            $is_today = $upc['tanggal'] === $today_str;
+                                            $is_past = $upc['tanggal'] < $today_str;
+                                            $nama_guru_pembina = $teacher['nama_guru'] ?? ($_SESSION['nama_guru'] ?? 'Anda');
+                                        ?>
+                                        <div class="d-flex align-items-center justify-content-between p-2.5 px-3 rounded" style="background: <?= $is_today ? '#fef2f2' : ($is_past ? '#f8fafc' : '#f0fdf4') ?>; border-radius: 12px; gap: 10px;">
+                                            <div class="d-flex align-items-center" style="gap: 10px; min-width: 0;">
+                                                <div style="width: 38px; height: 38px; border-radius: 10px; background: <?= $is_today ? '#ef4444' : ($is_past ? '#94a3b8' : '#22c55e') ?>; color: #fff; display: flex; flex-direction: column; align-items: center; justify-content: center; flex-shrink: 0; line-height: 1;">
+                                                    <span style="font-size: 13px; font-weight: 800;"><?= date('d', strtotime($upc['tanggal'])) ?></span>
+                                                    <span style="font-size: 9px; text-transform: uppercase; font-weight: 700;"><?= date('M', strtotime($upc['tanggal'])) ?></span>
+                                                </div>
+                                                <div style="min-width: 0;">
+                                                    <div class="font-weight-bold <?= $is_today ? 'text-danger' : ($is_past ? 'text-muted' : 'text-dark') ?>" style="font-size: 13px; line-height: 1.3;">
+                                                        <?= htmlspecialchars($upc_hari . ', ' . $upc_tgl) ?>
+                                                    </div>
+                                                    <div class="text-dark font-weight-600 text-truncate" style="font-size: 11.5px; margin-top: 2px;">
+                                                        <i class="fas fa-user-tie mr-1 text-primary" style="font-size: 11px;"></i>Pembina: <b><?= htmlspecialchars($nama_guru_pembina) ?></b>
+                                                    </div>
+                                                    <?php if (!empty($upc['keterangan'])): ?>
+                                                    <div class="text-muted text-truncate" style="font-size: 11px; margin-top: 1px;">
+                                                        <i class="fas fa-bullhorn mr-1 text-danger" style="font-size: 9.5px;"></i><?= htmlspecialchars($upc['keterangan']) ?>
+                                                    </div>
+                                                    <?php endif; ?>
+                                                </div>
+                                            </div>
+                                            <div class="flex-shrink-0 text-right">
+                                                <?php if ($is_today): ?>
+                                                <span class="badge badge-success font-weight-bold px-2.5 py-1" style="font-size: 10.5px; border-radius: 6px; background-color: #10b981 !important; color: #fff !important; box-shadow: 0 1px 3px rgba(16,185,129,0.3);">Hari Ini</span>
+                                                <?php elseif ($is_past): ?>
+                                                <span class="badge badge-secondary font-weight-bold px-2.5 py-1" style="font-size: 10.5px; border-radius: 6px; background-color: #64748b !important; color: #fff !important;">Dilaksanakan</span>
+                                                <?php else: ?>
+                                                <span class="badge badge-primary font-weight-bold px-2.5 py-1" style="font-size: 10.5px; border-radius: 6px; background-color: #2563eb !important; color: #fff !important;">Mendatang</span>
+                                                <?php endif; ?>
+                                            </div>
+                                        </div>
+                                        <?php endforeach; ?>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <?php endif; ?>
 
                     <div class="row d-md-none">
                         <div class="col-12">

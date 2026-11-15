@@ -268,11 +268,13 @@ include '../templates/sidebar.php';
                                     </tr>
                                 </thead>
                                 <tbody>
-                                    <?php foreach ($rows as $i => $r): ?>
-                                    <?php
+                                    <?php 
+                                    $today_str = date('Y-m-d');
+                                    foreach ($rows as $i => $r): 
                                         $tgl_formatted = formatDateIndonesia($r['tanggal']);
                                         $hari_name = getHariIndonesia($r['tanggal']);
-                                        $is_upcoming = strtotime($r['tanggal']) >= strtotime(date('Y-m-d'));
+                                        $is_today = $r['tanggal'] === $today_str;
+                                        $is_past = $r['tanggal'] < $today_str;
                                     ?>
                                     <tr>
                                         <td class="simad-card-no">
@@ -288,8 +290,12 @@ include '../templates/sidebar.php';
                                                     <i class="fas fa-info-circle mr-1"></i><?= htmlspecialchars($r['keterangan']) ?>
                                                 </small>
                                             <?php endif; ?>
-                                            <?php if ($is_upcoming): ?>
-                                                <span class="badge badge-success badge-pill mt-1" style="font-size:10px;">Akan Datang</span>
+                                            <?php if ($is_today): ?>
+                                                <span class="badge badge-success badge-pill mt-1" style="font-size:10px; background-color: #10b981 !important;">Hari Ini</span>
+                                            <?php elseif ($is_past): ?>
+                                                <span class="badge badge-secondary badge-pill mt-1" style="font-size:10px; background-color: #64748b !important;">Dilaksanakan</span>
+                                            <?php else: ?>
+                                                <span class="badge badge-primary badge-pill mt-1" style="font-size:10px; background-color: #2563eb !important;">Mendatang</span>
                                             <?php endif; ?>
                                         </td>
                                         <td class="simad-card-name">
