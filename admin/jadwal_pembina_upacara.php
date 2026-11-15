@@ -156,33 +156,13 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && $can_edit) {
 // Ambil daftar semua guru untuk dropdown
 $all_guru = $pdo->query("SELECT id_guru, nama_guru FROM tb_guru ORDER BY nama_guru ASC")->fetchAll(PDO::FETCH_ASSOC);
 
-// Guru/wali hanya melihat jadwal miliknya sendiri
-$is_teacher_view = in_array($user_level, ['guru', 'wali'], true);
-$current_guru_id = $is_teacher_view ? getCurrentGuruId($pdo) : 0;
-
-// Ambil daftar jadwal
-if ($is_teacher_view) {
-    if ($current_guru_id > 0) {
-        $stmtRows = $pdo->prepare("
-            SELECT j.*, g.nama_guru, g.foto
-            FROM tb_jadwal_pembina_upacara j
-            JOIN tb_guru g ON j.id_guru = g.id_guru
-            WHERE j.id_guru = ?
-            ORDER BY j.tanggal DESC, j.id DESC
-        ");
-        $stmtRows->execute([$current_guru_id]);
-        $rows = $stmtRows->fetchAll(PDO::FETCH_ASSOC);
-    } else {
-        $rows = [];
-    }
-} else {
-    $rows = $pdo->query("
-        SELECT j.*, g.nama_guru, g.foto 
-        FROM tb_jadwal_pembina_upacara j 
-        JOIN tb_guru g ON j.id_guru = g.id_guru 
-        ORDER BY j.tanggal DESC, j.id DESC
-    ")->fetchAll(PDO::FETCH_ASSOC);
-}
+// Ambil daftar semua jadwal (menu menampilkan seluruh guru)
+$rows = $pdo->query("
+    SELECT j.*, g.nama_guru, g.foto 
+    FROM tb_jadwal_pembina_upacara j 
+    JOIN tb_guru g ON j.id_guru = g.id_guru 
+    ORDER BY j.tanggal DESC, j.id DESC
+")->fetchAll(PDO::FETCH_ASSOC);
 
 $js_page = [];
 if ($alert) {
@@ -352,11 +332,6 @@ include '../templates/sidebar.php';
             <?php echo render_breadcrumb(); ?>
         </div>
         <div class="section-body">
-            <?php if ($is_teacher_view && empty($rows)): ?>
-            <div class="alert alert-info">
-                <i class="fas fa-info-circle mr-1"></i> Anda belum memiliki jadwal pembina upacara.
-            </div>
-            <?php else: ?>
             <div class="card">
                 <div class="card-header">
                     <h4><i class="fas fa-flag mr-2 text-danger"></i>Jadwal Pembina Upacara</h4>
@@ -454,7 +429,6 @@ include '../templates/sidebar.php';
                     </div>
                 </div>
             </div>
-            <?php endif; ?>
         </div>
     </section>
 </div>
