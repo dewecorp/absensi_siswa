@@ -754,7 +754,79 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                             $jadwal_grouped[] = $cur;
                         }
                     }
+
+                    // Ambil jadwal pembina upacara untuk guru yang sedang login (sebagai pengingat)
+                    $upacara_schedules = [];
+                    if ($jd_guru_id > 0) {
+                        try {
+                            $stUpacara = $pdo->prepare("
+                                SELECT * FROM tb_jadwal_pembina_upacara 
+                                WHERE id_guru = ? AND tanggal >= CURDATE() 
+                                ORDER BY tanggal ASC 
+                                LIMIT 5
+                            ");
+                            $stUpacara->execute([$jd_guru_id]);
+                            $upacara_schedules = $stUpacara->fetchAll(PDO::FETCH_ASSOC);
+                        } catch (Throwable $e) {
+                            $upacara_schedules = [];
+                        }
+                    }
                     ?>
+
+                    <?php if (!empty($upacara_schedules)): ?>
+                    <!-- Box Pengingat Jadwal Pembina Upacara -->
+                    <div class="row">
+                        <div class="col-12 mb-4">
+                            <div class="card border-0 shadow-sm" style="border-radius: 12px; background: linear-gradient(135deg, #fff5f5 0%, #ffffff 100%); border-left: 5px solid #dc3545 !important;">
+                                <div class="card-body p-3 p-md-4">
+                                    <div class="d-flex align-items-center justify-content-between flex-wrap" style="gap: 12px;">
+                                        <div class="d-flex align-items-center" style="gap: 14px;">
+                                            <div style="width: 48px; height: 48px; border-radius: 12px; background: rgba(220, 53, 69, 0.12); color: #dc3545; display: flex; align-items: center; justify-content: center; font-size: 22px; flex-shrink: 0;">
+                                                <i class="fas fa-flag"></i>
+                                            </div>
+                                            <div>
+                                                <div class="d-flex align-items-center flex-wrap" style="gap: 8px;">
+                                                    <h5 class="mb-0 font-weight-bold text-dark" style="font-size: 1.05rem;">Pengingat Jadwal Pembina Upacara</h5>
+                                                    <span class="badge badge-danger badge-pill px-2.5 py-1" style="font-size: 10px; font-weight: 700;">Tugas Anda</span>
+                                                </div>
+                                                <p class="text-muted small mb-0 mt-1">Anda memiliki jadwal bertugas sebagai <b>Pembina Upacara</b> mendatang:</p>
+                                            </div>
+                                        </div>
+                                        <a href="../admin/jadwal_pembina_upacara.php?session_type=guru" class="btn btn-outline-danger btn-sm font-weight-bold" style="border-radius: 8px;">
+                                            <i class="fas fa-calendar-alt mr-1"></i> Lihat Semua Jadwal
+                                        </a>
+                                    </div>
+                                    <div class="row mt-3" style="row-gap: 10px;">
+                                        <?php foreach ($upacara_schedules as $upc): ?>
+                                        <?php
+                                            $upc_tgl = formatDateIndonesia($upc['tanggal']);
+                                            $upc_hari = getHariIndonesia($upc['tanggal']);
+                                            $is_today = $upc['tanggal'] === date('Y-m-d');
+                                        ?>
+                                        <div class="col-12 col-md-6 col-lg-4">
+                                            <div class="p-2.5 px-3 rounded border bg-white d-flex align-items-center justify-content-between" style="border-color: <?= $is_today ? '#dc3545' : '#fed7d7' ?> !important; box-shadow: 0 1px 3px rgba(0,0,0,0.04);">
+                                                <div style="min-width: 0;">
+                                                    <div class="font-weight-bold <?= $is_today ? 'text-danger' : 'text-dark' ?>" style="font-size: 13px;">
+                                                        <i class="far fa-calendar-check mr-1 text-danger"></i><?= htmlspecialchars($upc_hari . ', ' . $upc_tgl) ?>
+                                                    </div>
+                                                    <?php if (!empty($upc['keterangan'])): ?>
+                                                    <small class="text-muted text-truncate d-block" style="font-size: 11px;">
+                                                        <?= htmlspecialchars($upc['keterangan']) ?>
+                                                    </small>
+                                                    <?php endif; ?>
+                                                </div>
+                                                <?php if ($is_today): ?>
+                                                <span class="badge badge-danger ml-2 font-weight-bold" style="font-size: 10px;">HARI INI</span>
+                                                <?php endif; ?>
+                                            </div>
+                                        </div>
+                                        <?php endforeach; ?>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <?php endif; ?>
 
                     <!-- Baris 1: Box Informasi KBM sejajar dengan Box Jadwal Hari Ini -->
                     <div class="row align-items-stretch">

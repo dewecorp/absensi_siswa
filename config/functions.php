@@ -1252,6 +1252,22 @@ function getCurrentDateIndonesia(): string {
     return "$day, $date $month $year";
 }
 
+// Function to get Indonesian day name from date string (YYYY-MM-DD)
+function getHariIndonesia(string $date): string {
+    $hari = [
+        'Sunday' => 'Minggu',
+        'Monday' => 'Senin',
+        'Tuesday' => 'Selasa',
+        'Wednesday' => 'Rabu',
+        'Thursday' => 'Kamis',
+        'Friday' => 'Jumat',
+        'Saturday' => 'Sabtu'
+    ];
+    $ts = strtotime($date);
+    if ($ts === false) return '';
+    return $hari[date('l', $ts)] ?? '';
+}
+
 /**
  * Kode hari libur mingguan dari DB (sumber utama; tidak bergantung pada merge getSchoolProfile).
  *
