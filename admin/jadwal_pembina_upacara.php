@@ -28,8 +28,30 @@ try {
         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
         updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
         KEY idx_tanggal (tanggal),
-        KEY idx_id_guru (id_guru)
+        KEY idx_id_guru (id_guru),
+        UNIQUE KEY uniq_tanggal_guru (tanggal, id_guru)
     ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4");
+} catch (Throwable $e) {}
+
+// Pastikan tidak ada data ganda di level database (dilewati jika data lama masih duplikat)
+try {
+    $ada_duplikat = (int)$pdo->query("
+        SELECT COUNT(*) FROM (
+            SELECT 1 FROM tb_jadwal_pembina_upacara
+            GROUP BY tanggal, id_guru HAVING COUNT(*) > 1
+        ) d
+    ")->fetchColumn();
+    if ($ada_duplikat === 0) {
+        $ada_index = (int)$pdo->query("
+            SELECT COUNT(*) FROM information_schema.statistics
+            WHERE table_schema = DATABASE()
+              AND table_name = 'tb_jadwal_pembina_upacara'
+              AND index_name = 'uniq_tanggal_guru'
+        ")->fetchColumn();
+        if ($ada_index === 0) {
+            $pdo->exec("ALTER TABLE tb_jadwal_pembina_upacara ADD UNIQUE KEY uniq_tanggal_guru (tanggal, id_guru)");
+        }
+    }
 } catch (Throwable $e) {}
 
 $page_title = 'Jadwal Pembina Upacara';
@@ -44,12 +66,38 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && $can_edit) {
         $id_guru = (int)($_POST['id_guru'] ?? 0);
         $keterangan = trim(sanitizeInput((string)($_POST['keterangan'] ?? '')));
 
-        if ($tanggal === '' || $id_guru <= 0) {
-            $alert = ['type' => 'danger', 'text' => 'Tanggal dan guru wajib diisi.'];
+        $dateObj = DateTime::createFromFormat('!Y-m-d', $tanggal);
+        $tanggal_valid = $dateObj && $dateObj->format('Y-m-d') === $tanggal;
+        $guru_valid = false;
+        $guru_nama = '';
+        if ($id_guru > 0) {
+            $stG = $pdo->prepare("SELECT nama_guru FROM tb_guru WHERE id_guru = ? LIMIT 1");
+            $stG->execute([$id_guru]);
+            $guru_nama = (string)($stG->fetchColumn() ?: '');
+            $guru_valid = $guru_nama !== '';
+        }
+
+        if (!$tanggal_valid || $id_guru <= 0) {
+            $alert = ['type' => 'danger', 'text' => 'Tanggal dan guru wajib diisi dengan benar.'];
+        } elseif (!$guru_valid) {
+            $alert = ['type' => 'danger', 'text' => 'Guru yang dipilih tidak ditemukan. Muat ulang halaman lalu pilih guru kembali.'];
         } else {
-            $stmt = $pdo->prepare("INSERT INTO tb_jadwal_pembina_upacara (tanggal, id_guru, keterangan) VALUES (?, ?, ?)");
-            $stmt->execute([$tanggal, $id_guru, $keterangan ?: null]);
-            $alert = ['type' => 'success', 'text' => 'Jadwal pembina upacara berhasil ditambahkan.'];
+            $stDup = $pdo->prepare("SELECT id FROM tb_jadwal_pembina_upacara WHERE tanggal = ? AND id_guru = ? LIMIT 1");
+            $stDup->execute([$tanggal, $id_guru]);
+            $duplikat = $stDup->fetchColumn();
+
+            if ($duplikat) {
+                $alert = ['type' => 'warning', 'text' => 'Jadwal pembina ' . $guru_nama . ' pada tanggal ' . formatDateIndonesia($tanggal) . ' sudah ada. Data ganda tidak disimpan.'];
+            } else {
+                try {
+                    $stmt = $pdo->prepare("INSERT INTO tb_jadwal_pembina_upacara (tanggal, id_guru, keterangan) VALUES (?, ?, ?)");
+                    $stmt->execute([$tanggal, $id_guru, $keterangan ?: null]);
+                    $alert = ['type' => 'success', 'text' => 'Jadwal pembina upacara tanggal ' . $tanggal . ' berhasil disimpan.'];
+                } catch (Throwable $e) {
+                    error_log('Gagal simpan jadwal pembina upacara: ' . $e->getMessage());
+                    $alert = ['type' => 'danger', 'text' => 'Jadwal gagal disimpan: ' . $e->getMessage()];
+                }
+            }
         }
     } elseif ($action === 'update') {
         $id = (int)($_POST['id'] ?? 0);
@@ -57,19 +105,50 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && $can_edit) {
         $id_guru = (int)($_POST['id_guru'] ?? 0);
         $keterangan = trim(sanitizeInput((string)($_POST['keterangan'] ?? '')));
 
-        if ($id <= 0 || $tanggal === '' || $id_guru <= 0) {
+        $dateObj = DateTime::createFromFormat('!Y-m-d', $tanggal);
+        $tanggal_valid = $dateObj && $dateObj->format('Y-m-d') === $tanggal;
+        $guru_valid = false;
+        $guru_nama = '';
+        if ($id_guru > 0) {
+            $stG = $pdo->prepare("SELECT nama_guru FROM tb_guru WHERE id_guru = ? LIMIT 1");
+            $stG->execute([$id_guru]);
+            $guru_nama = (string)($stG->fetchColumn() ?: '');
+            $guru_valid = $guru_nama !== '';
+        }
+
+        if ($id <= 0 || !$tanggal_valid || $id_guru <= 0) {
             $alert = ['type' => 'danger', 'text' => 'Data tidak valid.'];
+        } elseif (!$guru_valid) {
+            $alert = ['type' => 'danger', 'text' => 'Guru yang dipilih tidak ditemukan. Muat ulang halaman lalu pilih guru kembali.'];
         } else {
-            $stmt = $pdo->prepare("UPDATE tb_jadwal_pembina_upacara SET tanggal = ?, id_guru = ?, keterangan = ? WHERE id = ?");
-            $stmt->execute([$tanggal, $id_guru, $keterangan ?: null, $id]);
-            $alert = ['type' => 'success', 'text' => 'Jadwal pembina upacara berhasil diperbarui.'];
+            $stDup = $pdo->prepare("SELECT id FROM tb_jadwal_pembina_upacara WHERE tanggal = ? AND id_guru = ? AND id <> ? LIMIT 1");
+            $stDup->execute([$tanggal, $id_guru, $id]);
+            $duplikat = $stDup->fetchColumn();
+
+            if ($duplikat) {
+                $alert = ['type' => 'warning', 'text' => 'Jadwal pembina ' . $guru_nama . ' pada tanggal ' . formatDateIndonesia($tanggal) . ' sudah ada. Data ganda tidak disimpan.'];
+            } else {
+                try {
+                    $stmt = $pdo->prepare("UPDATE tb_jadwal_pembina_upacara SET tanggal = ?, id_guru = ?, keterangan = ? WHERE id = ?");
+                    $stmt->execute([$tanggal, $id_guru, $keterangan ?: null, $id]);
+                    $alert = ['type' => 'success', 'text' => 'Jadwal pembina upacara berhasil diperbarui.'];
+                } catch (Throwable $e) {
+                    error_log('Gagal update jadwal pembina upacara: ' . $e->getMessage());
+                    $alert = ['type' => 'danger', 'text' => 'Jadwal gagal diperbarui: ' . $e->getMessage()];
+                }
+            }
         }
     } elseif ($action === 'delete') {
         $id = (int)($_POST['id'] ?? 0);
         if ($id > 0) {
-            $stmt = $pdo->prepare("DELETE FROM tb_jadwal_pembina_upacara WHERE id = ?");
-            $stmt->execute([$id]);
-            $alert = ['type' => 'success', 'text' => 'Jadwal pembina upacara berhasil dihapus.'];
+            try {
+                $stmt = $pdo->prepare("DELETE FROM tb_jadwal_pembina_upacara WHERE id = ?");
+                $stmt->execute([$id]);
+                $alert = ['type' => 'success', 'text' => 'Jadwal pembina upacara berhasil dihapus.'];
+            } catch (Throwable $e) {
+                error_log('Gagal hapus jadwal pembina upacara: ' . $e->getMessage());
+                $alert = ['type' => 'danger', 'text' => 'Jadwal gagal dihapus: ' . $e->getMessage()];
+            }
         }
     }
 }
@@ -77,13 +156,33 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && $can_edit) {
 // Ambil daftar semua guru untuk dropdown
 $all_guru = $pdo->query("SELECT id_guru, nama_guru FROM tb_guru ORDER BY nama_guru ASC")->fetchAll(PDO::FETCH_ASSOC);
 
+// Guru/wali hanya melihat jadwal miliknya sendiri
+$is_teacher_view = in_array($user_level, ['guru', 'wali'], true);
+$current_guru_id = $is_teacher_view ? getCurrentGuruId($pdo) : 0;
+
 // Ambil daftar jadwal
-$rows = $pdo->query("
-    SELECT j.*, g.nama_guru, g.foto 
-    FROM tb_jadwal_pembina_upacara j 
-    JOIN tb_guru g ON j.id_guru = g.id_guru 
-    ORDER BY j.tanggal DESC, j.id DESC
-")->fetchAll(PDO::FETCH_ASSOC);
+if ($is_teacher_view) {
+    if ($current_guru_id > 0) {
+        $stmtRows = $pdo->prepare("
+            SELECT j.*, g.nama_guru, g.foto
+            FROM tb_jadwal_pembina_upacara j
+            JOIN tb_guru g ON j.id_guru = g.id_guru
+            WHERE j.id_guru = ?
+            ORDER BY j.tanggal DESC, j.id DESC
+        ");
+        $stmtRows->execute([$current_guru_id]);
+        $rows = $stmtRows->fetchAll(PDO::FETCH_ASSOC);
+    } else {
+        $rows = [];
+    }
+} else {
+    $rows = $pdo->query("
+        SELECT j.*, g.nama_guru, g.foto 
+        FROM tb_jadwal_pembina_upacara j 
+        JOIN tb_guru g ON j.id_guru = g.id_guru 
+        ORDER BY j.tanggal DESC, j.id DESC
+    ")->fetchAll(PDO::FETCH_ASSOC);
+}
 
 $js_page = [];
 if ($alert) {
@@ -102,7 +201,7 @@ $(function () {
         lengthChange: true,
         pageLength: 10,
         lengthMenu: [[10, 25, 50, 100, -1], [10, 25, 50, 100, 'Semua']],
-        order: [],
+        order: [[1, 'desc']],
         language: {
             lengthMenu: "Tampilkan _MENU_ entri",
             zeroRecords: "Tidak ada data jadwal pembina upacara",
@@ -119,6 +218,9 @@ $(function () {
 
     if ($.fn.DataTable.isDataTable('#table-upacara')) {
         $('#table-upacara').DataTable().destroy();
+    }
+    if (!$('#table-upacara').length) {
+        return;
     }
     var t = $('#table-upacara').DataTable(tableOpts);
 
@@ -209,6 +311,20 @@ include '../templates/sidebar.php';
 .upacara-card-grid tbody tr td {
     padding: 2px 0 !important;
 }
+/* Beri ruang untuk badge nomor di pojok kiri agar tidak menutupi tanggal */
+.upacara-card-grid tbody tr td:nth-child(2) {
+    padding-left: 32px !important;
+}
+/* Highlight kartu jadwal hari ini */
+.upacara-card-grid tbody tr.upacara-today {
+    border: 1.5px solid #ef4444 !important;
+    background: linear-gradient(135deg, #fff5f5 0%, #ffffff 60%) !important;
+    box-shadow: 0 6px 18px rgba(239, 68, 68, 0.16) !important;
+}
+.upacara-card-grid tbody tr.upacara-today:hover {
+    border-color: #dc2626 !important;
+    box-shadow: 0 10px 24px rgba(239, 68, 68, 0.22) !important;
+}
 .upacara-card-grid tbody tr td.simad-card-actions {
     margin-top: 8px !important;
     padding-top: 8px !important;
@@ -236,6 +352,11 @@ include '../templates/sidebar.php';
             <?php echo render_breadcrumb(); ?>
         </div>
         <div class="section-body">
+            <?php if ($is_teacher_view && empty($rows)): ?>
+            <div class="alert alert-info">
+                <i class="fas fa-info-circle mr-1"></i> Anda belum memiliki jadwal pembina upacara.
+            </div>
+            <?php else: ?>
             <div class="card">
                 <div class="card-header">
                     <h4><i class="fas fa-flag mr-2 text-danger"></i>Jadwal Pembina Upacara</h4>
@@ -276,11 +397,11 @@ include '../templates/sidebar.php';
                                         $is_today = $r['tanggal'] === $today_str;
                                         $is_past = $r['tanggal'] < $today_str;
                                     ?>
-                                    <tr>
+                                    <tr class="<?= $is_today ? 'upacara-today' : '' ?>">
                                         <td class="simad-card-no">
                                             <span class="badge-card-no"><?= $i + 1 ?></span>
                                         </td>
-                                        <td>
+                                        <td data-order="<?= htmlspecialchars($r['tanggal'], ENT_QUOTES) ?>">
                                             <div class="font-weight-bold text-dark">
                                                 <i class="far fa-calendar-alt text-primary mr-1"></i>
                                                 <?= htmlspecialchars($hari_name . ', ' . $tgl_formatted) ?>
@@ -333,6 +454,7 @@ include '../templates/sidebar.php';
                     </div>
                 </div>
             </div>
+            <?php endif; ?>
         </div>
     </section>
 </div>
