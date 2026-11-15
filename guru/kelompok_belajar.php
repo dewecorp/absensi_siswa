@@ -5,17 +5,18 @@ require_once '../config/kelompok_belajar_helper.php';
 
 ensure_kelompok_belajar_schema($pdo);
 
-if (!isAuthorized(['wali', 'admin', 'kepala_madrasah'])) {
+if (!isAuthorized(['wali', 'admin', 'kepala_madrasah', 'guru'])) {
     redirect('../login.php');
 }
 
 $user_level = getUserLevel();
 $session_type = (string)($_GET['session_type'] ?? '');
+$is_guru_mode = ($session_type === 'guru') || ($user_level === 'guru');
 $is_admin = ($user_level === 'admin') || ($session_type === 'admin');
 $is_kepala = ($user_level === 'kepala_madrasah') || ($session_type === 'kepala_madrasah');
-$is_admin_or_kepala = $is_admin || $is_kepala;
-$can_crud = in_array($user_level, ['admin', 'wali'], true) && $session_type !== 'kepala_madrasah';
-$dash_url = $is_admin ? '../admin/dashboard.php' : ($is_kepala ? '../kepala/dashboard.php' : '../wali/dashboard.php');
+$is_admin_or_kepala = $is_admin || $is_kepala || $is_guru_mode;
+$can_crud = in_array($user_level, ['admin', 'wali'], true) && !in_array($session_type, ['kepala_madrasah', 'guru'], true) && $user_level !== 'guru';
+$dash_url = $is_admin ? '../admin/dashboard.php' : ($is_kepala ? '../kepala/dashboard.php' : ($is_guru_mode ? '../guru/dashboard.php' : '../wali/dashboard.php'));
 
 $guru_id = getCurrentGuruId($pdo);
 if ($guru_id <= 0 && isset($_SESSION['user_id'])) {

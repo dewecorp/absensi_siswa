@@ -5,13 +5,14 @@ require_once '../config/learning_schema.php';
 
 ensure_learning_schema($pdo);
 
-if (!isAuthorized(['wali', 'admin', 'kepala_madrasah'])) {
+if (!isAuthorized(['wali', 'admin', 'kepala_madrasah', 'guru'])) {
     redirect('../login.php');
 }
 
 $user_level = getUserLevel();
-$is_admin_or_kepala = in_array($user_level, ['admin', 'kepala_madrasah'], true) || in_array($_GET['session_type'] ?? '', ['admin', 'kepala_madrasah'], true);
-$can_crud = !$is_admin_or_kepala;
+$session_type = (string)($_GET['session_type'] ?? '');
+$is_admin_or_kepala = in_array($user_level, ['admin', 'kepala_madrasah'], true) || in_array($session_type, ['admin', 'kepala_madrasah', 'guru'], true) || $user_level === 'guru';
+$can_crud = !$is_admin_or_kepala && $session_type !== 'guru' && $user_level !== 'guru';
 $guru_id = getCurrentGuruId($pdo);
 if ($guru_id <= 0 && isset($_SESSION['user_id'])) {
     $guru_id = (int)$_SESSION['user_id'];
@@ -976,9 +977,11 @@ include '../templates/sidebar.php';
                         <small class="text-muted">Menampilkan <span id="count-tl-timeline" class="font-weight-bold text-primary"><?= count($rows) ?></span> riwayat tindak lanjut</small>
                     </div>
                     <div class="d-flex align-items-center flex-wrap" style="gap: 8px;">
+                        <?php if ($session_type !== 'guru' && $user_level !== 'guru'): ?>
                         <a href="data_tindak_lanjut.php<?= isset($_GET['session_type']) ? '?session_type=' . urlencode($_GET['session_type']) : '' ?>" class="btn btn-info btn-sm font-weight-bold" style="border-radius: 6px;">
                             <i class="fas fa-database mr-1"></i> Master Data
                         </a>
+                        <?php endif; ?>
                         <?php
                         $qs_tl = [];
                         if ($selected_kelas_id > 0) { $qs_tl['kelas'] = $selected_kelas_id; }

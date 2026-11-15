@@ -5,13 +5,14 @@ require_once '../config/learning_schema.php';
 
 ensure_learning_schema($pdo);
 
-if (!isAuthorized(['wali', 'admin', 'kepala_madrasah'])) {
+if (!isAuthorized(['wali', 'admin', 'kepala_madrasah', 'guru'])) {
     redirect('../login.php');
 }
 
 $user_level = getUserLevel();
-$is_monitor = in_array($user_level, ['admin', 'kepala_madrasah'], true) || in_array($_GET['session_type'] ?? '', ['admin', 'kepala_madrasah'], true);
-$can_crud = !$is_monitor;
+$session_type = (string)($_GET['session_type'] ?? '');
+$is_monitor = in_array($user_level, ['admin', 'kepala_madrasah'], true) || in_array($session_type, ['admin', 'kepala_madrasah', 'guru'], true) || $user_level === 'guru';
+$can_crud = !$is_monitor && $session_type !== 'guru' && $user_level !== 'guru';
 $guru_id = getCurrentGuruId($pdo);
 if ($guru_id <= 0 && isset($_SESSION['user_id'])) {
     $guru_id = (int)$_SESSION['user_id'];
@@ -343,6 +344,7 @@ include '../templates/sidebar.php';
                         <?php
                         $qs_piket = [];
                         if ($selected_kelas_id > 0) { $qs_piket['kelas'] = $selected_kelas_id; }
+                        if ($session_type !== '') { $qs_piket['session_type'] = $session_type; }
                         $url_piket_cetak = 'export_piket_pdf.php?' . http_build_query(array_merge($qs_piket, ['mode' => 'print']));
                         $url_piket_xls = 'export_piket_excel.php?' . http_build_query($qs_piket);
                         ?>

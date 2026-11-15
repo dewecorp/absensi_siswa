@@ -5,13 +5,14 @@ require_once '../config/learning_schema.php';
 
 ensure_learning_schema($pdo);
 
-if (!isAuthorized(['wali', 'admin', 'kepala_madrasah'])) {
+if (!isAuthorized(['wali', 'admin', 'kepala_madrasah', 'guru'])) {
     redirect('../login.php');
 }
 
 $user_level = getUserLevel();
-$is_admin_or_kepala = in_array($user_level, ['admin', 'kepala_madrasah'], true) || in_array($_GET['session_type'] ?? '', ['admin', 'kepala_madrasah'], true);
-$can_crud = !$is_admin_or_kepala;
+$session_type = (string)($_GET['session_type'] ?? '');
+$is_admin_or_kepala = in_array($user_level, ['admin', 'kepala_madrasah'], true) || in_array($session_type, ['admin', 'kepala_madrasah', 'guru'], true) || $user_level === 'guru';
+$can_crud = !$is_admin_or_kepala && $session_type !== 'guru' && $user_level !== 'guru';
 $guru_id = getCurrentGuruId($pdo);
 if ($guru_id <= 0 && isset($_SESSION['user_id'])) {
     $guru_id = (int)$_SESSION['user_id'];

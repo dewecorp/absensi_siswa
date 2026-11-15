@@ -5,13 +5,14 @@ require_once '../config/learning_schema.php';
 
 ensure_learning_schema($pdo);
 
-if (!isAuthorized(['wali', 'admin', 'kepala_madrasah'])) {
+if (!isAuthorized(['wali', 'admin', 'kepala_madrasah', 'guru'])) {
     redirect('../login.php');
 }
 
 $user_level = getUserLevel();
-$is_admin_or_kepala = in_array($user_level, ['admin', 'kepala_madrasah'], true) || in_array($_GET['session_type'] ?? '', ['admin', 'kepala_madrasah'], true);
-$can_crud = !$is_admin_or_kepala;
+$session_type = (string)($_GET['session_type'] ?? '');
+$is_admin_or_kepala = in_array($user_level, ['admin', 'kepala_madrasah'], true) || in_array($session_type, ['admin', 'kepala_madrasah', 'guru'], true) || $user_level === 'guru';
+$can_crud = !$is_admin_or_kepala && $session_type !== 'guru' && $user_level !== 'guru';
 $guru_id = getCurrentGuruId($pdo);
 if ($guru_id <= 0 && isset($_SESSION['user_id'])) {
     $guru_id = (int)$_SESSION['user_id'];
@@ -727,12 +728,15 @@ include '../templates/sidebar.php';
                 <div class="card-header d-flex justify-content-between align-items-center flex-wrap" style="gap:8px;">
                     <h4>Catatan Kedisiplinan & Pelanggaran Tata Tertib</h4>
                     <div>
+                        <?php if ($session_type !== 'guru' && $user_level !== 'guru'): ?>
                         <a href="data_pelanggaran.php" class="btn btn-info btn-sm mr-1">
                             <i class="fas fa-database mr-1"></i> Data Pelanggaran
                         </a>
+                        <?php endif; ?>
                         <?php
                         $qs_lg = [];
                         if ($selected_kelas_id > 0) { $qs_lg['kelas'] = $selected_kelas_id; }
+                        if ($session_type !== '') { $qs_lg['session_type'] = $session_type; }
                         $url_lg_cetak = 'export_pelanggaran_pdf.php?' . http_build_query(array_merge($qs_lg, ['mode' => 'print']));
                         $url_lg_xls = 'export_pelanggaran_excel.php?' . http_build_query($qs_lg);
                         ?>

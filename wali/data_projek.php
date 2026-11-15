@@ -10,7 +10,9 @@ if (!isAuthorized(['wali', 'guru', 'admin', 'kepala_madrasah'])) {
 }
 
 $user_level = getUserLevel();
-$is_admin_or_kepala = in_array($user_level, ['admin', 'kepala_madrasah'], true) || in_array($_GET['session_type'] ?? '', ['admin', 'kepala_madrasah'], true);
+$session_type = (string)($_GET['session_type'] ?? '');
+$is_admin_or_kepala = in_array($user_level, ['admin', 'kepala_madrasah'], true) || in_array($session_type, ['admin', 'kepala_madrasah'], true);
+$can_crud = ($session_type !== 'guru');
 
 $guru_id = getCurrentGuruId($pdo);
 if ($guru_id <= 0 && isset($_SESSION['user_id'])) {
@@ -21,6 +23,9 @@ $message = null;
 
 // Handle CRUD Master Data Projek (Nama Projek, Tema, Tujuan)
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+    if (!$can_crud) {
+        $message = ['type' => 'danger', 'text' => 'Akses ditolak. Pengguna hanya memiliki akses lihat (monitoring).'];
+    } else {
     $action = $_POST['action'] ?? '';
 
     if ($action === 'tambah' || $action === 'edit') {
@@ -54,6 +59,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         } catch (Exception $e) {
             $message = ['type' => 'danger', 'text' => 'Gagal menghapus data projek: ' . $e->getMessage()];
         }
+    }
     }
 }
 
@@ -474,9 +480,11 @@ include '../templates/sidebar.php';
                         <h4 class="mb-0">Daftar Data Projek Kokurikuler</h4>
                         <small class="text-muted">Daftar induk projek &mdash; dipakai guru saat membuat projek pada menu Projek / Kokurikuler.</small>
                     </div>
+                    <?php if ($can_crud): ?>
                     <button type="button" class="btn btn-primary btn-sm mt-2 mt-sm-0" id="btnTambahDataProjek" style="border-radius: 8px;">
                         <i class="bi bi-plus-circle mr-1"></i> Tambah Data Projek
                     </button>
+                    <?php endif; ?>
                 </div>
 
                 <div class="card-body">
@@ -520,6 +528,7 @@ include '../templates/sidebar.php';
                                         <?php endif; ?>
                                     </div>
 
+                                    <?php if ($can_crud): ?>
                                     <div class="dp-card-actions">
                                         <button type="button" class="dp-act dp-act-edit btn-edit-data-projek"
                                             data-json='<?= htmlspecialchars(json_encode($r), ENT_QUOTES, 'UTF-8') ?>'
@@ -533,6 +542,7 @@ include '../templates/sidebar.php';
                                             <i class="bi bi-trash-fill"></i> Hapus
                                         </button>
                                     </div>
+                                    <?php endif; ?>
                                 </div>
                             </div>
                         <?php endforeach; ?>

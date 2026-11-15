@@ -2,12 +2,14 @@
 require_once '../config/database.php';
 require_once '../config/functions.php';
 
-if (!isAuthorized(['admin', 'kepala_madrasah', 'tata_usaha', 'wali'])) {
+if (!isAuthorized(['admin', 'kepala_madrasah', 'tata_usaha', 'wali', 'guru'])) {
     redirect('../login.php');
 }
 
 $user_level = getUserLevel();
-$is_wali = ($user_level === 'wali');
+$session_type = (string)($_GET['session_type'] ?? '');
+$is_guru_mode = ($session_type === 'guru') || ($user_level === 'guru');
+$is_wali = ($user_level === 'wali') && !$is_guru_mode;
 $message = null;
 
 // Siapkan tabel struktur kelas
@@ -551,6 +553,9 @@ include '../templates/sidebar.php';
                 </div>
                 <div class="card-body">
                     <form method="GET" class="form-row align-items-end">
+                        <?php if ($session_type !== ''): ?>
+                            <input type="hidden" name="session_type" value="<?= htmlspecialchars($session_type, ENT_QUOTES, 'UTF-8') ?>">
+                        <?php endif; ?>
                         <div class="form-group col-md-4 mb-0">
                             <label for="selectKelasStruktur">Pilih Kelas:</label>
                             <select name="kelas" id="selectKelasStruktur" class="form-control" style="width: 100%; max-width: 320px;" onchange="this.form.submit();">
@@ -578,9 +583,10 @@ include '../templates/sidebar.php';
                         </button>
                         <?php endif; ?>
                         <?php
+                        $st_param = $session_type !== '' ? '&session_type=' . urlencode($session_type) : '';
                         $export_base = $is_wali
-                            ? 'struktur_kelas.php?export='
-                            : 'struktur_kelas.php?kelas=' . (int)$selected_class_id . '&export=';
+                            ? ('struktur_kelas.php?export=')
+                            : ('struktur_kelas.php?kelas=' . (int)$selected_class_id . $st_param . '&export=');
                         ?>
                         <a href="<?= htmlspecialchars($export_base . 'excel', ENT_QUOTES) ?>" class="btn btn-info">
                             <i class="fas fa-file-excel"></i> Ekspor Excel
