@@ -450,10 +450,27 @@ include '../templates/sidebar.php';
     border-radius: 8px !important;
     padding: 4px 6px !important;
     min-height: 42px !important;
+    height: auto !important;
+    overflow: visible !important;
+    display: flex !important;
+    flex-wrap: wrap !important;
+    align-items: center !important;
+    gap: 4px !important;
 }
 .select2-container--default.select2-container--focus .select2-selection--multiple {
     border-color: #3b82f6 !important;
     box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.15) !important;
+}
+.select2-container--default .select2-selection--multiple .select2-selection__rendered {
+    display: flex !important;
+    flex-wrap: wrap !important;
+    align-items: center !important;
+    gap: 4px !important;
+    width: 100% !important;
+    padding: 0 !important;
+    margin: 0 !important;
+    overflow: visible !important;
+    line-height: normal !important;
 }
 .select2-container--default .select2-selection--multiple .select2-selection__choice {
     background-color: #3b82f6 !important;
@@ -461,16 +478,44 @@ include '../templates/sidebar.php';
     color: #fff !important;
     border-radius: 6px !important;
     padding: 3px 8px !important;
-    font-size: 13px !important;
-    margin: 2px 4px 2px 0 !important;
+    font-size: 12.5px !important;
+    line-height: 1.35 !important;
+    margin: 0 !important;
+    display: inline-flex !important;
+    align-items: center !important;
+    max-width: 100% !important;
+    white-space: normal !important;
+    word-break: break-word !important;
+    float: none !important;
 }
 .select2-container--default .select2-selection--multiple .select2-selection__choice__remove {
     color: #fff !important;
     margin-right: 6px !important;
     font-weight: bold !important;
+    float: none !important;
+    line-height: 1 !important;
+    display: inline-block !important;
 }
 .select2-container--default .select2-selection--multiple .select2-selection__choice__remove:hover {
     color: #fee2e2 !important;
+}
+.select2-container--default .select2-selection--multiple .select2-search--inline {
+    display: inline-flex !important;
+    flex: 1 1 120px !important;
+    min-width: 100px !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    float: none !important;
+}
+.select2-container--default .select2-selection--multiple .select2-search--inline .select2-search__field {
+    width: 100% !important;
+    height: 28px !important;
+    line-height: 28px !important;
+    margin: 0 !important;
+    padding: 0 4px !important;
+    border: none !important;
+    outline: none !important;
+    box-shadow: none !important;
 }
 .select2-container--default .select2-selection--single {
     border: 1px solid #dcdfe6 !important;
@@ -495,54 +540,63 @@ include '../templates/sidebar.php';
 
 <div class="main-content">
     <section class="section">
-        <div class="section-header d-flex justify-content-between align-items-center">
-            <div>
-                <h1>Kelompok Belajar</h1>
-                <div class="section-header-breadcrumb">
-                    <div class="breadcrumb-item"><a href="<?= htmlspecialchars($dash_url) ?>">Dashboard</a></div>
-                    <div class="breadcrumb-item">Pengelolaan Kelas</div>
-                    <div class="breadcrumb-item active">Kelompok Belajar</div>
-                </div>
+        <div class="section-header">
+            <h1>Kelompok Belajar</h1>
+            <div class="section-header-breadcrumb">
+                <div class="breadcrumb-item"><a href="<?= htmlspecialchars($dash_url) ?>">Dashboard</a></div>
+                <div class="breadcrumb-item">Pengelolaan Kelas</div>
+                <div class="breadcrumb-item active">Kelompok Belajar</div>
             </div>
-            <?php if ($can_crud): ?>
-            <div>
-                <button type="button" class="btn btn-primary" onclick="bukaModalTambah()">
-                    <i class="fas fa-plus mr-1"></i> Tambah Kelompok
-                </button>
-            </div>
-            <?php endif; ?>
         </div>
 
         <div class="section-body">
-            <!-- Filter & Search Card -->
+            <!-- Filter & Action Card -->
             <div class="card mb-4" style="border-radius:14px;border:none;box-shadow:0 4px 18px rgba(0,0,0,0.04);">
                 <div class="card-body p-3">
-                    <form method="GET" class="form-row align-items-center">
-                        <?php if ($session_type !== ''): ?>
-                            <input type="hidden" name="session_type" value="<?= htmlspecialchars($session_type) ?>">
-                        <?php endif; ?>
-                        <div class="col-md-4 col-sm-6 mb-2 mb-md-0">
-                            <label class="sr-only">Kelas</label>
-                            <select name="kelas" class="form-control" onchange="this.form.submit()">
-                                <option value=""><?= $is_admin_or_kepala ? '-- Pilih Kelas --' : 'Semua Kelas Diampu' ?></option>
+                    <?php
+                    $export_params = [];
+                    if ($session_type !== '') $export_params['session_type'] = $session_type;
+                    if ($f_kelas) $export_params['kelas'] = $f_kelas;
+                    if ($f_search !== '') $export_params['q'] = $f_search;
+                    $export_qs = !empty($export_params) ? ('?' . http_build_query($export_params)) : '';
+                    ?>
+                    <div class="d-flex flex-wrap align-items-center justify-content-between" style="gap:12px;">
+                        <!-- Action Buttons -->
+                        <div class="d-flex align-items-center flex-wrap" style="gap:8px;">
+                            <?php if ($can_crud): ?>
+                            <button type="button" class="btn btn-primary" onclick="bukaModalTambah()" style="border-radius: 999px; font-weight: 600; padding: 6px 18px; box-shadow: 0 4px 12px rgba(103, 119, 239, 0.25);">
+                                <i class="fas fa-plus mr-1"></i> Tambah Kelompok
+                            </button>
+                            <?php endif; ?>
+                            <a href="export_kelompok_belajar_excel.php<?= $export_qs ?>" class="btn btn-success" title="Ekspor ke Excel (.xlsx)" style="border-radius: 999px; font-weight: 600; padding: 6px 18px; box-shadow: 0 4px 12px rgba(71, 195, 99, 0.25);">
+                                <i class="fas fa-file-excel mr-1"></i> Ekspor Excel
+                            </a>
+                            <button type="button" class="btn btn-danger" title="Cetak / Ekspor PDF"
+                                    onclick="var w = window.open('cetak_kelompok_belajar.php<?= $export_qs ?>', '_blank', 'noopener,noreferrer'); if (w) w.opener = null;"
+                                    style="border-radius: 999px; font-weight: 600; padding: 6px 18px; box-shadow: 0 4px 12px rgba(252, 84, 75, 0.25);">
+                                <i class="fas fa-file-pdf mr-1"></i> Ekspor PDF
+                            </button>
+                        </div>
+
+                        <!-- Filter Form -->
+                        <form method="GET" class="d-flex align-items-center mb-0" style="gap:8px;flex-wrap:nowrap;">
+                            <?php if ($session_type !== ''): ?>
+                                <input type="hidden" name="session_type" value="<?= htmlspecialchars($session_type) ?>">
+                            <?php endif; ?>
+                            <select name="kelas" class="form-control" onchange="this.form.submit()" style="width:160px;min-width:140px;flex-shrink:0;">
+                                <option value=""><?= $is_admin_or_kepala ? '-- Pilih Kelas --' : 'Semua Kelas' ?></option>
                                 <?php foreach ($daftar_kelas as $k): ?>
                                     <option value="<?= (int)$k['id_kelas'] ?>" <?= $f_kelas === (int)$k['id_kelas'] ? 'selected' : '' ?>>
                                         Kelas <?= htmlspecialchars($k['nama_kelas']) ?>
                                     </option>
                                 <?php endforeach; ?>
                             </select>
-                        </div>
-                        <div class="col-md-5 col-sm-6 mb-2 mb-md-0">
-                            <label class="sr-only">Cari</label>
-                            <input type="text" name="q" class="form-control" placeholder="Cari nama kelompok atau ketua..." value="<?= htmlspecialchars($f_search) ?>">
-                        </div>
-                        <div class="col-md-3 col-sm-12 text-md-right">
-                            <button type="submit" class="btn btn-primary"><i class="fas fa-search mr-1"></i> Filter</button>
+                            <input type="text" name="q" class="form-control" placeholder="Cari nama kelompok..." value="<?= htmlspecialchars($f_search) ?>" style="width:200px;min-width:150px;" onchange="this.form.submit()">
                             <?php if ($f_kelas || $f_search !== ''): ?>
-                                <a href="kelompok_belajar.php<?= $session_type ? '?session_type=' . urlencode($session_type) : '' ?>" class="btn btn-outline-secondary ml-1" title="Reset filter"><i class="fas fa-redo"></i></a>
+                                <a href="kelompok_belajar.php<?= $session_type ? '?session_type=' . urlencode($session_type) : '' ?>" class="btn btn-outline-secondary" title="Reset filter" style="flex-shrink:0;"><i class="fas fa-redo"></i></a>
                             <?php endif; ?>
-                        </div>
-                    </form>
+                        </form>
+                    </div>
                 </div>
             </div>
 

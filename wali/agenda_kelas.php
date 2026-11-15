@@ -157,7 +157,7 @@ $stmt = $pdo->prepare("
     FROM tb_agenda_kelas a
     LEFT JOIN tb_kelas c ON c.id_kelas = a.id_kelas
     WHERE $where_sql
-    ORDER BY tgl_mulai_ef ASC, a.waktu_mulai ASC
+    ORDER BY tgl_mulai_ef DESC, a.waktu_mulai DESC, a.id DESC
 ");
 $stmt->execute($params);
 $rows = $stmt->fetchAll(PDO::FETCH_ASSOC);
