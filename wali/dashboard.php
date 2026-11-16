@@ -1235,11 +1235,11 @@ include_once '../templates/sidebar.php';
                                             </div>
                                             <div class="flex-shrink-0 text-right">
                                                 <?php if ($is_today): ?>
-                                                <span class="badge badge-success font-weight-bold px-2.5 py-1" style="font-size: 10.5px; border-radius: 6px; background-color: #10b981 !important; color: #fff !important; box-shadow: 0 1px 3px rgba(16,185,129,0.3);">Hari Ini</span>
+                                                <span class="badge badge-success font-weight-bold px-3 py-1.5" style="font-size: 13px; border-radius: 8px; background-color: #10b981 !important; color: #fff !important; box-shadow: 0 2px 4px rgba(16,185,129,0.35); letter-spacing: 0.3px;">Hari Ini</span>
                                                 <?php elseif ($is_past): ?>
-                                                <span class="badge badge-secondary font-weight-bold px-2.5 py-1" style="font-size: 10.5px; border-radius: 6px; background-color: #64748b !important; color: #fff !important;">Dilaksanakan</span>
+                                                <span class="badge badge-secondary font-weight-bold px-3 py-1.5" style="font-size: 13px; border-radius: 8px; background-color: #64748b !important; color: #fff !important; letter-spacing: 0.3px;">Dilaksanakan</span>
                                                 <?php else: ?>
-                                                <span class="badge badge-primary font-weight-bold px-2.5 py-1" style="font-size: 10.5px; border-radius: 6px; background-color: #2563eb !important; color: #fff !important;">Mendatang</span>
+                                                <span class="badge badge-primary font-weight-bold px-3 py-1.5" style="font-size: 13px; border-radius: 8px; background-color: #2563eb !important; color: #fff !important; box-shadow: 0 2px 4px rgba(37,99,235,0.25); letter-spacing: 0.3px;">Mendatang</span>
                                                 <?php endif; ?>
                                             </div>
                                         </div>
