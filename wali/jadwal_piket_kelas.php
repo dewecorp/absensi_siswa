@@ -30,17 +30,33 @@ if ($wali_class) {
 
 $all_classes = $pdo->query("SELECT id_kelas, nama_kelas FROM tb_kelas ORDER BY nama_kelas ASC")->fetchAll(PDO::FETCH_ASSOC);
 
+$teacher_accessible_classes = [];
+if ($guru_id > 0) {
+    $teacher_accessible_classes = getTeacherAccessibleClasses($pdo, $guru_id);
+}
+$is_multi_class_teacher = (count($teacher_accessible_classes) > 1);
+$show_class_filter = $is_monitor || $is_multi_class_teacher;
+$filter_class_options = $is_monitor ? $all_classes : $teacher_accessible_classes;
+
 $selected_kelas_id = $wali_kelas_id;
 $selected_kelas_name = $wali_kelas_name;
-if ($is_monitor) {
+if ($show_class_filter) {
     $selected_kelas_id = (int)($_GET['kelas'] ?? 0);
+    if ($selected_kelas_id <= 0) {
+        $selected_kelas_id = $wali_kelas_id > 0 ? $wali_kelas_id : (!empty($teacher_accessible_classes) ? (int)$teacher_accessible_classes[0]['id_kelas'] : 0);
+    }
     $selected_kelas_name = '';
-    foreach ($all_classes as $c) {
+    foreach ($filter_class_options as $c) {
         if ((int)$c['id_kelas'] === $selected_kelas_id) {
             $selected_kelas_name = (string)$c['nama_kelas'];
             break;
         }
     }
+}
+
+// Batasi hak CRUD hanya jika pengguna adalah admin atau wali kelas dari kelas yang dipilih
+if ($can_crud && $user_level === 'wali' && $selected_kelas_id !== $wali_kelas_id) {
+    $can_crud = false;
 }
 
 $days_order = getUrutanHariJadwalSekolah($pdo);
@@ -146,10 +162,7 @@ $where = ["1=1"];
 $params = [];
 $where[] = "p.id_kelas = ?";
 $params[] = $selected_kelas_id;
-if (!$is_monitor) {
-    $where[] = "p.id_wali = ?";
-    $params[] = $guru_id;
-}
+// Jadwal piket adalah data milik kelas (id_kelas). Wali kelas maupun guru kelas berhak melihat semua piket di kelas tersebut.
 
 $where_sql = implode(' AND ', $where);
 $field_hari = implode(',', array_map([$pdo, 'quote'], $days_order));
@@ -288,12 +301,12 @@ include '../templates/sidebar.php';
 <div class="main-content">
     <section class="section">
         <div class="section-header">
-            <h1>Jadwal Piket Kelas <?= $is_monitor ? (!empty($selected_kelas_name) ? '- Kelas ' . htmlspecialchars($selected_kelas_name) : '') : (!empty($wali_kelas_name) ? '- Kelas ' . htmlspecialchars($wali_kelas_name) : '') ?></h1>
+            <h1>Jadwal Piket Kelas</h1>
             <?php echo render_breadcrumb(); ?>
         </div>
 
         <div class="section-body">
-            <?php if ($is_monitor): ?>
+            <?php if ($show_class_filter): ?>
             <div class="card">
                 <div class="card-header">
                     <h4>Filter Kelas</h4>
@@ -305,7 +318,7 @@ include '../templates/sidebar.php';
                             <label for="selectKelasPiket">Pilih Kelas:</label>
                             <select name="kelas" id="selectKelasPiket" class="form-control" style="width: 100%; max-width: 320px;" onchange="this.form.submit();">
                                 <option value="">-- Pilih Kelas --</option>
-                                <?php foreach ($all_classes as $c): ?>
+                                <?php foreach ($filter_class_options as $c): ?>
                                     <option value="<?= (int)$c['id_kelas'] ?>" <?= $selected_kelas_id === (int)$c['id_kelas'] ? 'selected' : '' ?>><?= htmlspecialchars($c['nama_kelas']) ?></option>
                                 <?php endforeach; ?>
                             </select>

@@ -25,26 +25,49 @@ if ($guru_id <= 0 && isset($_SESSION['user_id'])) {
 
 // Ambil daftar kelas:
 // - Admin/Kepala: semua kelas
-// - Wali: kelas yang diampu sebagai wali kelas (fallback ke kelas yang diajar)
+// - Guru/Wali: kelas yang dapat diakses (diajar atau diwalikan)
 $all_kelas_master = $pdo->query("SELECT id_kelas, nama_kelas FROM tb_kelas ORDER BY id_kelas ASC")->fetchAll(PDO::FETCH_ASSOC);
-if ($is_admin_or_kepala) {
+if ($is_admin || $is_kepala) {
     $daftar_kelas = $all_kelas_master;
 } else {
-    $stmtWali = $pdo->prepare("SELECT id_kelas, nama_kelas FROM tb_kelas WHERE wali_kelas = ? OR wali_kelas = (SELECT nama_guru FROM tb_guru WHERE id_guru = ?) ORDER BY id_kelas ASC");
-    $stmtWali->execute([$guru_id, $guru_id]);
-    $daftar_kelas = $stmtWali->fetchAll(PDO::FETCH_ASSOC);
-    if (empty($daftar_kelas)) {
-        $daftar_kelas = getGuruTaughtClasses($pdo, $guru_id);
-    }
-    if (empty($daftar_kelas)) {
-        $daftar_kelas = $all_kelas_master;
+    $teacher_classes = getTeacherAccessibleClasses($pdo, $guru_id);
+    if (!empty($teacher_classes)) {
+        $daftar_kelas = $teacher_classes;
+    } else {
+        $stmtWali = $pdo->prepare("SELECT id_kelas, nama_kelas FROM tb_kelas WHERE wali_kelas = ? OR wali_kelas = (SELECT nama_guru FROM tb_guru WHERE id_guru = ?) ORDER BY id_kelas ASC");
+        $stmtWali->execute([$guru_id, $guru_id]);
+        $daftar_kelas = $stmtWali->fetchAll(PDO::FETCH_ASSOC);
+        if (empty($daftar_kelas)) {
+            $daftar_kelas = getGuruTaughtClasses($pdo, $guru_id);
+        }
+        if (empty($daftar_kelas)) {
+            $daftar_kelas = $all_kelas_master;
+        }
     }
 }
 $allowed_kelas_ids = array_map('intval', array_column($daftar_kelas, 'id_kelas'));
 
+// Cek kelas yang diwalikan oleh user ini
+$wali_kelas_id = 0;
+if ($guru_id > 0) {
+    $stW = $pdo->prepare("SELECT id_kelas FROM tb_kelas WHERE wali_kelas = ? OR wali_kelas = (SELECT nama_guru FROM tb_guru WHERE id_guru = ?) LIMIT 1");
+    $stW->execute([$guru_id, $guru_id]);
+    $wali_kelas_id = (int)($stW->fetchColumn() ?: 0);
+}
+
 // Filter
 $f_kelas = isset($_GET['kelas']) && $_GET['kelas'] !== '' ? (int)$_GET['kelas'] : null;
 $f_search = trim((string)($_GET['q'] ?? ''));
+
+// Defaultkan kelas ke kelas pertama jika mode guru belum pilih kelas
+if ($is_guru_mode && !$f_kelas && !empty($allowed_kelas_ids)) {
+    // Biarkan $f_kelas tetap null jika ingin melihat semua kelas yang diajar
+}
+
+// Boleh CRUD jika admin, atau wali kelas di kelasnya sendiri. Jika guru melihat kelas lain -> NO CRUD (read-only).
+if ($can_crud && $user_level === 'wali' && $f_kelas && $f_kelas !== $wali_kelas_id) {
+    $can_crud = false;
+}
 
 $buildRedirectUrl = static function (?int $kelasId = null) use ($session_type, $f_kelas): string {
     $q = [];
@@ -187,7 +210,7 @@ $swal_toast = $_SESSION['swal_toast'] ?? null;
 unset($_SESSION['swal_toast']);
 
 // Siswa hanya untuk kelas yang diajar guru (atau semua bila admin/kepala)
-if ($is_admin_or_kepala) {
+if ($is_admin || $is_kepala) {
     $all_siswa = $pdo->query("SELECT id_siswa, nama_siswa, id_kelas FROM tb_siswa ORDER BY nama_siswa ASC")->fetchAll(PDO::FETCH_ASSOC);
 } else {
     if (!empty($allowed_kelas_ids)) {
@@ -201,8 +224,10 @@ if ($is_admin_or_kepala) {
 }
 
 // Query data kelompok
-// Untuk Admin/Kepala: wajib pilih kelas terlebih dahulu. Jika belum memilih kelas, data dikosongkan.
-if ($is_admin_or_kepala && !$f_kelas) {
+// Untuk Admin/Kepala: wajib pilih kelas terlebih dahulu jika belum memilih kelas.
+// Untuk Guru/Wali: jika belum memilih kelas, otomatis tampilkan kelompok belajar dari semua kelas yang diampunya ($allowed_kelas_ids).
+$is_admin_or_kepala_strict = $is_admin || $is_kepala;
+if ($is_admin_or_kepala_strict && !$f_kelas) {
     $kelompok_list = [];
 } else {
     $sql = "
@@ -223,8 +248,8 @@ if ($is_admin_or_kepala && !$f_kelas) {
     ";
     $params = [];
 
-    // Pembatasan data untuk Wali: hanya kelompok dari kelas yang diampu atau yang dibuat
-    if (!$is_admin_or_kepala) {
+    // Pembatasan data untuk Guru/Wali: tampilkan kelompok dari kelas yang diampu atau yang dibuat
+    if (!$is_admin_or_kepala_strict) {
         if (!empty($allowed_kelas_ids)) {
             $ph = implode(',', array_fill(0, count($allowed_kelas_ids), '?'));
             $sql .= " AND (kb.id_kelas IN ($ph) OR kb.id_guru = ?)";
@@ -602,7 +627,7 @@ include '../templates/sidebar.php';
             </div>
 
             <!-- Daftar Kartu Kelompok Belajar -->
-            <?php if (!$is_admin_or_kepala || $f_kelas): ?>
+            <?php if (!$is_admin_or_kepala_strict || $f_kelas): ?>
             <?php if (empty($kelompok_list)): ?>
                 <div class="card text-center py-5" style="border-radius:16px;border:none;box-shadow:0 4px 18px rgba(0,0,0,0.04);">
                     <div class="card-body">
@@ -704,11 +729,15 @@ include '../templates/sidebar.php';
                             </div>
 
                             <!-- Card Footer: Aksi -->
+                            <?php
+                            $row_kelas_id = (int)($row['id_kelas'] ?? 0);
+                            $can_crud_row = ($user_level === 'admin') || ($can_crud && (!$row_kelas_id || $row_kelas_id === $wali_kelas_id));
+                            ?>
                             <div class="kb-card-footer">
                                 <small class="text-muted">
                                     <i class="far fa-clock mr-1"></i><?= date('d/m/Y', strtotime($row['created_at'])) ?>
                                 </small>
-                                <?php if ($can_crud): ?>
+                                <?php if ($can_crud_row): ?>
                                 <div class="btn-group" role="group">
                                     <button type="button" class="btn btn-sm btn-outline-primary"
                                             title="Edit Kelompok"

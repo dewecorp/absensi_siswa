@@ -64,10 +64,6 @@ if ($f_kelas > 0) {
     $where[] = "p.id_kelas = ?";
     $params[] = $f_kelas;
 }
-if (!$is_monitor) {
-    $where[] = "p.id_wali = ?";
-    $params[] = $guru_id;
-}
 $where_sql = implode(' AND ', $where);
 $field_hari = implode(',', array_map([$pdo, 'quote'], $days_order));
 $stmt = $pdo->prepare("

@@ -58,10 +58,6 @@ if ($id_projek > 0) {
         $where[] = "p.id_kelas = ?";
         $params[] = $f_kelas;
     }
-    if (!$is_admin_or_kepala) {
-        $where[] = "p.id_wali = ?";
-        $params[] = $guru_id;
-    }
 }
 $where_sql = implode(' AND ', $where);
 

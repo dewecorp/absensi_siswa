@@ -1340,13 +1340,9 @@ switch ($user_level) {
             ['title' => 'Jadwal Piket', 'url' => '../wali/jadwal_piket_kelas.php?session_type=guru', 'active' => $current_page === 'jadwal_piket_kelas.php'],
             ['title' => 'Kelompok Belajar', 'url' => '../guru/kelompok_belajar.php?session_type=guru', 'active' => $current_page === 'kelompok_belajar.php'],
             ['title' => 'Komunikasi Orang Tua', 'url' => '../wali/komunikasi_ortu.php?session_type=guru', 'active' => $current_page === 'komunikasi_ortu.php'],
-            ['title' => 'Konseling Siswa', 'url' => '../wali/konseling_awal.php?session_type=guru', 'active' => $current_page === 'konseling_awal.php'],
-            ['title' => 'Pelanggaran Siswa', 'url' => '../wali/pelanggaran_siswa.php?session_type=guru', 'active' => $current_page === 'pelanggaran_siswa.php'],
-            ['title' => 'Pembinaan Siswa', 'url' => '../wali/pembinaan_siswa.php?session_type=guru', 'active' => $current_page === 'pembinaan_siswa.php'],
             ['title' => 'Projek / Kokurikuler', 'url' => '../wali/projek_kokurikuler.php?session_type=guru', 'active' => $current_page === 'projek_kokurikuler.php'],
             ['title' => 'Data Projek Kokurikuler', 'url' => '../wali/data_projek.php?session_type=guru', 'active' => $current_page === 'data_projek.php'],
             ['title' => 'Struktur Kelas', 'url' => '../admin/struktur_kelas.php?session_type=guru', 'active' => $current_page === 'struktur_kelas.php'],
-            ['title' => 'Tindak Lanjut Pembinaan', 'url' => '../wali/tindak_lanjut.php?session_type=guru', 'active' => $is_wali_tl_page],
         ];
         usort($pengelolaan_kelas_submenu_guru, static function ($a, $b) { return strcasecmp($a['title'] ?? '', $b['title'] ?? ''); });
 
@@ -1367,7 +1363,7 @@ switch ($user_level) {
                 'title' => 'Pengelolaan Kelas',
                 'icon' => 'fas fa-user-graduate',
                 'submenu' => $pengelolaan_kelas_submenu_guru,
-                'active' => (in_array($current_page, ['konseling_awal.php', 'komunikasi_ortu.php', 'agenda_kelas.php', 'jadwal_piket_kelas.php', 'pelanggaran_siswa.php', 'pembinaan_siswa.php', 'projek_kokurikuler.php', 'data_projek.php', 'struktur_kelas.php', 'kelompok_belajar.php']) || $is_wali_tl_page)
+                'active' => in_array($current_page, ['komunikasi_ortu.php', 'agenda_kelas.php', 'jadwal_piket_kelas.php', 'projek_kokurikuler.php', 'data_projek.php', 'struktur_kelas.php', 'kelompok_belajar.php'])
             ],
             [
                 'title' => 'Forum Guru',

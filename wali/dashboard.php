@@ -46,38 +46,98 @@ if ($teacher) {
     $teacher_name = $_SESSION['username'];
 }
 
-// Get the class that the wali teaches
-$wali_kelas_stmt = $pdo->prepare("SELECT id_kelas, nama_kelas FROM tb_kelas WHERE wali_kelas = ?");
+// Get the class that the wali teaches and all accessible classes
+$wali_kelas_stmt = $pdo->prepare("SELECT id_kelas, nama_kelas, wali_kelas FROM tb_kelas WHERE wali_kelas = ?");
 $wali_kelas_stmt->execute([$teacher_name]);
 $wali_kelas = $wali_kelas_stmt->fetch(PDO::FETCH_ASSOC);
 
-// Get student count for the wali's class
+// Get all accessible classes for multi-class wali/guru
+$teacher_classes = [];
+if ($teacher && !empty($teacher['id_guru'])) {
+    $teacher_classes = getTeacherAccessibleClasses($pdo, (int)$teacher['id_guru']);
+}
+if (empty($teacher_classes) && $wali_kelas) {
+    $teacher_classes = [$wali_kelas];
+}
+
+// Per-class stats and student list for each class
+$class_students = [];
+$class_stats = [];
+$today = date('Y-m-d');
+$student_attendance_table = 'tb_absensi';
+
+foreach ($teacher_classes as $cls) {
+    $cid = (int)$cls['id_kelas'];
+    
+    // Students list with today attendance
+    $stStu = $pdo->prepare("
+        SELECT s.*, a.keterangan 
+        FROM tb_siswa s 
+        LEFT JOIN $student_attendance_table a ON s.id_siswa = a.id_siswa AND a.tanggal = ? 
+        WHERE s.id_kelas = ? 
+        ORDER BY s.nama_siswa ASC
+    ");
+    $stStu->execute([$today, $cid]);
+    $stuList = $stStu->fetchAll(PDO::FETCH_ASSOC);
+    $class_students[$cid] = $stuList;
+
+    // Student counts
+    $stCount = $pdo->prepare("SELECT COUNT(*) as total, 
+                               SUM(CASE WHEN jenis_kelamin = 'L' THEN 1 ELSE 0 END) as total_l,
+                               SUM(CASE WHEN jenis_kelamin = 'P' THEN 1 ELSE 0 END) as total_p
+                               FROM tb_siswa WHERE id_kelas = ?");
+    $stCount->execute([$cid]);
+    $cData = $stCount->fetch(PDO::FETCH_ASSOC) ?: ['total' => 0, 'total_l' => 0, 'total_p' => 0];
+
+    $cHadir = 0; $cSakit = 0; $cIzin = 0; $cAlpa = 0; $cBerhalangan = 0;
+    foreach ($stuList as $st) {
+        $ket = $st['keterangan'] ?? '';
+        if ($ket === 'Hadir') $cHadir++;
+        elseif ($ket === 'Sakit') $cSakit++;
+        elseif ($ket === 'Izin') $cIzin++;
+        elseif ($ket === 'Alpa') $cAlpa++;
+        elseif ($ket === 'Berhalangan') $cBerhalangan++;
+    }
+
+    $class_stats[$cid] = [
+        'total_siswa' => (int)($cData['total'] ?? 0),
+        'total_l' => (int)($cData['total_l'] ?? 0),
+        'total_p' => (int)($cData['total_p'] ?? 0),
+        'hadir' => $cHadir,
+        'sakit' => $cSakit,
+        'izin' => $cIzin,
+        'alpa' => $cAlpa,
+        'berhalangan' => $cBerhalangan
+    ];
+}
+
+// Get student count for the wali's primary class
 if ($wali_kelas) {
-    $stmt = $pdo->prepare("SELECT COUNT(*) as total_siswa, 
-                                 SUM(CASE WHEN jenis_kelamin = 'L' THEN 1 ELSE 0 END) as total_laki,
-                                 SUM(CASE WHEN jenis_kelamin = 'P' THEN 1 ELSE 0 END) as total_perempuan
-                          FROM tb_siswa WHERE id_kelas = ?");
-    $stmt->execute([$wali_kelas['id_kelas']]);
-    $stats = $stmt->fetch(PDO::FETCH_ASSOC);
-    $total_siswa = $stats['total_siswa'] ?? 0;
-    $total_laki = $stats['total_laki'] ?? 0;
-    $total_perempuan = $stats['total_perempuan'] ?? 0;
+    $primary_cid = (int)$wali_kelas['id_kelas'];
+    $total_siswa = $class_stats[$primary_cid]['total_siswa'] ?? 0;
+    $total_laki = $class_stats[$primary_cid]['total_l'] ?? 0;
+    $total_perempuan = $class_stats[$primary_cid]['total_p'] ?? 0;
+} elseif (!empty($teacher_classes)) {
+    $first_cid = (int)$teacher_classes[0]['id_kelas'];
+    $total_siswa = $class_stats[$first_cid]['total_siswa'] ?? 0;
+    $total_laki = $class_stats[$first_cid]['total_l'] ?? 0;
+    $total_perempuan = $class_stats[$first_cid]['total_p'] ?? 0;
 } else {
     $total_siswa = 0;
     $total_laki = 0;
     $total_perempuan = 0;
 }
 
-// Get today's attendance statistics for the wali's class
-$today = date('Y-m-d');
+// Get today's attendance statistics for the wali's primary class
 $holiday = isSchoolHoliday($pdo, $today);
 
 // Check if there is a tutoring schedule today (for Grade 6)
 $is_grade_6_wali = false;
-if ($wali_kelas) {
-    $class_name = strtoupper($wali_kelas['nama_kelas']);
-    if (strpos($class_name, '6') !== false || strpos($class_name, 'VI') !== false) {
+foreach ($teacher_classes as $cls) {
+    $cname = strtoupper($cls['nama_kelas']);
+    if (strpos($cname, '6') !== false || strpos($cname, 'VI') !== false) {
         $is_grade_6_wali = true;
+        break;
     }
 }
 
@@ -97,11 +157,16 @@ if ($has_les_schedule && $teacher && isset($teacher['id_guru'])) {
     $today_les_attendance = $stmt_check_les->fetch(PDO::FETCH_ASSOC);
 }
 
-// Determine which attendance table to use for STUDENTS
-// Main dashboard always shows regular attendance (tb_absensi)
-$student_attendance_table = 'tb_absensi';
+// Attendance stats for primary class
+$primary_id = $wali_kelas ? (int)$wali_kelas['id_kelas'] : (!empty($teacher_classes) ? (int)$teacher_classes[0]['id_kelas'] : 0);
+$jumlah_hadir = $class_stats[$primary_id]['hadir'] ?? 0;
+$jumlah_sakit = $class_stats[$primary_id]['sakit'] ?? 0;
+$jumlah_izin = $class_stats[$primary_id]['izin'] ?? 0;
+$jumlah_alpa = $class_stats[$primary_id]['alpa'] ?? 0;
+$jumlah_berhalangan = $class_stats[$primary_id]['berhalangan'] ?? 0;
 
-if ($wali_kelas) {
+$attendance_stats = [];
+if ($primary_id > 0) {
     $stmt = $pdo->prepare("
         SELECT a.keterangan, COUNT(*) as jumlah 
         FROM $student_attendance_table a 
@@ -109,10 +174,8 @@ if ($wali_kelas) {
         WHERE s.id_kelas = ? AND a.tanggal = ? 
         GROUP BY a.keterangan
     ");
-    $stmt->execute([$wali_kelas['id_kelas'], $today]);
+    $stmt->execute([$primary_id, $today]);
     $attendance_stats = $stmt->fetchAll(PDO::FETCH_ASSOC);
-} else {
-    $attendance_stats = [];
 }
 
 // Initialize counts
@@ -236,13 +299,7 @@ $alpa_data_json = json_encode($alpa_data);
 $berhalangan_data_json = json_encode($berhalangan_data);
 
 // Calculate total classes taught by this wali (as a teacher)
-$total_kelas_ajar = 0;
-if ($teacher && !empty($teacher['mengajar'])) {
-    $mengajar_decoded = json_decode($teacher['mengajar'], true);
-    if (is_array($mengajar_decoded)) {
-        $total_kelas_ajar = count($mengajar_decoded);
-    }
-}
+$total_kelas_ajar = !empty($teacher_classes) ? count($teacher_classes) : 0;
 
 // Background Image
 $hero_bg = !empty($school_profile['dashboard_hero_image']) 
@@ -1424,13 +1481,69 @@ include_once '../templates/sidebar.php';
 
 
                     <!-- ── RINGKASAN KELAS ── -->
-                    <div class="dash-section-head">
+                    <div class="dash-section-head d-flex justify-content-between align-items-center flex-wrap">
                         <div class="dsh-title">
                             <span class="dsh-dot" style="background:#2563eb;"></span>
-                            Ringkasan Kelas <?= $wali_kelas ? htmlspecialchars($wali_kelas['nama_kelas']) : '' ?>
+                            Ringkasan Kelas
                         </div>
-
+                        <?php if (count($teacher_classes) >= 2): ?>
+                        <ul class="nav nav-pills" id="ringkasanWaliPills" role="tablist" style="gap:4px;">
+                            <?php foreach ($teacher_classes as $idx => $cls): ?>
+                            <li class="nav-item" role="presentation">
+                                <a class="nav-link <?= $idx === 0 ? 'active' : '' ?> py-1 px-3" id="rw-tab-<?= (int)$cls['id_kelas'] ?>" data-toggle="pill" href="#rw-panel-<?= (int)$cls['id_kelas'] ?>" role="tab" style="font-size:12px; border-radius:16px;">Kelas <?= htmlspecialchars($cls['nama_kelas']) ?></a>
+                            </li>
+                            <?php endforeach; ?>
+                        </ul>
+                        <?php endif; ?>
                     </div>
+
+                    <?php if (count($teacher_classes) >= 2): ?>
+                    <div class="tab-content" id="ringkasanWaliTabContent">
+                        <?php foreach ($teacher_classes as $idx => $cls): ?>
+                            <?php
+                            $cStat = $class_stats[(int)$cls['id_kelas']] ?? ['total_siswa' => 0, 'total_l' => 0, 'total_p' => 0, 'hadir' => 0];
+                            $isWaliThis = ($wali_kelas && (int)$wali_kelas['id_kelas'] === (int)$cls['id_kelas']);
+                            ?>
+                            <div class="tab-pane fade <?= $idx === 0 ? 'show active' : '' ?>" id="rw-panel-<?= (int)$cls['id_kelas'] ?>" role="tabpanel">
+                                <div class="row dash-stat-row">
+                                    <div class="col-12 col-sm-6 col-lg-4">
+                                        <div class="dash-stat-card tint-blue">
+                                            <div class="dash-stat-ico dsi-blue"><i class="fas fa-users"></i></div>
+                                            <div class="dash-stat-body">
+                                                <div class="dash-stat-label">Total Siswa <?= htmlspecialchars($cls['nama_kelas']) ?></div>
+                                                <div class="dash-stat-value"><?= $cStat['total_siswa'] ?></div>
+                                                <div class="dash-stat-sub">
+                                                    <span><i class="fas fa-mars" style="color:#3b82f6;"></i> <?= $cStat['total_l'] ?> L</span>
+                                                    <span><i class="fas fa-venus" style="color:#ec4899;"></i> <?= $cStat['total_p'] ?> P</span>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <div class="col-6 col-sm-6 col-lg-4">
+                                        <div class="dash-stat-card tint-indigo">
+                                            <div class="dash-stat-ico dsi-indigo"><i class="fas fa-chalkboard"></i></div>
+                                            <div class="dash-stat-body">
+                                                <div class="dash-stat-label">Peran di Kelas</div>
+                                                <div class="dash-stat-value" style="font-size:18px; font-weight:700;"><?= $isWaliThis ? 'Wali Kelas' : 'Guru Mapel' ?></div>
+                                                <div class="dash-stat-sub"><span style="color:#4338ca;">Kelas <?= htmlspecialchars($cls['nama_kelas']) ?></span></div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <div class="col-6 col-sm-6 col-lg-4">
+                                        <div class="dash-stat-card tint-green">
+                                            <div class="dash-stat-ico dsi-green"><i class="fas fa-user-check"></i></div>
+                                            <div class="dash-stat-body">
+                                                <div class="dash-stat-label">Siswa Hadir</div>
+                                                <div class="dash-stat-value"><?= $cStat['hadir'] ?></div>
+                                                <div class="dash-stat-sub"><span style="color:#15803d;">dari <?= $cStat['total_siswa'] ?> siswa</span></div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        <?php endforeach; ?>
+                    </div>
+                    <?php else: ?>
                     <div class="row dash-stat-row">
                         <div class="col-12 col-sm-6 col-lg-4">
                             <div class="dash-stat-card tint-blue">
@@ -1466,6 +1579,7 @@ include_once '../templates/sidebar.php';
                             </div>
                         </div>
                     </div>
+                    <?php endif; ?>
 
                     <!-- ── KEHADIRAN SISWA HARI INI ── -->
                     <div class="dash-section-head" style="margin-top:4px;">
@@ -1544,78 +1658,110 @@ include_once '../templates/sidebar.php';
                         </div>
                     </div>
                     
-                    <?php
-                    $siswa_list = [];
-                    if ($wali_kelas) {
-                        $siswa_stmt = $pdo->prepare("SELECT s.*, a.keterangan as attendance_status FROM tb_siswa s LEFT JOIN tb_absensi a ON s.id_siswa = a.id_siswa AND a.tanggal = CURDATE() WHERE s.id_kelas = ? ORDER BY s.nama_siswa ASC");
-                        $siswa_stmt->execute([$wali_kelas['id_kelas']]);
-                        $siswa_list = $siswa_stmt->fetchAll(PDO::FETCH_ASSOC);
-                    }
-                    ?>
                     <div class="row">
                         <div class="col-12">
                             <div class="card mapp-hide-mobile">
                                 <div class="card-header">
-                                    <h4>Status Kehadiran Siswa Hari Ini<?php echo $wali_kelas ? ' - Kelas ' . htmlspecialchars($wali_kelas['nama_kelas'] ?? '') : ''; ?></h4>
+                                    <h4>Status Kehadiran Siswa Hari Ini</h4>
                                 </div>
                                 <div class="card-body">
-                                    <div class="table-responsive mt-3">
-                                        <table class="table table-striped table-bordered">
-                                            <thead>
-                                                <tr>
-                                                    <th>No</th>
-                                                    <th>Nama Siswa</th>
-                                                    <th>NISN</th>
-                                                    <th>Status Kehadiran</th>
-                                                </tr>
-                                            </thead>
-                                            <tbody>
-                                                <?php if ($wali_kelas && !empty($siswa_list)): ?>
-                                                    <?php foreach ($siswa_list as $idx => $siswa): ?>
-                                                        <tr>
-                                                            <td><?php echo $idx + 1; ?></td>
-                                                            <td><?php echo htmlspecialchars($siswa['nama_siswa']); ?></td>
-                                                            <td><?php echo htmlspecialchars($siswa['nisn']); ?></td>
-                                                            <td>
-                                                                <?php
-                                                                $status = $siswa['attendance_status'] ?? 'Belum Mengisi Kehadiran';
-                                                                $badge_class = '';
-                                                                switch (strtolower($status)) {
-                                                                    case 'hadir':
-                                                                        $badge_class = 'badge-success';
-                                                                        break;
-                                                                    case 'sakit':
-                                                                        $badge_class = 'badge-warning';
-                                                                        break;
-                                                                    case 'izin':
-                                                                        $badge_class = 'badge-info';
-                                                                        break;
-                                                                    case 'alpa':
-                                                                    case 'berhalangan':
-                                                                        $badge_class = 'badge-danger';
-                                                                        break;
-                                                                    default:
-                                                                        $badge_class = 'badge-secondary';
-                                                                }
-                                                                ?>
-                                                                <span class="badge <?php echo $badge_class; ?>">
-                                                                    <?php echo htmlspecialchars($status); ?>
-                                                                </span>
-                                                            </td>
-                                                        </tr>
-                                                    <?php endforeach; ?>
-                                                <?php elseif ($wali_kelas): ?>
-                                                    <tr>
-                                                        <td colspan="4" class="text-center">Tidak ada siswa dalam kelas ini</td>
-                                                    </tr>
-                                                <?php else: ?>
-                                                    <tr>
-                                                        <td colspan="4" class="text-center">Tidak ada kelas yang diajar</td>
-                                                    </tr>
-                                                <?php endif; ?>
-                                            </tbody>
-                                        </table>
-                                    </div>
+                                    <?php if (!empty($teacher_classes)): ?>
+                                        <?php $use_class_tabs = count($teacher_classes) >= 2; ?>
+
+                                        <?php if ($use_class_tabs): ?>
+                                            <ul class="nav nav-tabs mb-3" id="attendanceClassTabsWali" role="tablist">
+                                                <?php foreach ($teacher_classes as $tab_index => $kelas): ?>
+                                                    <?php $is_active_tab = $tab_index === 0; ?>
+                                                    <li class="nav-item" role="presentation">
+                                                        <a
+                                                            class="nav-link <?php echo $is_active_tab ? 'active' : ''; ?>"
+                                                            id="wali-kelas-tab-<?php echo (int)$kelas['id_kelas']; ?>"
+                                                            data-toggle="tab"
+                                                            href="#wali-kelas-panel-<?php echo (int)$kelas['id_kelas']; ?>"
+                                                            role="tab"
+                                                            aria-controls="wali-kelas-panel-<?php echo (int)$kelas['id_kelas']; ?>"
+                                                            aria-selected="<?php echo $is_active_tab ? 'true' : 'false'; ?>"
+                                                        >
+                                                            Kelas <?php echo htmlspecialchars($kelas['nama_kelas']); ?>
+                                                        </a>
+                                                    </li>
+                                                <?php endforeach; ?>
+                                            </ul>
+                                        <?php endif; ?>
+
+                                        <div class="tab-content" id="attendanceClassTabsWaliContent">
+                                            <?php foreach ($teacher_classes as $panel_index => $kelas): ?>
+                                                <?php
+                                                $is_active_panel = $panel_index === 0;
+                                                $students_in_class = $class_students[$kelas['id_kelas']] ?? [];
+                                                ?>
+                                                <div
+                                                    class="tab-pane fade <?php echo $is_active_panel ? 'show active' : ''; ?>"
+                                                    id="wali-kelas-panel-<?php echo (int)$kelas['id_kelas']; ?>"
+                                                    role="tabpanel"
+                                                    aria-labelledby="wali-kelas-tab-<?php echo (int)$kelas['id_kelas']; ?>"
+                                                >
+                                                    <div class="table-responsive">
+                                                        <table class="table table-striped table-bordered mb-0">
+                                                            <thead>
+                                                                <tr>
+                                                                    <th style="width: 60px;">No</th>
+                                                                    <th>Nama Siswa</th>
+                                                                    <th style="width: 180px;">NISN</th>
+                                                                    <th style="width: 180px;">Status Kehadiran</th>
+                                                                </tr>
+                                                            </thead>
+                                                            <tbody>
+                                                                <?php if (!empty($students_in_class)): ?>
+                                                                    <?php foreach ($students_in_class as $idx => $siswa): ?>
+                                                                        <?php
+                                                                        $status = $siswa['keterangan'] ?? 'Belum Mengisi Kehadiran';
+                                                                        $badge_class = '';
+                                                                        switch (strtolower($status)) {
+                                                                            case 'hadir':
+                                                                                $badge_class = 'badge-success';
+                                                                                break;
+                                                                            case 'sakit':
+                                                                                $badge_class = 'badge-warning';
+                                                                                break;
+                                                                            case 'izin':
+                                                                                $badge_class = 'badge-info';
+                                                                                break;
+                                                                            case 'alpa':
+                                                                            case 'berhalangan':
+                                                                                $badge_class = 'badge-danger';
+                                                                                break;
+                                                                            default:
+                                                                                $badge_class = 'badge-secondary';
+                                                                        }
+                                                                        ?>
+                                                                        <tr>
+                                                                            <td><?php echo $idx + 1; ?></td>
+                                                                            <td><?php echo htmlspecialchars($siswa['nama_siswa']); ?></td>
+                                                                            <td><?php echo htmlspecialchars($siswa['nisn']); ?></td>
+                                                                            <td>
+                                                                                <span class="badge <?php echo $badge_class; ?>">
+                                                                                    <?php echo htmlspecialchars($status); ?>
+                                                                                </span>
+                                                                            </td>
+                                                                        </tr>
+                                                                    <?php endforeach; ?>
+                                                                <?php else: ?>
+                                                                    <tr>
+                                                                        <td colspan="4" class="text-center">Tidak ada data siswa untuk kelas ini.</td>
+                                                                    </tr>
+                                                                <?php endif; ?>
+                                                            </tbody>
+                                                        </table>
+                                                    </div>
+                                                </div>
+                                            <?php endforeach; ?>
+                                        </div>
+                                    <?php else: ?>
+                                        <div class="text-center py-4 text-muted">
+                                            Tidak ada data kelas yang dapat diakses.
+                                        </div>
+                                    <?php endif; ?>
                                 </div>
                             </div>
                         </div>

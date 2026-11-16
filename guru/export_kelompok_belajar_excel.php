@@ -28,7 +28,10 @@ if ($guru_id <= 0 && isset($_SESSION['user_id'])) {
 // Allowed class filter
 $allowed_kelas_ids = [];
 if (!$is_admin_or_kepala) {
-    if (function_exists('getGuruTaughtClasses')) {
+    if (function_exists('getTeacherAccessibleClasses')) {
+        $allowed_kelas = getTeacherAccessibleClasses($pdo, $guru_id);
+        $allowed_kelas_ids = array_map('intval', array_column($allowed_kelas, 'id_kelas'));
+    } elseif (function_exists('getGuruTaughtClasses')) {
         $allowed_kelas = getGuruTaughtClasses($pdo, $guru_id);
         $allowed_kelas_ids = array_map('intval', array_column($allowed_kelas, 'id_kelas'));
     }
@@ -45,7 +48,8 @@ if (!$is_admin_or_kepala) {
 $f_kelas  = (int)($_GET['kelas'] ?? 0);
 $f_search = trim(sanitizeInput((string)($_GET['q'] ?? '')));
 
-if ($is_admin_or_kepala && !$f_kelas) {
+$is_admin_or_kepala_strict = $is_admin || $is_kepala;
+if ($is_admin_or_kepala_strict && !$f_kelas) {
     $kelompok_list = [];
 } else {
     $sql = "
@@ -65,7 +69,7 @@ if ($is_admin_or_kepala && !$f_kelas) {
     ";
     $params = [];
 
-    if (!$is_admin_or_kepala) {
+    if (!$is_admin_or_kepala_strict) {
         if (!empty($allowed_kelas_ids)) {
             $ph = implode(',', array_fill(0, count($allowed_kelas_ids), '?'));
             $sql .= " AND (kb.id_kelas IN ($ph) OR kb.id_guru = ?)";

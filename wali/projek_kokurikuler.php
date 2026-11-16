@@ -87,9 +87,24 @@ if ($wali_class) {
 
 $all_classes = $pdo->query("SELECT id_kelas, nama_kelas FROM tb_kelas ORDER BY nama_kelas ASC")->fetchAll(PDO::FETCH_ASSOC);
 
+$teacher_accessible_classes = [];
+if ($guru_id > 0) {
+    $teacher_accessible_classes = getTeacherAccessibleClasses($pdo, $guru_id);
+}
+$is_multi_class_teacher = (count($teacher_accessible_classes) > 1);
+$show_class_filter = $is_admin_or_kepala || $is_multi_class_teacher;
+$filter_class_options = $is_admin_or_kepala ? $all_classes : $teacher_accessible_classes;
+
 $selected_kelas_id = $wali_kelas_id;
-if ($is_admin_or_kepala && isset($_GET['kelas'])) {
+if ($show_class_filter && isset($_GET['kelas'])) {
     $selected_kelas_id = (int)$_GET['kelas'];
+} elseif ($show_class_filter && $selected_kelas_id <= 0 && !empty($teacher_accessible_classes)) {
+    $selected_kelas_id = (int)$teacher_accessible_classes[0]['id_kelas'];
+}
+
+// Batasi hak CRUD hanya jika pengguna adalah admin atau wali kelas dari kelas yang dipilih
+if ($can_crud && $user_level === 'wali' && $selected_kelas_id !== $wali_kelas_id) {
+    $can_crud = false;
 }
 
 // Daftar Data Projek (Master) untuk dipilih guru saat membuat projek
@@ -247,10 +262,6 @@ $params = [];
 if ($selected_kelas_id > 0) {
     $where[] = "p.id_kelas = ?";
     $params[] = $selected_kelas_id;
-}
-if (!$is_admin_or_kepala) {
-    $where[] = "p.id_wali = ?";
-    $params[] = $guru_id;
 }
 
 $where_sql = implode(' AND ', $where);
@@ -1080,20 +1091,20 @@ include '../templates/sidebar.php';
 <div class="main-content">
     <section class="section">
         <div class="section-header">
-            <h1>Daftar Projek / Kokurikuler <?= !empty($wali_kelas_name) ? '- Kelas ' . htmlspecialchars($wali_kelas_name) : '' ?></h1>
+            <h1>Daftar Projek / Kokurikuler</h1>
             <?php echo render_breadcrumb(); ?>
         </div>
 
         <div class="section-body">
-            <?php if ($is_admin_or_kepala): ?>
+            <?php if ($show_class_filter): ?>
             <div class="card mb-3">
                 <div class="card-body p-3">
                     <form method="GET" class="form-inline">
                         <?php if (isset($_GET['session_type'])): ?><input type="hidden" name="session_type" value="<?= htmlspecialchars($_GET['session_type']) ?>"><?php endif; ?>
                         <label class="mr-2">Pilih Kelas:</label>
                         <select name="kelas" class="form-control" onchange="this.form.submit()">
-                            <option value="">-- Semua Kelas --</option>
-                            <?php foreach ($all_classes as $c): ?>
+                            <option value="">-- <?= $is_admin_or_kepala ? 'Semua Kelas' : 'Pilih Kelas' ?> --</option>
+                            <?php foreach ($filter_class_options as $c): ?>
                                 <option value="<?= (int)$c['id_kelas'] ?>" <?= $selected_kelas_id === (int)$c['id_kelas'] ? 'selected' : '' ?>><?= htmlspecialchars($c['nama_kelas']) ?></option>
                             <?php endforeach; ?>
                         </select>

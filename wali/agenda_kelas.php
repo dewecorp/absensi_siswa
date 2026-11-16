@@ -30,20 +30,36 @@ if ($wali_class) {
 
 $all_classes = $pdo->query("SELECT id_kelas, nama_kelas FROM tb_kelas ORDER BY nama_kelas ASC")->fetchAll(PDO::FETCH_ASSOC);
 
+$teacher_accessible_classes = [];
+if ($guru_id > 0) {
+    $teacher_accessible_classes = getTeacherAccessibleClasses($pdo, $guru_id);
+}
+$is_multi_class_teacher = (count($teacher_accessible_classes) > 1);
+$show_class_filter = $is_admin_or_kepala || $is_multi_class_teacher;
+$filter_class_options = $is_admin_or_kepala ? $all_classes : $teacher_accessible_classes;
+
 $selected_kelas_id = $wali_kelas_id;
 $selected_kelas_name = $wali_kelas_name;
-if ($is_admin_or_kepala) {
+if ($show_class_filter) {
     $selected_kelas_id = (int)($_GET['kelas'] ?? 0);
     if ($selected_kelas_id <= 0 && isset($_GET['f_kelas'])) {
         $selected_kelas_id = (int)$_GET['f_kelas'];
     }
+    if ($selected_kelas_id <= 0) {
+        $selected_kelas_id = $wali_kelas_id > 0 ? $wali_kelas_id : (!empty($teacher_accessible_classes) ? (int)$teacher_accessible_classes[0]['id_kelas'] : 0);
+    }
     $selected_kelas_name = '';
-    foreach ($all_classes as $c) {
+    foreach ($filter_class_options as $c) {
         if ((int)$c['id_kelas'] === $selected_kelas_id) {
             $selected_kelas_name = (string)$c['nama_kelas'];
             break;
         }
     }
+}
+
+// Batasi hak CRUD hanya jika pengguna adalah admin atau wali kelas dari kelas yang dipilih
+if ($can_crud && $user_level === 'wali' && $selected_kelas_id !== $wali_kelas_id) {
+    $can_crud = false;
 }
 
 $message = null;
@@ -136,10 +152,6 @@ $params = [];
 if ($selected_kelas_id > 0) {
     $where[] = "a.id_kelas = ?";
     $params[] = $selected_kelas_id;
-}
-if (!$is_admin_or_kepala) {
-    $where[] = "a.id_wali = ?";
-    $params[] = $guru_id;
 }
 if ($f_jenis !== '') {
     $where[] = "a.jenis = ?";
@@ -352,12 +364,12 @@ include '../templates/sidebar.php';
 <div class="main-content">
     <section class="section">
         <div class="section-header">
-            <h1>Daftar Agenda Kelas <?= $is_admin_or_kepala ? (!empty($selected_kelas_name) ? '- Kelas ' . htmlspecialchars($selected_kelas_name) : '') : (!empty($wali_kelas_name) ? '- Kelas ' . htmlspecialchars($wali_kelas_name) : '') ?></h1>
+            <h1>Daftar Agenda Kelas</h1>
             <?php echo render_breadcrumb(); ?>
         </div>
 
         <div class="section-body">
-            <?php if ($is_admin_or_kepala): ?>
+            <?php if ($show_class_filter): ?>
             <div class="card">
                 <div class="card-header">
                     <h4>Filter Kelas</h4>
@@ -368,7 +380,7 @@ include '../templates/sidebar.php';
                         <label class="mr-2" for="selectKelasAgenda">Pilih Kelas:</label>
                         <select name="kelas" id="selectKelasAgenda" class="form-control" style="min-width: 220px;" onchange="this.form.submit();">
                             <option value="">-- Pilih Kelas --</option>
-                            <?php foreach ($all_classes as $c): ?>
+                            <?php foreach ($filter_class_options as $c): ?>
                                 <option value="<?= (int)$c['id_kelas'] ?>" <?= $selected_kelas_id === (int)$c['id_kelas'] ? 'selected' : '' ?>><?= htmlspecialchars($c['nama_kelas']) ?></option>
                             <?php endforeach; ?>
                         </select>

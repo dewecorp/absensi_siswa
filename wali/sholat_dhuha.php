@@ -33,17 +33,64 @@ if (isset($_SESSION['nama_guru']) && !empty($_SESSION['nama_guru'])) {
     }
 }
 
+// Get teacher ID
+$id_guru = null;
+if ($_SESSION['level'] == 'guru' || $_SESSION['level'] == 'wali') {
+    $stmt = $pdo->prepare("SELECT * FROM tb_guru WHERE id_guru = ?");
+    $stmt->execute([$_SESSION['user_id']]);
+    $teacher = $stmt->fetch(PDO::FETCH_ASSOC);
+    if ($teacher) $id_guru = (int)$teacher['id_guru'];
+} else {
+    $stmt = $pdo->prepare("SELECT g.* FROM tb_guru g JOIN tb_pengguna p ON g.id_guru = p.id_guru WHERE p.id_pengguna = ?");
+    $stmt->execute([$_SESSION['user_id']]);
+    $teacher = $stmt->fetch(PDO::FETCH_ASSOC);
+    if ($teacher) $id_guru = (int)$teacher['id_guru'];
+}
+if (!$id_guru && isset($_SESSION['user_id'])) {
+    $id_guru = (int)$_SESSION['user_id'];
+}
+
 // Get the class that the wali teaches
 $wali_kelas_stmt = $pdo->prepare("SELECT id_kelas, nama_kelas FROM tb_kelas WHERE wali_kelas = ?");
 $wali_kelas_stmt->execute([$teacher_name]);
 $wali_kelas = $wali_kelas_stmt->fetch(PDO::FETCH_ASSOC);
 
-if (!$wali_kelas) {
-    die('<div class="alert alert-danger">Anda belum ditugaskan sebagai Wali Kelas untuk kelas manapun. Silakan hubungi Administrator.</div>');
+// Accessible classes for multi-class guru/wali
+$classes = [];
+if ($id_guru > 0) {
+    $classes = getTeacherAccessibleClasses($pdo, $id_guru);
+}
+if (empty($classes) && $wali_kelas) {
+    $classes = [$wali_kelas];
 }
 
-$id_kelas = $wali_kelas['id_kelas'];
-$nama_kelas = $wali_kelas['nama_kelas'];
+if (empty($classes)) {
+    die('<div class="alert alert-danger">Anda belum ditugaskan untuk kelas manapun. Silakan hubungi Administrator.</div>');
+}
+
+// Determine selected class
+$id_kelas = 0;
+if (isset($_GET['kelas']) && !empty($_GET['kelas'])) {
+    $id_kelas = (int)$_GET['kelas'];
+} elseif (isset($_POST['id_kelas']) && !empty($_POST['id_kelas'])) {
+    $id_kelas = (int)$_POST['id_kelas'];
+} elseif ($wali_kelas) {
+    $id_kelas = (int)$wali_kelas['id_kelas'];
+} else {
+    $id_kelas = (int)$classes[0]['id_kelas'];
+}
+
+$nama_kelas = '';
+foreach ($classes as $c) {
+    if ((int)$c['id_kelas'] === $id_kelas) {
+        $nama_kelas = $c['nama_kelas'];
+        break;
+    }
+}
+if ($nama_kelas === '' && $wali_kelas) {
+    $id_kelas = (int)$wali_kelas['id_kelas'];
+    $nama_kelas = $wali_kelas['nama_kelas'];
+}
 
 // Auto-save kehadiran sholat satu siswa (tanpa tombol simpan)
 if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['single_absensi_siswa'])) {
@@ -144,7 +191,7 @@ include '../templates/header.php';
 <div class="main-content">
     <section class="section">
         <div class="section-header">
-            <h1>Sholat Dhuha - Kelas <?php echo htmlspecialchars($nama_kelas); ?></h1>
+            <h1>Sholat Dhuha</h1>
             <div class="section-header-breadcrumb">
                 <div class="breadcrumb-item active"><a href="dashboard.php">Dashboard</a></div>
                 <div class="breadcrumb-item">Kehadiran Siswa</div>
@@ -161,10 +208,24 @@ include '../templates/header.php';
                     <div class="card-body">
                         <form method="GET" action="<?php echo $_SERVER['PHP_SELF']; ?>" id="filterForm">
                             <div class="row">
+                                <?php if (count($classes) > 1): ?>
+                                <div class="col-md-4">
+                                    <div class="form-group">
+                                        <label>Kelas</label>
+                                        <select class="form-control" name="kelas" id="kelasSelect" onchange="document.getElementById('filterForm').submit();">
+                                            <?php foreach ($classes as $c): ?>
+                                                <option value="<?php echo (int)$c['id_kelas']; ?>" <?php echo $id_kelas === (int)$c['id_kelas'] ? 'selected' : ''; ?>>
+                                                    Kelas <?php echo htmlspecialchars($c['nama_kelas']); ?>
+                                                </option>
+                                            <?php endforeach; ?>
+                                        </select>
+                                    </div>
+                                </div>
+                                <?php endif; ?>
                                 <div class="col-md-4">
                                     <div class="form-group">
                                         <label>Tanggal</label>
-                                        <input type="date" class="form-control" name="tanggal" id="tanggalInput" value="<?php echo $tanggal; ?>" required>
+                                        <input type="date" class="form-control" name="tanggal" id="tanggalInput" value="<?php echo $tanggal; ?>" required onchange="document.getElementById('filterForm').submit();">
                                     </div>
                                 </div>
                             </div>

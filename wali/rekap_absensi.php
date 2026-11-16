@@ -97,20 +97,48 @@ if (isset($_SESSION['nama_guru']) && !empty($_SESSION['nama_guru'])) {
     }
 }
 
+// Get teacher ID
+$id_guru = null;
+if ($_SESSION['level'] == 'guru' || $_SESSION['level'] == 'wali') {
+    $stmt = $pdo->prepare("SELECT * FROM tb_guru WHERE id_guru = ?");
+    $stmt->execute([$_SESSION['user_id']]);
+    $teacher = $stmt->fetch(PDO::FETCH_ASSOC);
+    if ($teacher) $id_guru = (int)$teacher['id_guru'];
+} else {
+    $stmt = $pdo->prepare("SELECT g.* FROM tb_guru g JOIN tb_pengguna p ON g.id_guru = p.id_guru WHERE p.id_pengguna = ?");
+    $stmt->execute([$_SESSION['user_id']]);
+    $teacher = $stmt->fetch(PDO::FETCH_ASSOC);
+    if ($teacher) $id_guru = (int)$teacher['id_guru'];
+}
+if (!$id_guru && isset($_SESSION['user_id'])) {
+    $id_guru = (int)$_SESSION['user_id'];
+}
+
 // Get the class that the wali teaches
 $wali_kelas_stmt = $pdo->prepare("SELECT id_kelas, nama_kelas FROM tb_kelas WHERE wali_kelas = ?");
 $wali_kelas_stmt->execute([$teacher_name]);
 $wali_kelas = $wali_kelas_stmt->fetch(PDO::FETCH_ASSOC);
 
-// Set class_id to wali's class automatically
-if ($wali_kelas) {
-    $class_id = $wali_kelas['id_kelas'];
-    // Override POST value to ensure wali can only access their own class
-    $_POST['class_id'] = $class_id;
+// Accessible classes for multi-class guru/wali
+$classes = [];
+if ($id_guru > 0) {
+    $classes = getTeacherAccessibleClasses($pdo, $id_guru);
+}
+if (empty($classes) && $wali_kelas) {
+    $classes = [$wali_kelas];
 }
 
-// For wali, we only show their own class
-$classes = $wali_kelas ? [$wali_kelas] : [];
+// Set class_id
+if ($class_id <= 0) {
+    if (isset($_GET['class_id']) && !empty($_GET['class_id'])) {
+        $class_id = (int)$_GET['class_id'];
+    } elseif ($wali_kelas) {
+        $class_id = (int)$wali_kelas['id_kelas'];
+    } elseif (!empty($classes)) {
+        $class_id = (int)$classes[0]['id_kelas'];
+    }
+}
+$_POST['class_id'] = $class_id;
 
 // Process search based on filter type
 if ($class_id > 0) {
@@ -444,8 +472,19 @@ include '../templates/user_header.php';
                                     </div>
                                     <div class="card-body">
                                         <form method="POST" class="row" id="attendanceFilterForm">
-                                            <?php if ($wali_kelas): ?>
-                                                <input type="hidden" name="class_id" value="<?php echo $wali_kelas['id_kelas']; ?>">
+                                            <?php if (count($classes) > 1): ?>
+                                                <div class="form-group col-md-3">
+                                                    <label>Pilih Kelas</label>
+                                                    <select name="class_id" class="form-control selectric" id="classSelect" onchange="this.form.submit()">
+                                                        <?php foreach ($classes as $c): ?>
+                                                            <option value="<?php echo (int)$c['id_kelas']; ?>" <?php echo ($class_id == (int)$c['id_kelas']) ? 'selected' : ''; ?>>
+                                                                Kelas <?php echo htmlspecialchars($c['nama_kelas']); ?>
+                                                            </option>
+                                                        <?php endforeach; ?>
+                                                    </select>
+                                                </div>
+                                            <?php else: ?>
+                                                <input type="hidden" name="class_id" value="<?php echo $class_id; ?>">
                                             <?php endif; ?>
                                             
                                             <div class="form-group col-md-3">

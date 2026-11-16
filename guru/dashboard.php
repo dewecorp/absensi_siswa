@@ -43,7 +43,11 @@ if (!empty($teacher['nama_guru']) && empty($_SESSION['nama_guru'])) {
 // Get classes that this teacher teaches
 $teacher_class_ids = [];
 $teacher_classes = [];
-if (!empty($teacher['mengajar'])) {
+if (!empty($teacher['id_guru'])) {
+    $teacher_classes = getTeacherAccessibleClasses($pdo, (int)$teacher['id_guru']);
+    $teacher_class_ids = array_map(function($c) { return (int)$c['id_kelas']; }, $teacher_classes);
+}
+if (empty($teacher_classes) && !empty($teacher['mengajar'])) {
     $mengajar_decoded = json_decode((string)$teacher['mengajar'], true);
     if (is_array($mengajar_decoded) && !empty($mengajar_decoded)) {
         // Get all classes first
@@ -168,6 +172,42 @@ if (!empty($teacher_class_ids)) {
 
 // Get statistics based on classes that teacher teaches
 $total_kelas = count($teacher_class_ids);
+
+// Per-class stats for Ringkasan Kelas tabs
+$class_stats = [];
+foreach ($teacher_classes as $cls) {
+    $cid = (int)$cls['id_kelas'];
+    $stClass = $pdo->prepare("SELECT COUNT(*) as total, 
+                               SUM(CASE WHEN jenis_kelamin = 'L' THEN 1 ELSE 0 END) as total_l,
+                               SUM(CASE WHEN jenis_kelamin = 'P' THEN 1 ELSE 0 END) as total_p
+                               FROM tb_siswa WHERE id_kelas = ?");
+    $stClass->execute([$cid]);
+    $csData = $stClass->fetch(PDO::FETCH_ASSOC) ?: ['total' => 0, 'total_l' => 0, 'total_p' => 0];
+
+    // Hitung kehadiran hari ini untuk kelas ini
+    $c_hadir = 0; $c_sakit = 0; $c_izin = 0; $c_alpa = 0; $c_berhalangan = 0;
+    if (isset($class_students[$cid])) {
+        foreach ($class_students[$cid] as $stu) {
+            $ket = $stu['keterangan'] ?? '';
+            if ($ket === 'Hadir') $c_hadir++;
+            elseif ($ket === 'Sakit') $c_sakit++;
+            elseif ($ket === 'Izin') $c_izin++;
+            elseif ($ket === 'Alpa') $c_alpa++;
+            elseif ($ket === 'Berhalangan') $c_berhalangan++;
+        }
+    }
+
+    $class_stats[$cid] = [
+        'total_siswa' => (int)($csData['total'] ?? 0),
+        'total_l' => (int)($csData['total_l'] ?? 0),
+        'total_p' => (int)($csData['total_p'] ?? 0),
+        'hadir' => $c_hadir,
+        'sakit' => $c_sakit,
+        'izin' => $c_izin,
+        'alpa' => $c_alpa,
+        'berhalangan' => $c_berhalangan
+    ];
+}
 
 if (!empty($teacher_class_ids)) {
     // Get total students from classes that teacher teaches
@@ -1400,44 +1440,103 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
 
                     <!-- ── RINGKASAN KELAS ── -->
-                    <div class="dash-section-head">
+                    <div class="dash-section-head d-flex justify-content-between align-items-center flex-wrap">
                         <div class="dsh-title">
                             <span class="dsh-dot" style="background:#2563eb;"></span>
                             Ringkasan Kelas
                         </div>
-
+                        <?php if (count($teacher_classes) >= 2): ?>
+                        <ul class="nav nav-pills" id="ringkasanClassPills" role="tablist" style="gap:4px;">
+                            <li class="nav-item" role="presentation">
+                                <a class="nav-link active py-1 px-3" id="rk-all-tab" data-toggle="pill" href="#rk-all" role="tab" style="font-size:12px; border-radius:16px;">Semua</a>
+                            </li>
+                            <?php foreach ($teacher_classes as $idx => $cls): ?>
+                            <li class="nav-item" role="presentation">
+                                <a class="nav-link py-1 px-3" id="rk-cls-tab-<?= (int)$cls['id_kelas'] ?>" data-toggle="pill" href="#rk-cls-<?= (int)$cls['id_kelas'] ?>" role="tab" style="font-size:12px; border-radius:16px;">Kelas <?= htmlspecialchars($cls['nama_kelas']) ?></a>
+                            </li>
+                            <?php endforeach; ?>
+                        </ul>
+                        <?php endif; ?>
                     </div>
-                    <div class="row dash-stat-row">
-                        <div class="col-12 col-sm-4 col-lg-4">
-                            <div class="dash-stat-card tint-blue">
-                                <div class="dash-stat-ico dsi-blue"><i class="fas fa-users"></i></div>
-                                <div class="dash-stat-body">
-                                    <div class="dash-stat-label">Total Siswa</div>
-                                    <div class="dash-stat-value"><?php echo $total_siswa; ?></div>
-                                    <div class="dash-stat-sub"><span style="color:#2563eb;">siswa aktif</span></div>
+
+                    <div class="tab-content" id="ringkasanTabContent">
+                        <div class="tab-pane fade show active" id="rk-all" role="tabpanel">
+                            <div class="row dash-stat-row">
+                                <div class="col-12 col-sm-4 col-lg-4">
+                                    <div class="dash-stat-card tint-blue">
+                                        <div class="dash-stat-ico dsi-blue"><i class="fas fa-users"></i></div>
+                                        <div class="dash-stat-body">
+                                            <div class="dash-stat-label">Total Siswa</div>
+                                            <div class="dash-stat-value"><?php echo $total_siswa; ?></div>
+                                            <div class="dash-stat-sub"><span style="color:#2563eb;">siswa aktif</span></div>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="col-6 col-sm-4 col-lg-4">
+                                    <div class="dash-stat-card tint-indigo">
+                                        <div class="dash-stat-ico dsi-indigo"><i class="fas fa-chalkboard"></i></div>
+                                        <div class="dash-stat-body">
+                                            <div class="dash-stat-label">Total Kelas Ajar</div>
+                                            <div class="dash-stat-value"><?php echo $total_kelas; ?></div>
+                                            <div class="dash-stat-sub"><span style="color:#4338ca;">kelas</span></div>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="col-6 col-sm-4 col-lg-4">
+                                    <div class="dash-stat-card tint-green">
+                                        <div class="dash-stat-ico dsi-green"><i class="fas fa-user-check"></i></div>
+                                        <div class="dash-stat-body">
+                                            <div class="dash-stat-label">Siswa Hadir</div>
+                                            <div class="dash-stat-value"><?php echo $jumlah_hadir; ?></div>
+                                            <div class="dash-stat-sub"><span style="color:#15803d;">hari ini</span></div>
+                                        </div>
+                                    </div>
                                 </div>
                             </div>
                         </div>
-                        <div class="col-6 col-sm-4 col-lg-4">
-                            <div class="dash-stat-card tint-indigo">
-                                <div class="dash-stat-ico dsi-indigo"><i class="fas fa-chalkboard"></i></div>
-                                <div class="dash-stat-body">
-                                    <div class="dash-stat-label">Total Kelas Ajar</div>
-                                    <div class="dash-stat-value"><?php echo $total_kelas; ?></div>
-                                    <div class="dash-stat-sub"><span style="color:#4338ca;">kelas</span></div>
+
+                        <?php if (count($teacher_classes) >= 2): ?>
+                            <?php foreach ($teacher_classes as $cls): ?>
+                                <?php $cStat = $class_stats[(int)$cls['id_kelas']] ?? ['total_siswa' => 0, 'total_l' => 0, 'total_p' => 0, 'hadir' => 0]; ?>
+                                <div class="tab-pane fade" id="rk-cls-<?= (int)$cls['id_kelas'] ?>" role="tabpanel">
+                                    <div class="row dash-stat-row">
+                                        <div class="col-12 col-sm-6 col-lg-4">
+                                            <div class="dash-stat-card tint-blue">
+                                                <div class="dash-stat-ico dsi-blue"><i class="fas fa-users"></i></div>
+                                                <div class="dash-stat-body">
+                                                    <div class="dash-stat-label">Total Siswa Kelas <?= htmlspecialchars($cls['nama_kelas']) ?></div>
+                                                    <div class="dash-stat-value"><?= $cStat['total_siswa'] ?></div>
+                                                    <div class="dash-stat-sub">
+                                                        <span><i class="fas fa-mars" style="color:#3b82f6;"></i> <?= $cStat['total_l'] ?> L</span>
+                                                        <span><i class="fas fa-venus" style="color:#ec4899;"></i> <?= $cStat['total_p'] ?> P</span>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </div>
+                                        <div class="col-6 col-sm-6 col-lg-4">
+                                            <div class="dash-stat-card tint-indigo">
+                                                <div class="dash-stat-ico dsi-indigo"><i class="fas fa-chalkboard"></i></div>
+                                                <div class="dash-stat-body">
+                                                    <div class="dash-stat-label">Wali Kelas</div>
+                                                    <div class="dash-stat-value" style="font-size:16px;"><?= htmlspecialchars($cls['wali_kelas'] ?? '-') ?></div>
+                                                    <div class="dash-stat-sub"><span style="color:#4338ca;">Kelas <?= htmlspecialchars($cls['nama_kelas']) ?></span></div>
+                                                </div>
+                                            </div>
+                                        </div>
+                                        <div class="col-6 col-sm-6 col-lg-4">
+                                            <div class="dash-stat-card tint-green">
+                                                <div class="dash-stat-ico dsi-green"><i class="fas fa-user-check"></i></div>
+                                                <div class="dash-stat-body">
+                                                    <div class="dash-stat-label">Siswa Hadir</div>
+                                                    <div class="dash-stat-value"><?= $cStat['hadir'] ?></div>
+                                                    <div class="dash-stat-sub"><span style="color:#15803d;">dari <?= $cStat['total_siswa'] ?> siswa</span></div>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
                                 </div>
-                            </div>
-                        </div>
-                        <div class="col-6 col-sm-4 col-lg-4">
-                            <div class="dash-stat-card tint-green">
-                                <div class="dash-stat-ico dsi-green"><i class="fas fa-user-check"></i></div>
-                                <div class="dash-stat-body">
-                                    <div class="dash-stat-label">Siswa Hadir</div>
-                                    <div class="dash-stat-value"><?php echo $jumlah_hadir; ?></div>
-                                    <div class="dash-stat-sub"><span style="color:#15803d;">hari ini</span></div>
-                                </div>
-                            </div>
-                        </div>
+                            <?php endforeach; ?>
+                        <?php endif; ?>
                     </div>
 
                     <!-- ── KEHADIRAN SISWA ── -->

@@ -66,18 +66,43 @@ if (!$teacher) {
 
 $teacher_name = $teacher['nama_guru'];
 
-// Get wali class
-$wali_kelas_stmt = $pdo->prepare("SELECT id_kelas, nama_kelas FROM tb_kelas WHERE wali_kelas = ?");
-$wali_kelas_stmt->execute([$teacher_name]);
-$wali_kelas = $wali_kelas_stmt->fetch(PDO::FETCH_ASSOC);
-
-if (!$wali_kelas) {
-    die('Anda tidak terdaftar sebagai wali kelas manapun.');
+// Get accessible classes for multi-class wali/guru
+$classes = [];
+if (!empty($teacher['id_guru'])) {
+    $classes = getTeacherAccessibleClasses($pdo, (int)$teacher['id_guru']);
+}
+if (empty($classes) && $wali_kelas) {
+    $classes = [$wali_kelas];
 }
 
-// Force class_id to wali's class
-$class_id = $wali_kelas['id_kelas'];
-$classes = [$wali_kelas]; // For dropdown compatibility
+if (empty($classes)) {
+    die('Anda tidak terdaftar mengajar di kelas manapun.');
+}
+
+// Determine class_id
+$class_id = 0;
+if (isset($_POST['class_id']) && !empty($_POST['class_id'])) {
+    $class_id = (int)$_POST['class_id'];
+} elseif (isset($_GET['class_id']) && !empty($_GET['class_id'])) {
+    $class_id = (int)$_GET['class_id'];
+} elseif ($wali_kelas) {
+    $class_id = (int)$wali_kelas['id_kelas'];
+} else {
+    $class_id = (int)$classes[0]['id_kelas'];
+}
+
+// Find class_info
+$class_info = null;
+foreach ($classes as $c) {
+    if ((int)$c['id_kelas'] === $class_id) {
+        $class_info = $c;
+        break;
+    }
+}
+if (!$class_info) {
+    $class_info = $classes[0];
+    $class_id = (int)$class_info['id_kelas'];
+}
 
 // Handle form submission parameters
 $filter_type = $_POST['filter_type'] ?? 'daily';
@@ -457,7 +482,7 @@ echo "<script>
 <div class="main-content">
     <section class="section">
         <div class="section-header">
-            <h1>Rekap Sholat Berjamaah - Kelas <?php echo htmlspecialchars($wali_kelas['nama_kelas']); ?></h1>
+            <h1>Rekap Sholat Berjamaah</h1>
             <div class="section-header-breadcrumb">
                 <div class="breadcrumb-item active"><a href="dashboard.php">Dashboard</a></div>
                 <div class="breadcrumb-item"><a href="#">Kehadiran Siswa</a></div>
@@ -470,8 +495,20 @@ echo "<script>
                 <div class="card-header"><h4>Filter Rekap Sholat</h4></div>
                 <div class="card-body">
                     <form method="POST" class="row">
-                        <!-- Hidden class_id since wali only has one class -->
+                        <?php if (count($classes) > 1): ?>
+                        <div class="form-group col-md-3">
+                            <label>Pilih Kelas</label>
+                            <select name="class_id" class="form-control selectric" onchange="this.form.submit()">
+                                <?php foreach ($classes as $c): ?>
+                                    <option value="<?php echo (int)$c['id_kelas']; ?>" <?php echo $class_id === (int)$c['id_kelas'] ? 'selected' : ''; ?>>
+                                        Kelas <?php echo htmlspecialchars($c['nama_kelas']); ?>
+                                    </option>
+                                <?php endforeach; ?>
+                            </select>
+                        </div>
+                        <?php else: ?>
                         <input type="hidden" name="class_id" value="<?php echo $class_id; ?>">
+                        <?php endif; ?>
                         
                         <div class="form-group col-md-3">
                             <label>Jenis Filter</label>

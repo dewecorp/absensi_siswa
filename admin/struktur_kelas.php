@@ -39,10 +39,23 @@ try {
     // ignore
 }
 
-$selected_class_id = 0;
-$selected_class_name = '';
+$guru_id = getCurrentGuruId($pdo);
+if ($guru_id <= 0 && isset($_SESSION['user_id'])) {
+    $guru_id = (int)$_SESSION['user_id'];
+}
 
-if ($is_wali) {
+$wali_kelas_id = 0;
+$wali_kelas_name = '';
+if ($guru_id > 0) {
+    $stmtWali = $pdo->prepare("SELECT id_kelas, nama_kelas FROM tb_kelas WHERE wali_kelas = ? OR wali_kelas = (SELECT nama_guru FROM tb_guru WHERE id_guru = ?)");
+    $stmtWali->execute([$guru_id, $guru_id]);
+    $wali_class = $stmtWali->fetch(PDO::FETCH_ASSOC);
+    if ($wali_class) {
+        $wali_kelas_id = (int)$wali_class['id_kelas'];
+        $wali_kelas_name = (string)$wali_class['nama_kelas'];
+    }
+}
+if ($wali_kelas_id <= 0) {
     $teacher_name = trim((string)($_SESSION['nama_guru'] ?? ''));
     if ($teacher_name === '') {
         $teacher_name = trim((string)($_SESSION['username'] ?? ''));
@@ -50,17 +63,48 @@ if ($is_wali) {
     if ($teacher_name !== '') {
         foreach ($classes as $c) {
             if (trim((string)($c['wali_kelas'] ?? '')) === $teacher_name) {
-                $selected_class_id = (int)$c['id_kelas'];
-                $selected_class_name = (string)$c['nama_kelas'];
+                $wali_kelas_id = (int)$c['id_kelas'];
+                $wali_kelas_name = (string)$c['nama_kelas'];
                 break;
             }
         }
     }
+}
+
+$teacher_accessible_classes = [];
+if ($guru_id > 0) {
+    $teacher_accessible_classes = getTeacherAccessibleClasses($pdo, $guru_id);
+}
+$is_multi_class_teacher = (count($teacher_accessible_classes) > 1);
+$show_class_filter = !$is_wali || $is_multi_class_teacher;
+$filter_class_options = !$is_wali && !in_array($user_level, ['wali', 'guru'], true) ? $classes : (!empty($teacher_accessible_classes) ? $teacher_accessible_classes : $classes);
+
+$selected_class_id = 0;
+$selected_class_name = '';
+
+if ($is_wali) {
+    $selected_class_id = $wali_kelas_id;
+    $selected_class_name = $wali_kelas_name;
+    if ($show_class_filter && isset($_GET['kelas'])) {
+        $selected_class_id = (int)$_GET['kelas'];
+    }
+    if ($selected_class_id <= 0 && !empty($teacher_accessible_classes)) {
+        $selected_class_id = (int)$teacher_accessible_classes[0]['id_kelas'];
+    }
+    foreach ($classes as $c) {
+        if ((int)$c['id_kelas'] === $selected_class_id) {
+            $selected_class_name = (string)$c['nama_kelas'];
+            break;
+        }
+    }
     if ($selected_class_id <= 0) {
-        $message = ['type' => 'warning', 'text' => 'Anda belum terdaftar sebagai wali kelas.'];
+        $message = ['type' => 'warning', 'text' => 'Anda belum memiliki kelas yang dapat diakses.'];
     }
 } else {
     $selected_class_id = (int)($_GET['kelas'] ?? 0);
+    if ($selected_class_id <= 0 && $is_guru_mode && !empty($teacher_accessible_classes)) {
+        $selected_class_id = (int)$teacher_accessible_classes[0]['id_kelas'];
+    }
     foreach ($classes as $c) {
         if ((int)$c['id_kelas'] === $selected_class_id) {
             $selected_class_name = (string)$c['nama_kelas'];
@@ -69,37 +113,49 @@ if ($is_wali) {
     }
 }
 
-// Handle POST (khusus wali): tambah / edit / hapus jabatan
-if ($_SERVER['REQUEST_METHOD'] === 'POST' && $is_wali) {
-    $action = (string)($_POST['action'] ?? '');
-    $qs = $is_wali ? '?ok=saved' : ('?kelas=' . $selected_class_id . '&ok=saved');
-    try {
-        if ($action === 'tambah' && isset($_POST['id_siswa'], $_POST['jabatan'])) {
-            $id_siswa = (int)$_POST['id_siswa'];
-            $jabatan = trim((string)$_POST['jabatan']);
-            if ($id_siswa > 0 && $jabatan !== '') {
-                $stmt = $pdo->prepare("INSERT INTO tb_struktur_kelas (id_siswa, jabatan) VALUES (?, ?) ON DUPLICATE KEY UPDATE jabatan = VALUES(jabatan)");
-                $stmt->execute([$id_siswa, $jabatan]);
+// Boleh CRUD jika wali di kelasnya sendiri, atau admin
+$can_crud_struktur = ($user_level === 'admin') || ($is_wali && $selected_class_id === $wali_kelas_id && $wali_kelas_id > 0);
+
+// Handle POST (khusus yang punya hak CRUD): tambah / edit / hapus jabatan
+if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+    if (!$can_crud_struktur) {
+        $message = ['type' => 'danger', 'text' => 'Akses ditolak. Pengguna hanya dapat mengelola struktur kelas yang diwalikan.'];
+    } else {
+        $action = (string)($_POST['action'] ?? '');
+        $redirect_params = [];
+        if ($session_type !== '') $redirect_params['session_type'] = $session_type;
+        if ($selected_class_id > 0) $redirect_params['kelas'] = $selected_class_id;
+        $redirect_params['ok'] = 'saved';
+        $qs = '?' . http_build_query($redirect_params);
+        try {
+            if ($action === 'tambah' && isset($_POST['id_siswa'], $_POST['jabatan'])) {
+                $id_siswa = (int)$_POST['id_siswa'];
+                $jabatan = trim((string)$_POST['jabatan']);
+                if ($id_siswa > 0 && $jabatan !== '') {
+                    $stmt = $pdo->prepare("INSERT INTO tb_struktur_kelas (id_siswa, jabatan) VALUES (?, ?) ON DUPLICATE KEY UPDATE jabatan = VALUES(jabatan)");
+                    $stmt->execute([$id_siswa, $jabatan]);
+                }
+            } elseif ($action === 'edit' && isset($_POST['id'], $_POST['jabatan'])) {
+                $id = (int)$_POST['id'];
+                $jabatan = trim((string)$_POST['jabatan']);
+                if ($id > 0 && $jabatan !== '') {
+                    $pdo->prepare("UPDATE tb_struktur_kelas SET jabatan = ? WHERE id = ?")->execute([$jabatan, $id]);
+                }
+            } elseif ($action === 'hapus' && isset($_POST['id'])) {
+                $id = (int)$_POST['id'];
+                if ($id > 0) {
+                    $pdo->prepare("DELETE FROM tb_struktur_kelas WHERE id = ?")->execute([$id]);
+                }
             }
-        } elseif ($action === 'edit' && isset($_POST['id'], $_POST['jabatan'])) {
-            $id = (int)$_POST['id'];
-            $jabatan = trim((string)$_POST['jabatan']);
-            if ($id > 0 && $jabatan !== '') {
-                $pdo->prepare("UPDATE tb_struktur_kelas SET jabatan = ? WHERE id = ?")->execute([$jabatan, $id]);
-            }
-        } elseif ($action === 'hapus' && isset($_POST['id'])) {
-            $id = (int)$_POST['id'];
-            if ($id > 0) {
-                $pdo->prepare("DELETE FROM tb_struktur_kelas WHERE id = ?")->execute([$id]);
-            }
+        } catch (Exception $e) {
+            $redirect_params['err'] = '1';
+            unset($redirect_params['ok']);
+            header('Location: struktur_kelas.php?' . http_build_query($redirect_params));
+            exit;
         }
-    } catch (Exception $e) {
-        $qs = $is_wali ? '?err=1' : ('?kelas=' . $selected_class_id . '&err=1');
         header('Location: struktur_kelas.php' . $qs);
         exit;
     }
-    header('Location: struktur_kelas.php' . $qs);
-    exit;
 }
 
 if (isset($_GET['ok']) && $_GET['ok'] === 'saved') {
@@ -546,7 +602,7 @@ include '../templates/sidebar.php';
             <?php echo render_breadcrumb(); ?>
         </div>
         <div class="section-body">
-            <?php if (!$is_wali): ?>
+            <?php if ($show_class_filter): ?>
             <div class="card">
                 <div class="card-header">
                     <h4>Filter Kelas</h4>
@@ -560,7 +616,7 @@ include '../templates/sidebar.php';
                             <label for="selectKelasStruktur">Pilih Kelas:</label>
                             <select name="kelas" id="selectKelasStruktur" class="form-control" style="width: 100%; max-width: 320px;" onchange="this.form.submit();">
                                 <option value="">-- Pilih Kelas --</option>
-                                <?php foreach ($classes as $c): ?>
+                                <?php foreach ($filter_class_options as $c): ?>
                                     <option value="<?= (int)$c['id_kelas'] ?>" <?= $selected_class_id === (int)$c['id_kelas'] ? 'selected' : '' ?>>
                                         <?= htmlspecialchars($c['nama_kelas']) ?>
                                     </option>
@@ -577,16 +633,14 @@ include '../templates/sidebar.php';
                 <div class="card-header">
                     <h4>Struktur Kelas <?= htmlspecialchars($selected_class_name) ?></h4>
                     <div class="card-header-action">
-                        <?php if ($is_wali): ?>
+                        <?php if ($can_crud_struktur): ?>
                         <button type="button" class="btn btn-success" data-toggle="modal" data-target="#modalTambahJabatan">
                             <i class="fas fa-plus"></i> Tambah
                         </button>
                         <?php endif; ?>
                         <?php
                         $st_param = $session_type !== '' ? '&session_type=' . urlencode($session_type) : '';
-                        $export_base = $is_wali
-                            ? ('struktur_kelas.php?export=')
-                            : ('struktur_kelas.php?kelas=' . (int)$selected_class_id . $st_param . '&export=');
+                        $export_base = 'struktur_kelas.php?kelas=' . (int)$selected_class_id . $st_param . '&export=';
                         ?>
                         <a href="<?= htmlspecialchars($export_base . 'excel', ENT_QUOTES) ?>" class="btn btn-info">
                             <i class="fas fa-file-excel"></i> Ekspor Excel
@@ -621,7 +675,7 @@ include '../templates/sidebar.php';
                                             </div>
                                         </div>
                                     </div>
-                                    <?php if ($is_wali): ?>
+                                    <?php if ($can_crud_struktur): ?>
                                     <div class="struktur-card-actions">
                                         <button type="button" class="struktur-btn-act struktur-btn-edit btn-edit-jabatan"
                                                 title="Edit Jabatan"
@@ -655,7 +709,7 @@ include '../templates/sidebar.php';
     </section>
 </div>
 
-<?php if ($is_wali): ?>
+<?php if ($can_crud_struktur): ?>
 <!-- Modal Tambah Jabatan -->
 <div class="modal fade" id="modalTambahJabatan" tabindex="-1" role="dialog" aria-hidden="true">
     <div class="modal-dialog" role="document">
