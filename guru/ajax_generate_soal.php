@@ -686,6 +686,14 @@ if ($aksi === 'generate') {
         }
         $diff_count[$b]++;
         $it['karakteristik'] = trim((string)($it['karakteristik'] ?? ''));
+        // Jika pengguna tidak meminta With Image, hilangkan tag With Image dan blok gambar bila AI menyelipkannya
+        $user_has_image = !empty($karakteristik['With Image']) || !empty($karakteristik['with_image']);
+        if (!$user_has_image) {
+            $it['gambar'] = '';
+            $it['pertanyaan'] = preg_replace('/\[GAMBAR:\s*.*?\]/is', '', (string)($it['pertanyaan'] ?? ''));
+            $it['karakteristik'] = trim(preg_replace('/\bwith\s*image\b/i', '', $it['karakteristik']));
+            $it['karakteristik'] = trim(preg_replace('/^,+|,+$/', '', $it['karakteristik']));
+        }
         $lv = $norm_level($it['level_kognitif'] ?? '');
         $it['level_kognitif'] = $lv !== '' ? $lv : 'L2';
         $it['cp'] = trim((string)($it['cp'] ?? ''));
@@ -747,6 +755,12 @@ if ($aksi === 'generate') {
             $k['kesulitan'] = $soal[$i]['kesulitan'] ?? 'Sedang';
         }
         $k['karakteristik'] = trim((string)($k['karakteristik'] ?? ''));
+        // Jika pengguna tidak meminta With Image, hilangkan tag With Image pada kisi-kisi
+        $user_has_image = !empty($karakteristik['With Image']) || !empty($karakteristik['with_image']);
+        if (!$user_has_image) {
+            $k['karakteristik'] = trim(preg_replace('/\bwith\s*image\b/i', '', $k['karakteristik']));
+            $k['karakteristik'] = trim(preg_replace('/^,+|,+$/', '', $k['karakteristik']));
+        }
         // Sinkronisasi karakteristik antara kisi dan soal bila salah satu kosong
         if ($k['karakteristik'] === '' && !empty($soal[$i]['karakteristik'])) {
             $k['karakteristik'] = $soal[$i]['karakteristik'];

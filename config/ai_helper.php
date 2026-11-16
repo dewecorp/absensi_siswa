@@ -338,13 +338,38 @@ if (!function_exists('ai_build_soal_prompt')) {
             $lines[] = '- Materi detail: tidak diberikan (opsional). Susun soal dari topik/sub-topik di atas sesuai mapel/kelas/semester dan kurikulum.';
         }
         if (trim((string)($in['instruksi_tambahan'] ?? '')) !== '') {
-            $lines[] = '- Instruksi / Perintah Tambahan Khusus: ' . trim((string)$in['instruksi_tambahan']) . ' (PENTING: Wajib dipatuhi dan diimplementasikan pada pembuatan butir soal/kisi-kisi terkait. Bila instruksi meminta gambar/ilustrasi pada butir tertentu, WAJIB menuliskan blok deskripsi gambar dengan format persis: [GAMBAR: uraian detail objek gambar agar guru dapat menggambar ulang/menempelkan gambar pada naskah cetak] tepat setelah kalimat pertanyaan butir tersebut, dan biarkan field "gambar" pada JSON tetap terisi teks uraian yang sama).';
+            $lines[] = '- Instruksi / Perintah Tambahan Khusus: ' . trim((string)$in['instruksi_tambahan']) . ' (PENTING: Wajib dipatuhi dan diimplementasikan pada pembuatan butir soal/kisi-kisi terkait).';
         }
-        $lines[] = '- ATURAN MUTLAK GAMBAR / ILUSTRASI SOAL (DISIPLIN TINGGI & RELEVAN):';
-        $lines[] = '  1. RELEVANSI 100%: Gambar WAJIB langsung terkait dengan materi pokok yang diuji. DILARANG KERAS membuat deskripsi gambar yang tidak sesuai tema atau menyimpang.';
-        $lines[] = '  2. KESESUAIAN SUBJEK & USIA: Jika soal menceritakan kegiatan peserta didik madrasah (MI/SD, MTs, MA), subjek visual WAJIB dideskripsikan sebagai "peserta didik / siswa madrasah (anak-anak usia sekolah berseragam sekolah)". DILARANG KERAS mendeskripsikan warga masyarakat dewasa, orang kampung, atau petani jika konteksnya adalah murid madrasah.';
-        $lines[] = '  3. MATERI SAINS / DIAGRAM: Gunakan istilah anatomi atau sains yang baku dan presisi (misal: "Diagram sistem pencernaan manusia dengan label mulut, kerongkongan, lambung, usus halus, usus besar, anus").';
-        $lines[] = '  4. PENULISAN BLOK: Tuliskan persis [GAMBAR: deskripsi objek edukatif yang fokus dan spesifik] tepat setelah kalimat pertanyaan. Jangan menulis "perhatikan gambar berikut" tanpa menyertakan blok [GAMBAR: ...]. Jika soal tidak memerlukan gambar, JANGAN menuliskan blok tersebut.';
+
+        // Penanganan Karakteristik Khusus & Gambar
+        $d_kar = [];
+        $has_hots = false;
+        $has_literacy = false;
+        $has_numeracy = false;
+        $has_with_image = false;
+        if (!empty($in['karakteristik']) && is_array($in['karakteristik'])) {
+            foreach ($in['karakteristik'] as $kn => $kn_jml) {
+                $kn_clean = trim((string)$kn);
+                $jml_kar = (int)$kn_jml;
+                if ($jml_kar > 0) {
+                    $d_kar[] = $jml_kar . ' butir ' . $kn_clean;
+                    $kl = strtolower($kn_clean);
+                    if (strpos($kl, 'hots') !== false) $has_hots = true;
+                    if (strpos($kl, 'literacy') !== false || strpos($kl, 'literasi') !== false) $has_literacy = true;
+                    if (strpos($kl, 'numeracy') !== false || strpos($kl, 'numerasi') !== false) $has_numeracy = true;
+                    if (strpos($kl, 'image') !== false || strpos($kl, 'gambar') !== false) $has_with_image = true;
+                }
+            }
+        }
+
+        if (!$has_with_image) {
+            $lines[] = '- ATURAN PENTING GAMBAR / VISUAL: Karakteristik "With Image" TIDAK DIPILIH oleh pengguna. DILARANG KERAS membuat gambar/ilustrasi pada butir soal mana pun! JANGAN menuliskan blok [GAMBAR: ...] dan field "gambar" pada JSON WAJIB string kosong "". DILARANG menambahkan tag "With Image" pada karakteristik!';
+        } else {
+            $lines[] = '- ATURAN GAMBAR / ILUSTRASI SOAL (Hanya untuk butir yang diminta With Image):';
+            $lines[] = '  1. RELEVANSI 100%: Gambar WAJIB langsung terkait dengan materi pokok dan berupa diagram teknis ilmiah atau posisi gerak.';
+            $lines[] = '  2. FORMAT BLOK: [GAMBAR: Nama objek teknis dalam bahasa Indonesia | search: english search keywords for Wikimedia]';
+        }
+
         // Aturan Level Kesulitan & Taksonomi Bloom / Karakteristik
         $d_kesulitan = [];
         if (!empty($in['kesulitan_dist']) && is_array($in['kesulitan_dist'])) {
@@ -369,26 +394,6 @@ if (!function_exists('ai_build_soal_prompt')) {
         } else {
             $lines[] = 'Level kognitif (WAJIB untuk tiap butir kisi-kisi dan soal, cantumkan field "level_kognitif" dengan nilai persis C1, C2, C3, C4, C5, atau C6):';
             $lines[] = '- Kognitif C1 (Mengingat), C2 (Memahami), C3 (Mengaplikasikan), C4 (Menganalisis), C5 (Mengevaluasi), C6 (Mencipta).';
-        }
-
-        $d_kar = [];
-        $has_hots = false;
-        $has_literacy = false;
-        $has_numeracy = false;
-        $has_with_image = false;
-        if (!empty($in['karakteristik']) && is_array($in['karakteristik'])) {
-            foreach ($in['karakteristik'] as $kn => $kn_jml) {
-                $kn_clean = trim((string)$kn);
-                $jml_kar = (int)$kn_jml;
-                if ($jml_kar > 0) {
-                    $d_kar[] = $jml_kar . ' butir ' . $kn_clean;
-                    $kl = strtolower($kn_clean);
-                    if (strpos($kl, 'hots') !== false) $has_hots = true;
-                    if (strpos($kl, 'literacy') !== false || strpos($kl, 'literasi') !== false) $has_literacy = true;
-                    if (strpos($kl, 'numeracy') !== false || strpos($kl, 'numerasi') !== false) $has_numeracy = true;
-                    if (strpos($kl, 'image') !== false || strpos($kl, 'gambar') !== false) $has_with_image = true;
-                }
-            }
         }
         if ($d_kar) {
             $lines[] = '=======================================================';
@@ -455,7 +460,11 @@ if (!function_exists('ai_build_soal_prompt')) {
         $lines[] = 'CP = turunkan dari kurikulum: Permendikdasmen CP 046 (fase/kelas terkait) atau KMA 1503+KBC (madrasah). TP = jabaran operasional topik/sub-topik di atas (1-2 kalimat, diawali kata kerja operasional).';
         $lines[] = 'Jawab HANYA dengan JSON valid (tanpa markdown, tanpa penjelasan di luar JSON) memakai skema persis ini:';
         $lines[] = '{"kisi_kisi":[{"no":1,"materi":"...","cp":"...","tp":"...","indikator":"...","bentuk":"Pilihan Ganda","level_kognitif":"L2","kesulitan":"Sedang","karakteristik":"HOTS","bobot":1}],"soal":[{"no":1,"bentuk":"Pilihan Ganda","karakteristik":"HOTS","pertanyaan":"...","gambar":"...","opsi":{"A":"...","B":"...","C":"...","D":"..."},"tabel":[],"kunci":"A","pembahasan":"...","cp":"...","tp":"...","indikator":"...","level_kognitif":"L2","kesulitan":"Sedang","bobot":1}]}';
-        $lines[] = 'Field "gambar" pada tiap butir soal: isi dengan uraian detail objek gambar/ilustrasi yang harus ditempel guru bila butir tersebut memerlukan gambar (contoh: "Diagram sistem pencernaan manusia dengan label mulut, kerongkongan, lambung, usus halus, usus besar"); bila butir tidak memerlukan gambar, isi dengan string kosong "". Uraian yang sama WAJIB juga ditulis sebagai blok [GAMBAR: ...] di dalam teks "pertanyaan".';
+        if (!$has_with_image) {
+            $lines[] = 'Field "gambar" pada tiap butir soal: WAJIB STRING KOSONG "" karena pengguna TIDAK MEMILIH butir bergambar. DILARANG MENULISKAN BLOK [GAMBAR: ...] DI DALAM TEKS PERTANYAAN!';
+        } else {
+            $lines[] = 'Field "gambar" pada tiap butir soal: isi dengan uraian detail objek diagram/gambar untuk butir yang diminta With Image (contoh: "Diagram sistem pernapasan manusia | search: human respiratory system diagram"); bila butir reguler/tanpa gambar, isi dengan string kosong "". Uraian yang sama WAJIB juga ditulis sebagai blok [GAMBAR: ...] di dalam teks "pertanyaan".';
+        }
         $lines[] = 'Untuk bentuk selain Pilihan Ganda / Pilihan Ganda Kompleks, isi "opsi" dengan {} dan "kunci" dengan jawaban benar sesuai aturan bentuk di atas. Untuk Menjodohkan, "opsi" tetap {} dan "tabel" WAJIB diisi sesuai aturan. Nomor "no" pada "kisi_kisi" urut 1 sampai ' . $total . '. Nomor "no" pada "soal" urut 1 sampai ' . $total_soal_item . ' (Menjodohkan hanya 1 nomor karena hanya 1 butir soal).';
         return implode("\n", $lines);
     }
@@ -760,17 +769,20 @@ if (!function_exists('ai_resolve_image_file')) {
                 'serta', 'oleh', 'berbagai', 'macam', 'jenis', 'sangat', 'secara', 'agar', 'bisa', 'dapat',
                 'tersebut', 'mereka', 'kita', 'kami', 'anak-anak', 'peserta', 'didik', 'siswa', 'riang',
                 'senang', 'gembira', 'tersenyum', 'susunan', 'organ', 'struktur', 'bagian', 'alat', 'sistem',
-                'tahapan', 'langkah', 'cara', 'proses', 'hingga', 'sampai', 'mulai', 'berikut', 'ini', 'teknik'
+                'tahapan', 'langkah', 'cara', 'proses', 'hingga', 'sampai', 'mulai', 'berikut', 'ini', 'teknik',
+                'lapangan', 'madrasah', 'sekolah', 'melakukan', 'gerakan', 'posisi'
             ];
             $cleanWords = preg_replace('/[^a-z0-9\s-]/u', ' ', $clean);
             $words = array_values(array_filter(explode(' ', $cleanWords), function($w) use ($stopwords) {
                 return strlen($w) >= 3 && !in_array($w, $stopwords);
             }));
-            $commons_kw = !empty($words) ? implode(' ', array_slice($words, 0, 3)) : $caption;
+            $commons_kw = !empty($words) ? implode(' ', array_slice($words, 0, 3)) : '';
         }
 
         if ($commons_kw !== '') {
-            $cmUrl = "https://commons.wikimedia.org/w/api.php?action=query&generator=search&gsrsearch=" . rawurlencode($commons_kw) . "&gsrnamespace=6&gsrlimit=3&prop=pageimages&pithumbsize=800&format=json";
+            // Pencarian Wikimedia Commons: filter strictly ke file gambar (filetype:bitmap) dan buang file PDF
+            $cmSearchQuery = $commons_kw . ' filetype:bitmap -hoaks -laporan -pdf';
+            $cmUrl = "https://commons.wikimedia.org/w/api.php?action=query&generator=search&gsrsearch=" . rawurlencode($cmSearchQuery) . "&gsrnamespace=6&gsrlimit=5&prop=pageimages&pithumbsize=800&format=json";
             $ch = curl_init($cmUrl);
             curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
             curl_setopt($ch, CURLOPT_USERAGENT, $ua);
@@ -781,6 +793,11 @@ if (!function_exists('ai_resolve_image_file')) {
 
             if (!empty($res['query']['pages'])) {
                 foreach ($res['query']['pages'] as $p) {
+                    $title_lower = strtolower($p['title'] ?? '');
+                    // Tolak dokumen PDF, berkas hoaks, buku laporan, atau thumbnail dokumen non-gambar
+                    if (strpos($title_lower, '.pdf') !== false || strpos($title_lower, 'hoaks') !== false || strpos($title_lower, 'laporan') !== false) {
+                        continue;
+                    }
                     if (!empty($p['thumbnail']['source'])) {
                         $imgUrl = $p['thumbnail']['source'];
                         break;
