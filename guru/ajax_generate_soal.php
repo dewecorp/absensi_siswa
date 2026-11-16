@@ -156,8 +156,9 @@ function ai_bersih_pertanyaan(string $pertanyaan): string {
 // SELALU tampilkan gambar: unduh dulu via resolver, fallback URL publik bila cache belum ada
 function ai_gambar_html(string $uraian): string {
     if ($uraian === '') return '';
+    $clean_cap = trim(preg_replace('/\|\s*search:.*$/i', '', $uraian));
     [$fp, $bin] = ai_resolve_image_file($uraian);
-    $cap = '<div style="font-size:8pt;color:#444;font-style:italic;margin-top:4px;">Gambar: ' . htmlspecialchars($uraian) . '</div>';
+    $cap = '<div style="font-size:8pt;color:#444;font-style:italic;margin-top:4px;">Gambar: ' . htmlspecialchars($clean_cap) . '</div>';
     if ($bin !== '' && strlen($bin) > 2000) {
         $b64 = base64_encode($bin);
         return '<div style="text-align:center;margin:8px 0;">'
@@ -166,10 +167,14 @@ function ai_gambar_html(string $uraian): string {
     }
     $hash = md5($uraian);
     $url = '../uploads/ai_images/img_' . $hash . '.jpg';
-    $poll = 'https://image.pollinations.ai/prompt/' . rawurlencode($uraian) . '?width=650&height=380&nologo=true';
-    $src = (is_string($fp) && $fp !== '' && is_file($fp) && filesize($fp) > 2000) ? $url : $poll;
-    return '<div style="text-align:center;margin:8px 0;">'
-        . '<img src="' . htmlspecialchars($src) . '" style="max-width:480px;width:100%;height:auto;max-height:280px;border-radius:4px;border:1px solid #777;">'
+    if (is_string($fp) && $fp !== '' && is_file($fp) && filesize($fp) > 2000) {
+        return '<div style="text-align:center;margin:8px 0;">'
+            . '<img src="' . htmlspecialchars($url) . '" style="max-width:480px;width:100%;height:auto;max-height:280px;border-radius:4px;border:1px solid #777;">'
+            . $cap . '</div>';
+    }
+    // Jika tidak ditemukan gambar ensiklopedia/lokal, tampilkan box frame ilustrasi materi yang bersih
+    return '<div style="text-align:center;margin:8px 0;padding:12px;background:#f8fafc;border:1px dashed #94a3b8;border-radius:6px;">'
+        . '<div style="font-size:9pt;font-weight:bold;color:#334155;">[Area Ilustrasi / Gambar Soal]</div>'
         . $cap . '</div>';
 }
 
@@ -269,16 +274,16 @@ function ai_docx_tabel_jodoh(array $rows): string {
     return $xml;
 }
 
-// Susun DOCX tabel kisi-kisi 9 kolom (sama seperti preview generator):
-// No | Bentuk | Materi | CP | TP | Indikator | Level | Kesulitan | Bobot
+// Susun DOCX tabel kisi-kisi 10 kolom:
+// No | Bentuk | Karakteristik | Materi | CP | TP | Indikator | Level | Kesulitan | Bobot
 function ai_docx_tabel_kisi(array $rows): string {
     if (empty($rows)) {
         return '';
     }
     // Lebar kolom (dxa), total 9000
-    $cols = [500, 900, 1000, 1200, 1200, 1600, 700, 1000, 800];
-    $heads = ['No', 'Bentuk', 'Materi', 'CP', 'TP', 'Indikator', 'Level', 'Kesulitan', 'Bobot'];
-    $keys = ['no', 'bentuk', 'materi', 'cp', 'tp', 'indikator', 'level_kognitif', 'kesulitan', 'bobot'];
+    $cols = [450, 850, 950, 950, 1150, 1150, 1550, 650, 800, 500];
+    $heads = ['No', 'Bentuk', 'Karakteristik', 'Materi', 'CP', 'TP', 'Indikator', 'Level', 'Kesulitan', 'Bobot'];
+    $keys = ['no', 'bentuk', 'karakteristik', 'materi', 'cp', 'tp', 'indikator', 'level_kognitif', 'kesulitan', 'bobot'];
 
     $xml = '<w:tbl>'
         . '<w:tblPr>'
@@ -364,10 +369,13 @@ function ai_build_soal_docx(array $items, array $payload): string {
             }
         }
 
-        $body .= ai_docx_p(($i + 1) . '. [' . (string)$b_it . '][' . (string)($it['level_kognitif'] ?? 'L2') . '] ' . ai_bersih_pertanyaan($pert_it), true);
+        $kar_it = trim((string)($it['karakteristik'] ?? ''));
+        $kar_label = ($kar_it !== '') ? '[' . $kar_it . ']' : '';
+        $body .= ai_docx_p(($i + 1) . '. [' . (string)$b_it . '][' . (string)($it['level_kognitif'] ?? 'L2') . ']' . $kar_label . ' ' . ai_bersih_pertanyaan($pert_it), true);
         $gbr_it = ai_extract_gambar((string)($it['pertanyaan'] ?? ''), (string)($it['gambar'] ?? ''));
         if ($gbr_it !== '') {
-            $body .= ai_docx_p('Ilustrasi / Gambar Soal: ' . $gbr_it, true);
+            $gbr_clean = trim(preg_replace('/\|\s*search:.*$/i', '', $gbr_it));
+            $body .= ai_docx_p('Ilustrasi / Gambar Soal: ' . $gbr_clean, true);
         }
         if ($b_it === 'Menjodohkan' && !empty($tbl_docx)) {
             $body .= ai_docx_tabel_jodoh($tbl_docx);
@@ -861,6 +869,11 @@ if ($aksi === 'simpan') {
             if ($tp_item === '') {
                 $tp_item = 'Menganalisis, mengidentifikasi, dan menerapkan konsep ' . $topik_simpan . ' dalam pemecahan masalah.';
             }
+            $kar_simpan = trim((string)($it['karakteristik'] ?? ($kisi_list[$idx]['karakteristik'] ?? '')));
+            $ind_simpan = trim((string)($it['indikator'] ?? ($kisi_list[$idx]['indikator'] ?? '')));
+            if ($kar_simpan !== '' && stripos($ind_simpan, '[' . $kar_simpan . ']') === false) {
+                $ind_simpan = ($ind_simpan !== '' ? '[' . $kar_simpan . '] ' . $ind_simpan : '[' . $kar_simpan . ']');
+            }
             $stmt->execute([
                 $guru_id,
                 'SOAL-' . strtoupper(substr(uniqid(), -6)),
@@ -870,7 +883,7 @@ if ($aksi === 'simpan') {
                 $topik_simpan, ($sub_topik_simpan !== '' ? $sub_topik_simpan : null),
                 ($materi !== '' ? $materi : null),
                 $cp_item, $tp_item,
-                trim((string)($it['indikator'] ?? ($kisi_list[$idx]['indikator'] ?? ''))) ?: null, $lv_item,
+                ($ind_simpan !== '' ? $ind_simpan : null), $lv_item,
                 in_array($it['kesulitan'] ?? '', ['Mudah', 'Sedang', 'Sukar'], true) ? $it['kesulitan'] : 'Sedang',
                 (float)($it['bobot'] ?? 1),
                 $pertanyaan, $opsi,

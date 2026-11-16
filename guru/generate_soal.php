@@ -85,6 +85,18 @@ $(document).on('change', '.ai-paket-check', function() {
     }
     aiHitungTotal();
 });
+$(document).on('change', '.ai-kar-check', function() {
+    var $box = $(this).closest('.ai-kar-box');
+    var $num = $box.find('.ai-kar-num');
+    if ($(this).is(':checked')) {
+        $num.prop('disabled', false);
+        if (parseInt($num.val() || '0', 10) <= 0) { $num.val(2); }
+        $box.addClass('border-primary bg-light');
+    } else {
+        $num.prop('disabled', true);
+        $box.removeClass('border-primary bg-light');
+    }
+});
 $(document).on('input', '.ai-paket-num', function() {
     var v = parseInt($(this).val() || '0', 10) || 0;
     if (v < 0) { $(this).val(0); }
@@ -138,7 +150,23 @@ $('#formGenerateAI').on('submit', function(e) {
         var kisi = aiLastKisi;
         var kBody = '';
         kisi.forEach(function(k) {
-            kBody += '<tr><td>' + (k.no || '') + '</td><td><span class="badge badge-light border">' + $('<div>').text(k.bentuk || '').html() + '</span></td><td>' + $('<div>').text(k.materi || '').html() + '</td><td>' + $('<div>').text(k.cp || '-').html() + '</td><td>' + $('<div>').text(k.tp || '-').html() + '</td><td>' + $('<div>').text(k.indikator || '').html() + '</td><td><span class="badge badge-info">' + $('<div>').text(k.level_kognitif || 'L2').html() + '</span></td><td>' + $('<div>').text(k.kesulitan || '').html() + '</td><td>' + (k.bobot || '') + '</td></tr>';
+            var karBadge = '';
+            if (k.karakteristik) {
+                var kls = String(k.karakteristik).split(/[,;]/);
+                kls.forEach(function(kl) {
+                    kl = kl.trim();
+                    if (!kl) return;
+                    var c = 'badge-secondary';
+                    if (/hots/i.test(kl)) c = 'badge-danger';
+                    else if (/liter/i.test(kl)) c = 'badge-warning';
+                    else if (/num/i.test(kl)) c = 'badge-info text-white" style="background:#8b5cf6;';
+                    else if (/image|gambar/i.test(kl)) c = 'badge-success';
+                    karBadge += '<span class="badge ' + c + ' mr-1 mb-1">' + $('<div>').text(kl).html() + '</span>';
+                });
+            } else {
+                karBadge = '<span class="text-muted small">-</span>';
+            }
+            kBody += '<tr><td>' + (k.no || '') + '</td><td><span class="badge badge-light border">' + $('<div>').text(k.bentuk || '').html() + '</span></td><td>' + karBadge + '</td><td>' + $('<div>').text(k.materi || '').html() + '</td><td>' + $('<div>').text(k.cp || '-').html() + '</td><td>' + $('<div>').text(k.tp || '-').html() + '</td><td>' + $('<div>').text(k.indikator || '').html() + '</td><td><span class="badge badge-info">' + $('<div>').text(k.level_kognitif || 'L2').html() + '</span></td><td>' + $('<div>').text(k.kesulitan || '').html() + '</td><td>' + (k.bobot || '') + '</td></tr>';
         });
         if (kBody !== '') {
             $('#aiKisiTable tbody').html(kBody);
@@ -167,13 +195,28 @@ $('#formGenerateAI').on('submit', function(e) {
             var pg = aiPisahGambar(s.pertanyaan, s.gambar);
             s.gambar = pg.gambar;
             html += '<li class="mb-3"><span class="badge badge-primary mb-1">' + $('<div>').text(s.bentuk || '').html() + '</span> <span class="badge badge-info mb-1">' + $('<div>').text(s.level_kognitif || 'L2').html() + '</span>';
+            if (s.karakteristik) {
+                var kList = String(s.karakteristik).split(/[,;]/);
+                kList.forEach(function(kl) {
+                    kl = kl.trim();
+                    if (!kl) return;
+                    var badgeColor = 'badge-secondary';
+                    if (/hots/i.test(kl)) badgeColor = 'badge-danger';
+                    else if (/liter/i.test(kl)) badgeColor = 'badge-warning';
+                    else if (/num/i.test(kl)) badgeColor = 'badge-info text-white" style="background:#8b5cf6;';
+                    else if (/image|gambar/i.test(kl)) badgeColor = 'badge-success';
+                    html += ' <span class="badge ' + badgeColor + ' mb-1 font-weight-bold"><i class="fas fa-star mr-1"></i>' + $('<div>').text(kl).html() + '</span>';
+                });
+            }
             if (pg.gambar !== '') {
-                var gesc = $('<div>').text(pg.gambar).html();
-                var gurl = 'https://image.pollinations.ai/prompt/' + encodeURIComponent(pg.gambar) + '?width=650&height=380&nologo=true';
-                html += '<div class="my-2 text-center p-2 bg-white rounded border ai-gambar-box" data-desc="' + gesc + '" style="max-width:520px;">'
-                    + '<img class="ai-gambar-img img-fluid rounded" src="' + gurl + '" alt="' + gesc + '" style="max-width:100%;max-height:300px;" loading="lazy" onerror="this.style.display=\'none\';this.parentNode.querySelector(\'.ai-gambar-spin\').style.display=\'none\';">'
-                    + '<div class="ai-gambar-cap small text-muted mt-1"><i class="fas fa-image mr-1"></i>' + gesc + '</div>'
-                    + '<div class="ai-gambar-spin small text-muted" style="display:none;"><i class="fas fa-spinner fa-spin mr-1"></i>Memuat gambar...</div>'
+                var cleanCap = pg.gambar.replace(/\|\s*search:.*$/i, '').trim();
+                var gesc = $('<div>').text(cleanCap).html();
+                var rawDesc = $('<div>').text(pg.gambar).html();
+                html += '<div class="my-2 p-2 bg-white rounded border ai-gambar-box" data-desc="' + rawDesc + '" style="max-width:520px;text-align:center;">'
+                    + '<div class="ai-gambar-loading py-3 text-muted small"><i class="fas fa-circle-notch fa-spin text-primary mr-1"></i> Menyiapkan ilustrasi edukasi: <b>' + gesc + '</b>...</div>'
+                    + '<img class="ai-gambar-img img-fluid rounded" src="" alt="' + gesc + '" style="max-width:100%;max-height:300px;display:none;" loading="lazy">'
+                    + '<div class="ai-gambar-cap small text-muted mt-1" style="display:none;"><i class="fas fa-image mr-1 text-primary"></i>' + gesc + '</div>'
+                    + '<div class="ai-gambar-fallback alert alert-light border small text-muted my-1" style="display:none;font-size:11.5px;padding:8px 12px;"><i class="fas fa-info-circle mr-1 text-info"></i><b>Area Ilustrasi Soal:</b> ' + gesc + '</div>'
                     + '</div>';
             }
             html += '<div class="font-weight-bold" style="white-space:pre-wrap;">' + $('<div>').text(pg.teks || '').html() + '</div>';
@@ -191,15 +234,25 @@ $('#formGenerateAI').on('submit', function(e) {
         });
         html += '</ol>';
         $('#aiHasil').html(html);
-        // Coba ganti ke cache lokal bila sudah ada; biarkan gambar pollinations tampil langsung
+        // Muat gambar resmi / diagram materi via endpoint resolve_image
         $('.ai-gambar-box').each(function() {
             var box = $(this);
             var desc = box.data('desc') || '';
-            if (!desc) return;
+            if (!desc) {
+                box.find('.ai-gambar-loading').hide();
+                return;
+            }
             $.getJSON('ajax_generate_soal.php', { aksi: 'resolve_image', desc: desc }).done(function(r) {
+                box.find('.ai-gambar-loading').hide();
                 if (r && r.ok && r.url) {
-                    box.find('.ai-gambar-img').attr('src', r.url);
+                    box.find('.ai-gambar-img').attr('src', r.url).show();
+                    box.find('.ai-gambar-cap').show();
+                } else {
+                    box.find('.ai-gambar-fallback').show();
                 }
+            }).fail(function() {
+                box.find('.ai-gambar-loading').hide();
+                box.find('.ai-gambar-fallback').show();
             });
         });
         // Hitung total butir: tiap baris pasangan Menjodohkan dihitung 1 butir
@@ -482,12 +535,12 @@ include '../templates/sidebar.php';
                                 <div class="row">
                                     <?php foreach ($khusus_options as $ko): ?>
                                         <div class="col-md-3 mb-2">
-                                            <div class="border rounded p-2 d-flex align-items-center">
+                                            <div class="border rounded p-2 d-flex align-items-center ai-kar-box" style="transition:all .2s ease;">
                                                 <div class="custom-control custom-checkbox mr-2">
-                                                    <input type="checkbox" class="custom-control-input" name="karakteristik[]" value="<?= $ko ?>" id="kar_<?= md5($ko) ?>">
+                                                    <input type="checkbox" class="custom-control-input ai-kar-check" name="karakteristik[]" value="<?= $ko ?>" id="kar_<?= md5($ko) ?>">
                                                     <label class="custom-control-label font-weight-bold small" for="kar_<?= md5($ko) ?>"><?= $ko ?></label>
                                                 </div>
-                                                <input type="number" name="karakteristik_jml[<?= $ko ?>]" class="form-control form-control-sm ml-auto" style="width:70px;" value="2" min="0">
+                                                <input type="number" name="karakteristik_jml[<?= $ko ?>]" class="form-control form-control-sm ml-auto ai-kar-num" style="width:70px;" value="2" min="1" disabled>
                                             </div>
                                         </div>
                                     <?php endforeach; ?>
@@ -512,7 +565,7 @@ include '../templates/sidebar.php';
                     <h4>Kisi-Kisi — <span id="aiJudulHasil">Paket Soal</span></h4>
                 </div>
                 <div class="card-body">
-                    <div class="table-responsive"><table class="table table-sm table-bordered" id="aiKisiTable"><thead><tr><th>No</th><th>Bentuk</th><th>Materi</th><th>CP</th><th>TP</th><th>Indikator</th><th>Level</th><th>Kesulitan</th><th>Bobot</th></tr></thead><tbody></tbody></table></div>
+                    <div class="table-responsive"><table class="table table-sm table-bordered" id="aiKisiTable"><thead><tr><th>No</th><th>Bentuk</th><th>Karakteristik</th><th>Materi</th><th>CP</th><th>TP</th><th>Indikator</th><th>Level</th><th>Kesulitan</th><th>Bobot</th></tr></thead><tbody></tbody></table></div>
                 </div>
             </div>
 
