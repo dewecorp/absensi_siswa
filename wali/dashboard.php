@@ -1213,9 +1213,9 @@ include_once '../templates/sidebar.php';
                                             $is_past = $upc['tanggal'] < $today_str;
                                             $nama_guru_pembina = $teacher['nama_guru'] ?? ($_SESSION['nama_guru'] ?? 'Anda');
                                         ?>
-                                        <div class="d-flex align-items-center justify-content-between p-2.5 px-3 rounded" style="background: <?= $is_today ? '#fef2f2' : ($is_past ? '#f8fafc' : '#f0fdf4') ?>; <?= $is_today ? 'border: 1.5px solid #fca5a5; box-shadow: 0 3px 10px rgba(239,68,68,0.12);' : 'border: 1.5px solid transparent;' ?> border-radius: 12px; gap: 10px;">
+                                        <div class="d-flex align-items-center justify-content-between p-2.5 px-3 rounded" style="border-radius: 12px; gap: 10px;">
                                             <div class="d-flex align-items-center" style="gap: 10px; min-width: 0;">
-                                                <div style="width: 38px; height: 38px; border-radius: 10px; background: <?= $is_today ? '#ef4444' : ($is_past ? '#94a3b8' : '#22c55e') ?>; color: #fff; display: flex; flex-direction: column; align-items: center; justify-content: center; flex-shrink: 0; line-height: 1;">
+                                                <div style="width: 38px; height: 38px; border-radius: 10px; background: <?= $is_today ? '#ef4444' : ($is_past ? '#94a3b8' : '#3b82f6') ?>; color: #fff; display: flex; flex-direction: column; align-items: center; justify-content: center; flex-shrink: 0; line-height: 1;">
                                                     <span style="font-size: 13px; font-weight: 800;"><?= date('d', strtotime($upc['tanggal'])) ?></span>
                                                     <span style="font-size: 9px; text-transform: uppercase; font-weight: 700;"><?= date('M', strtotime($upc['tanggal'])) ?></span>
                                                 </div>
