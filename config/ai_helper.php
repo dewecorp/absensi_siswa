@@ -394,24 +394,32 @@ if (!function_exists('ai_build_soal_prompt')) {
             $lines[] = '=======================================================';
             $lines[] = 'DISIPLIN IMPLEMENTASI KARAKTERISTIK / BENTUK KHUSUS SOAL (MUTLAK WAJIB DIPENUHI):';
             $lines[] = 'Target komposisi karakteristik: ' . implode(', ', $d_kar) . '.';
-            $lines[] = 'Tiap butir soal dan kisi-kisi WAJIB memiliki field "karakteristik" yang diisi persis sesuai jenisnya ("HOTS", "Literacy", "Numeracy", "With Image", atau kombinasinya bila relevan misal "HOTS, Literacy"). Jika butir reguler, isi "".';
+            $lines[] = 'PRINSIP PENTING TINGKAT KESULITAN & KARAKTERISTIK:';
+            $lines[] = '- Karakteristik khusus (HOTS, Literacy, Numeracy, With Image) BUKAN HANYA untuk tingkat kesulitan Sukar!';
+            $lines[] = '- Soal dengan tingkat kesulitan "Mudah" maupun "Sedang" JUGA BISA dan WAJIB dibuat dengan karakteristik HOTS / Literacy / Numeracy jika diminta pada komposisi.';
+            $lines[] = '  * HOTS level Mudah/Sedang: stimulus kasus kontekstual sederhana atau situasi sehari-hari yang dekat dengan siswa, menganalisis hubungan sebab-akibat sederhana tanpa jebakan rumit.';
+            $lines[] = '  * Literacy level Mudah/Sedang: wacana bacaan ringkas dan lugas (1-2 paragraf jelas), pertanyaan menguji pemahaman ide pokok, pesan tersirat, atau hubungan sebab-akibat dalam teks.';
+            $lines[] = '  * Numeracy level Mudah/Sedang: data tabel/angka sederhana dengan perhitungan atau interpretasi langsung yang terukur.';
+            $lines[] = '- PISAHKAN butir: Jika pengguna meminta ' . implode(' dan ', $d_kar) . ' dari total ' . $total . ' butir, PASTIKAN JUMLAH BUTIR YANG DIBERI LABEL DAN CIRI MASING-MASING KARAKTERISTIK TEPAT SESUAI TARGET TERSEBUT! Jangan menggabungkan seluruh karakteristik ke dalam butir yang sama sehingga butir lain kosong.';
+            $lines[] = '- Tiap butir soal dan kisi-kisi WAJIB memiliki field "karakteristik" yang diisi persis sesuai jenisnya ("HOTS", "Literacy", "Numeracy", "With Image", atau jika satu butir memenuhi dua kriteria tulis misal "HOTS, Literacy"). Jika butir reguler, isi "".';
             $lines[] = 'DILARANG KERAS MEMBUAT SOAL TEKSTUAL HAFALAN BIASA untuk butir-butir berkarakteristik khusus! Ikuti panduan baku berikut:';
 
             if ($has_hots) {
                 $lines[] = '--- STANDAR BAKU BUTIR HOTS (HIGHER ORDER THINKING SKILLS) ---';
                 $lines[] = '1. DILARANG KERAS membuat pertanyaan hafalan definisi langsung, pengertian, atau hafalan langkah prosedural teoritis polos (contoh DILARANG: "Jelaskan bagaimana cara melakukan teknik...", "Sebutkan pengertian...", "Apa fungsi...", "Sebutkan tahapan...").';
                 $lines[] = '2. WAJIB DIAWALI STIMULUS KASUS / SITUASI OTENTIK (2-4 kalimat): ceritakan skenario masalah nyata, dinamika pertandingan/lapangan, dilema taktis/strategi, situasi krisis, atau fenomena empiris yang relevan dengan topik materi.';
-                $lines[] = '3. LEVEL KOGNITIF WAJIB C4 (Menganalisis), C5 (Mengevaluasi), atau C6 (Mencipta/Merancang Solusi).';
+                $lines[] = '3. Dapat diterapkan pada tingkat kesulitan Mudah, Sedang, maupun Sukar (dengan menyesuaikan kompleksitas kasus stimulus).';
                 $lines[] = '4. Siswa diminta mengidentifikasi akar masalah dari stimulus tersebut, membandingkan efektivitas opsi tindakan, memecahkan kebuntuan situasi, atau merumuskan strategi perbaikan berbasis prinsip materi.';
             }
 
             if ($has_literacy) {
                 $lines[] = '--- STANDAR BAKU BUTIR LITERACY (LITERASI MEMBACA & ANALISIS TEKS) ---';
                 $lines[] = '1. WAJIB MENYAJIKAN TEKS STIMULUS BACAAN yang utuh, bermakna, dan informatif (1-2 paragraf narasi deskriptif, artikel populer edukatif, studi kasus, atau dialog bermakna) sebelum kalimat pertanyaan.';
-                $lines[] = '2. Format penulisan pada field "pertanyaan": Awali dengan teks bacaan terstruktur, contoh:';
+                $lines[] = '2. Dapat diterapkan pada tingkat kesulitan Mudah, Sedang, maupun Sukar.';
+                $lines[] = '3. Format penulisan pada field "pertanyaan": Awali dengan teks bacaan terstruktur, contoh:';
                 $lines[] = '   "Bacalah wacana berikut dengan cermat!\n\n[Teks bacaan narasi/artikel 1-2 paragraf kaya informasi]\n\nBerdasarkan wacana di atas, [kalimat pertanyaan analitis]..."';
-                $lines[] = '3. Pertanyaan harus menguji kompetensi literasi: menemukan informasi tersirat, menganalisis hubungan kausalitas antar-peristiwa dalam bacaan, menyimpulkan pesan utama, atau mengevaluasi sudut pandang penulis.';
-                $lines[] = '4. DILARANG membuat soal literasi yang berdiri sendiri tanpa teks bacaan!';
+                $lines[] = '4. Pertanyaan harus menguji kompetensi literasi: menemukan informasi tersirat, menganalisis hubungan kausalitas antar-peristiwa dalam bacaan, menyimpulkan pesan utama, atau mengevaluasi sudut pandang penulis.';
+                $lines[] = '5. DILARANG membuat soal literasi yang berdiri sendiri tanpa teks bacaan!';
             }
 
             if ($has_numeracy) {

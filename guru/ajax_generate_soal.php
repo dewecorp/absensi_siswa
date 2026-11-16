@@ -685,6 +685,7 @@ if ($aksi === 'generate') {
             $it['kesulitan'] = $diff_cycle[$diff_count[$b] % 3];
         }
         $diff_count[$b]++;
+        $it['karakteristik'] = trim((string)($it['karakteristik'] ?? ''));
         $lv = $norm_level($it['level_kognitif'] ?? '');
         $it['level_kognitif'] = $lv !== '' ? $lv : 'L2';
         $it['cp'] = trim((string)($it['cp'] ?? ''));
@@ -744,6 +745,13 @@ if ($aksi === 'generate') {
         $k['indikator'] = trim((string)($k['indikator'] ?? ''));
         if (!in_array($k['kesulitan'] ?? '', ['Mudah', 'Sedang', 'Sukar'], true)) {
             $k['kesulitan'] = $soal[$i]['kesulitan'] ?? 'Sedang';
+        }
+        $k['karakteristik'] = trim((string)($k['karakteristik'] ?? ''));
+        // Sinkronisasi karakteristik antara kisi dan soal bila salah satu kosong
+        if ($k['karakteristik'] === '' && !empty($soal[$i]['karakteristik'])) {
+            $k['karakteristik'] = $soal[$i]['karakteristik'];
+        } elseif (!empty($k['karakteristik']) && empty($soal[$i]['karakteristik'])) {
+            $soal[$i]['karakteristik'] = $k['karakteristik'];
         }
         $k['bobot'] = (float)($k['bobot'] ?? ($soal[$i]['bobot'] ?? 1));
 
