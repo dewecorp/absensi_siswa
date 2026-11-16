@@ -113,7 +113,7 @@ $('#formGenerateAI').on('submit', function(e) {
     var fd = new FormData(this);
     fd.append('aksi', 'generate');
     $('#btnProsesAI').prop('disabled', true);
-    $('#aiLoading').show();
+    if (typeof aiShowOverlay === 'function') aiShowOverlay('soal');
     $('#aiKisiWrap').hide();
     $('#aiHasilWrap').hide();
     $.ajax({
@@ -220,7 +220,7 @@ $('#formGenerateAI').on('submit', function(e) {
         Swal.fire({ icon: 'error', title: 'Gagal', text: msg });
     }).always(function() {
         $('#btnProsesAI').prop('disabled', false);
-        $('#aiLoading').hide();
+        if (typeof aiHideOverlay === 'function') aiHideOverlay();
     });
 });
 function aiCommonPayload() {
@@ -503,7 +503,6 @@ include '../templates/sidebar.php';
                             </div>
                         </div>
                         <button type="submit" class="btn btn-success" id="btnProsesAI"><i class="fas fa-magic mr-1"></i> Generate Soal</button>
-                        <span id="aiLoading" class="ml-2 text-muted" style="display:none;">Memproses generator, mohon tunggu...</span>
                     </form>
                 </div>
             </div>
@@ -561,4 +560,69 @@ include '../templates/sidebar.php';
     </section>
 </div>
 
+<!-- AI Loading Overlay -->
+<div id="aiLoadingOverlay" style="display:none;position:fixed;inset:0;z-index:9999;background:rgba(15,23,42,0.55);backdrop-filter:blur(4px);-webkit-backdrop-filter:blur(4px);align-items:center;justify-content:center;flex-direction:column;">
+    <div style="background:#fff;border-radius:20px;padding:40px 48px;text-align:center;box-shadow:0 24px 64px rgba(0,0,0,0.18);max-width:360px;width:90%;">
+        <div class="ai-orbit-wrap" style="margin:0 auto 24px;width:72px;height:72px;position:relative;">
+            <div class="ai-orbit-ring"></div>
+            <div class="ai-orbit-core">
+                <i class="fas fa-magic" style="font-size:22px;color:#6366f1;"></i>
+            </div>
+        </div>
+        <div style="font-size:17px;font-weight:700;color:#1e293b;margin-bottom:6px;" id="aiOverlayTitle">Memproses dengan AI</div>
+        <div style="font-size:13px;color:#64748b;min-height:36px;line-height:1.5;" id="aiOverlayMsg">Menyusun kisi-kisi soal...</div>
+        <div class="ai-dots-wrap" style="margin-top:18px;">
+            <span class="ai-dot"></span><span class="ai-dot"></span><span class="ai-dot"></span>
+        </div>
+    </div>
+</div>
+<style>
+.ai-orbit-wrap{display:flex;align-items:center;justify-content:center;}
+.ai-orbit-ring{position:absolute;inset:0;border-radius:50%;border:3px solid transparent;border-top-color:#6366f1;border-right-color:#a5b4fc;animation:aiSpin 1.1s linear infinite;}
+.ai-orbit-core{width:48px;height:48px;border-radius:50%;background:linear-gradient(135deg,#ede9fe,#dbeafe);display:flex;align-items:center;justify-content:center;}
+@keyframes aiSpin{to{transform:rotate(360deg);}}
+.ai-dots-wrap{display:flex;gap:8px;justify-content:center;}
+.ai-dot{width:9px;height:9px;border-radius:50%;background:#a5b4fc;animation:aiDotBounce 1.2s ease-in-out infinite;}
+.ai-dot:nth-child(1){animation-delay:0s;}
+.ai-dot:nth-child(2){animation-delay:.2s;}
+.ai-dot:nth-child(3){animation-delay:.4s;}
+@keyframes aiDotBounce{0%,80%,100%{transform:scale(.6);opacity:.5;}40%{transform:scale(1);opacity:1;}}
+</style>
+<script>
+var _aiMsgTimer = null;
+var _aiMsgsByType = {
+    soal: [
+        'Menyusun kisi-kisi soal...',
+        'Menganalisis kompetensi dasar...',
+        'Merancang butir pertanyaan...',
+        'Memilih level kognitif Bloom...',
+        'Menyusun pilihan jawaban...',
+        'Memfinalisasi paket soal...',
+        'Hampir selesai, mohon tunggu...'
+    ],
+    perangkat: [
+        'Menyusun perangkat pembelajaran...',
+        'Menganalisis tujuan pembelajaran...',
+        'Merancang alur kegiatan...',
+        'Menyusun asesmen formatif...',
+        'Membuat bahan refleksi...',
+        'Memfinalisasi dokumen...',
+        'Hampir selesai, mohon tunggu...'
+    ]
+};
+function aiShowOverlay(type) {
+    var msgs = _aiMsgsByType[type] || _aiMsgsByType['soal'];
+    var idx = 0;
+    $('#aiOverlayMsg').text(msgs[0]);
+    $('#aiLoadingOverlay').css('display','flex');
+    _aiMsgTimer = setInterval(function(){
+        idx = (idx + 1) % msgs.length;
+        $('#aiOverlayMsg').fadeOut(200, function(){ $(this).text(msgs[idx]).fadeIn(200); });
+    }, 2200);
+}
+function aiHideOverlay() {
+    clearInterval(_aiMsgTimer);
+    $('#aiLoadingOverlay').fadeOut(300);
+}
+</script>
 <?php include '../templates/footer.php'; ?>
