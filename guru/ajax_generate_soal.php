@@ -651,7 +651,23 @@ if ($aksi === 'generate') {
     };
     $diff_cycle = ['Mudah', 'Sedang', 'Sukar'];
     $diff_count = [];
-    $soal = array_values(is_array($data['soal'] ?? null) ? $data['soal'] : []);
+    // Flatten bila ada pembungkusan array bersarang
+    $raw_soal = is_array($data['soal'] ?? null) ? $data['soal'] : [];
+    $flat_soal = [];
+    foreach ($raw_soal as $item) {
+        if (!is_array($item)) continue;
+        $has_num = false;
+        foreach ($item as $sk => $sv) {
+            if (is_numeric($sk) && is_array($sv) && (isset($sv['pertanyaan']) || isset($sv['indikator']) || isset($sv['bentuk']))) {
+                $flat_soal[] = $sv;
+                $has_num = true;
+            }
+        }
+        if (!$has_num) {
+            $flat_soal[] = $item;
+        }
+    }
+    $soal = array_values($flat_soal);
     foreach ($soal as $i => &$it) {
         if (!is_array($it)) {
             $it = ['pertanyaan' => ''];

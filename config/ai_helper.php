@@ -547,7 +547,32 @@ if (!function_exists('ai_parse_soal_json')) {
                 return [false, null, 'Respons AI bukan JSON soal yang valid. Silakan klik Generate ulang.'];
             }
         }
-        if (empty($data['kisi_kisi']) || !is_array($data['kisi_kisi'])) {
+
+        // Normalisasi: bila AI membungkus butir soal ke dalam index numerik internal [0=>..., 1=>...]
+        $unwrap_list = function(array $items): array {
+            $out = [];
+            foreach ($items as $k => $v) {
+                if (!is_array($v)) continue;
+                $has_numeric_sub = false;
+                foreach ($v as $subk => $subv) {
+                    if (is_numeric($subk) && is_array($subv) && (isset($subv['pertanyaan']) || isset($subv['indikator']) || isset($subv['bentuk']))) {
+                        $out[] = $subv;
+                        $has_numeric_sub = true;
+                    }
+                }
+                if (!$has_numeric_sub) {
+                    $out[] = $v;
+                }
+            }
+            return array_values($out);
+        };
+
+        if (!empty($data['soal']) && is_array($data['soal'])) {
+            $data['soal'] = $unwrap_list($data['soal']);
+        }
+        if (!empty($data['kisi_kisi']) && is_array($data['kisi_kisi'])) {
+            $data['kisi_kisi'] = $unwrap_list($data['kisi_kisi']);
+        } else {
             $data['kisi_kisi'] = [];
         }
         return [true, $data, ''];

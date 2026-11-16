@@ -267,10 +267,29 @@ $('#formGenerateAI').on('submit', function(e) {
         $('#aiCount').text(totalButir);
         $('#aiHasilWrap').show();
         Swal.fire({ icon: 'success', title: 'Selesai', text: totalButir + ' butir (1 paket) berhasil dibuat.', timer: 1800, showConfirmButton: false });
-    }).fail(function(xhr) {
+    }).fail(function(xhr, status, error) {
         var msg = 'Gagal generate soal.';
-        try { var r = JSON.parse(xhr.responseText); if (r.msg) msg = r.msg; } catch(e) {}
-        Swal.fire({ icon: 'error', title: 'Gagal', text: msg });
+        if (status === 'timeout') {
+            msg = 'Waktu permintaan habis (timeout). Server AI membutuhkan waktu lebih lama. Silakan coba kembali.';
+        } else if (xhr.responseText) {
+            try {
+                var r = JSON.parse(xhr.responseText);
+                if (r && r.msg) msg = r.msg;
+                if (r && r.debug) msg += '\n\n[DEBUG]: ' + r.debug;
+            } catch(e) {
+                var clean = $('<div>').html(xhr.responseText).text().trim();
+                if (clean) {
+                    msg = clean.substring(0, 400);
+                } else {
+                    msg = 'HTTP ' + xhr.status + ': ' + (error || 'Unknown error');
+                }
+            }
+        }
+        Swal.fire({
+            icon: 'error',
+            title: 'Gagal',
+            html: '<div style="text-align:left;white-space:pre-wrap;max-height:300px;overflow:auto;font-size:13px;">' + $('<div>').text(msg).html() + '</div>'
+        });
     }).always(function() {
         $('#btnProsesAI').prop('disabled', false);
         if (typeof aiHideOverlay === 'function') aiHideOverlay();
