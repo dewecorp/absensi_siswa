@@ -461,9 +461,14 @@ if (!function_exists('ai_build_soal_prompt')) {
         $lines[] = 'Jawab HANYA dengan JSON valid (tanpa markdown, tanpa penjelasan di luar JSON) memakai skema persis ini:';
         $lines[] = '{"kisi_kisi":[{"no":1,"materi":"...","cp":"...","tp":"...","indikator":"...","bentuk":"Pilihan Ganda","level_kognitif":"L2","kesulitan":"Sedang","karakteristik":"HOTS","bobot":1}],"soal":[{"no":1,"bentuk":"Pilihan Ganda","karakteristik":"HOTS","pertanyaan":"...","gambar":"...","opsi":{"A":"...","B":"...","C":"...","D":"..."},"tabel":[],"kunci":"A","pembahasan":"...","cp":"...","tp":"...","indikator":"...","level_kognitif":"L2","kesulitan":"Sedang","bobot":1}]}';
         if (!$has_with_image) {
-            $lines[] = 'Field "gambar" pada tiap butir soal: WAJIB STRING KOSONG "" karena pengguna TIDAK MEMILIH butir bergambar. DILARANG MENULISKAN BLOK [GAMBAR: ...] DI DALAM TEKS PERTANYAAN!';
+            $lines[] = 'Field "gambar", "gambar_caption", dan "gambar_svg" pada tiap butir soal: WAJIB STRING KOSONG "" karena pengguna TIDAK MEMILIH opsi With Image. DILARANG MENULISKAN BLOK [GAMBAR: ...] DI DALAM TEKS PERTANYAAN!';
         } else {
-            $lines[] = 'Field "gambar" pada tiap butir soal: isi dengan uraian detail objek diagram/gambar untuk butir yang diminta With Image (contoh: "Diagram sistem pernapasan manusia | search: human respiratory system diagram"); bila butir reguler/tanpa gambar, isi dengan string kosong "". Uraian yang sama WAJIB juga ditulis sebagai blok [GAMBAR: ...] di dalam teks "pertanyaan".';
+            $lines[] = 'KETENTUAN KHUSUS UNTUK BUTIR WITH IMAGE (ILUSTRASI VISUAL ASLI GENERATOR):';
+            $lines[] = '1. Generator WAJIB membuat ilustrasi/diagram edukatif sendiri menggunakan format SVG mandiri pada field "gambar_svg" (DILARANG mengambil URL web luar).';
+            $lines[] = '2. Pada field "gambar_caption", tuliskan judul formal diagram (contoh: "Diagram Lapangan Bola Voli dan Ukuran Garis Serang").';
+            $lines[] = '3. Pada field "gambar_svg", tuliskan kode XML SVG utuh diawali <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 500 300"> dan diakhiri </svg>. Diagram harus memiliki latar belakang terang, garis dimensi berpanah, serta label teks nama/angka yang tajam dan presisi sesuai materi soal.';
+            $lines[] = '4. Field "gambar" diisi sama dengan gambar_caption. Pada teks "pertanyaan", cantumkan kalimat stimulus pengantar (misal: "Perhatikan diagram berikut!") dan sertakan blok [GAMBAR: {gambar_caption}].';
+            $lines[] = '5. Untuk butir soal reguler yang TIDAK memiliki karakteristik With Image, field "gambar_svg", "gambar_caption", dan "gambar" WAJIB diisi string kosong "".';
         }
         $lines[] = 'Untuk bentuk selain Pilihan Ganda / Pilihan Ganda Kompleks, isi "opsi" dengan {} dan "kunci" dengan jawaban benar sesuai aturan bentuk di atas. Untuk Menjodohkan, "opsi" tetap {} dan "tabel" WAJIB diisi sesuai aturan. Nomor "no" pada "kisi_kisi" urut 1 sampai ' . $total . '. Nomor "no" pada "soal" urut 1 sampai ' . $total_soal_item . ' (Menjodohkan hanya 1 nomor karena hanya 1 butir soal).';
         return implode("\n", $lines);
@@ -553,15 +558,31 @@ if (!function_exists('ai_parse_soal_json')) {
         $t = preg_replace('/[\x00-\x1F\x7F]/u', '', $t);
         $data = json_decode($t, true);
         if (json_last_error() !== JSON_ERROR_NONE) {
+            // Coba perbaiki koma menggantung
             $t_fix = preg_replace('/,\s*([\]}])/', '$1', $t);
             $data = json_decode($t_fix, true);
         }
+
+        // Jika JSON terputus di tengah jalan (misal output token panjang), coba tutup kurung kurawal/siku
+        if (!is_array($data)) {
+            $t_closed = $t;
+            $open_curly = substr_count($t_closed, '{') - substr_count($t_closed, '}');
+            $open_square = substr_count($t_closed, '[') - substr_count($t_closed, ']');
+            // Hapus trailing koma atau properti yang terpotong di akhir
+            $t_closed = preg_replace('/,\s*"[^"]*"?\s*:\s*[^,}\]]*$/s', '', $t_closed);
+            $t_closed = preg_replace('/,\s*$/', '', $t_closed);
+            for ($i = 0; $i < $open_square; $i++) { $t_closed .= ']'; }
+            for ($i = 0; $i < $open_curly; $i++) { $t_closed .= '}'; }
+            $data = json_decode($t_closed, true);
+        }
+
         if (!is_array($data) || empty($data['soal']) || !is_array($data['soal'])) {
             $arr_alt = json_decode($t, true);
             if (is_array($arr_alt) && array_is_list($arr_alt)) {
                 $data = ['kisi_kisi' => [], 'soal' => $arr_alt];
             } else {
-                return [false, null, 'Respons AI bukan JSON soal yang valid. Silakan klik Generate ulang.'];
+                $errMsg = 'Format respons dari model AI tidak dapat dibaca sebagai naskah soal. Hal ini biasanya terjadi jika jumlah butir terlalu banyak sehingga respons terpotong. Silakan coba kurangi jumlah soal atau klik Generate ulang.';
+                return [false, $errMsg, $errMsg];
             }
         }
 
@@ -618,10 +639,293 @@ if (!function_exists('ai_parse_perangkat_json')) {
     }
 }
 
+if (!function_exists('ai_builtin_diagram_svg')) {
+    // Generator vektor SVG bawaan untuk materi kurikulum madrasah & sekolah (PJOK, MTK, IPA, IPS, PAI)
+    // Menghasilkan diagram bersih, presisi secara proporsi, dan berlabel jelas tanpa ketergantungan web luar.
+    function ai_builtin_diagram_svg(string $desc): string {
+        $clean = mb_strtolower(trim($desc), 'UTF-8');
+        $clean = preg_replace('/\|\s*search:.*$/i', '', $clean);
+
+        // 1. PJOK: Lapangan Bola Voli
+        if (strpos($clean, 'voli') !== false || strpos($clean, 'volleyball') !== false) {
+            return '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 620 380" font-family="Arial, sans-serif">'
+                . '<rect width="620" height="380" fill="#f8fafc"/>'
+                . '<rect x="15" y="15" width="590" height="350" rx="8" fill="#ffffff" stroke="#cbd5e1" stroke-width="2"/>'
+                . '<text x="310" y="42" font-size="15" font-weight="bold" text-anchor="middle" fill="#1e293b">DIAGRAM LAPANGAN BOLA VOLI STANDAR FIVB</text>'
+                . '<rect x="70" y="80" width="480" height="240" fill="#2563eb" stroke="#ffffff" stroke-width="4"/>'
+                . '<line x1="310" y1="80" x2="310" y2="320" stroke="#ffffff" stroke-width="4"/>'
+                . '<line x1="230" y1="80" x2="230" y2="320" stroke="#ffffff" stroke-width="3"/>'
+                . '<line x1="390" y1="80" x2="390" y2="320" stroke="#ffffff" stroke-width="3"/>'
+                . '<rect x="307" y="70" width="6" height="260" fill="#ef4444" fill-opacity="0.85"/>'
+                . '<text x="310" y="65" font-size="12" font-weight="bold" text-anchor="middle" fill="#dc2626">JARING / NET</text>'
+                . '<defs><marker id="arrV" markerWidth="8" markerHeight="6" refX="4" refY="3" orient="auto"><polygon points="0 0, 8 3, 0 6" fill="#0f172a"/></marker></defs>'
+                . '<line x1="70" y1="345" x2="550" y2="345" stroke="#0f172a" stroke-width="1.8" marker-start="url(#arrV)" marker-end="url(#arrV)"/>'
+                . '<text x="310" y="365" font-size="13" font-weight="bold" text-anchor="middle" fill="#0f172a">Panjang Total = 18 Meter</text>'
+                . '<line x1="570" y1="80" x2="570" y2="320" stroke="#0f172a" stroke-width="1.8" marker-start="url(#arrV)" marker-end="url(#arrV)"/>'
+                . '<text x="590" y="205" font-size="13" font-weight="bold" text-anchor="middle" fill="#0f172a" transform="rotate(90, 590, 205)">Lebar = 9 Meter</text>'
+                . '<line x1="230" y1="95" x2="310" y2="95" stroke="#ffffff" stroke-width="1.5" marker-start="url(#arrV)" marker-end="url(#arrV)"/>'
+                . '<text x="270" y="115" font-size="11" font-weight="bold" text-anchor="middle" fill="#ffffff">3 Meter</text>'
+                . '<text x="230" y="72" font-size="11" text-anchor="middle" fill="#475569" font-weight="bold">Garis Serang</text>'
+                . '<text x="390" y="72" font-size="11" text-anchor="middle" fill="#475569" font-weight="bold">Garis Serang</text>'
+                . '<text x="150" y="205" font-size="12" fill="#ffffff" text-anchor="middle" font-weight="bold">Daerah Belakang</text>'
+                . '<text x="270" y="205" font-size="12" fill="#ffffff" text-anchor="middle" font-weight="bold">Daerah Serang</text>'
+                . '<text x="350" y="205" font-size="12" fill="#ffffff" text-anchor="middle" font-weight="bold">Daerah Serang</text>'
+                . '<text x="470" y="205" font-size="12" fill="#ffffff" text-anchor="middle" font-weight="bold">Daerah Belakang</text>'
+                . '</svg>';
+        }
+
+        // 2. PJOK: Lapangan Sepak Bola
+        if (strpos($clean, 'sepak bola') !== false || strpos($clean, 'football') !== false || strpos($clean, 'soccer') !== false) {
+            return '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 620 380" font-family="Arial, sans-serif">'
+                . '<rect width="620" height="380" fill="#f8fafc"/>'
+                . '<rect x="15" y="15" width="590" height="350" rx="8" fill="#ffffff" stroke="#cbd5e1" stroke-width="2"/>'
+                . '<text x="310" y="42" font-size="15" font-weight="bold" text-anchor="middle" fill="#1e293b">DIAGRAM LAPANGAN SEPAK BOLA STANDAR FIFA</text>'
+                . '<rect x="60" y="70" width="500" height="260" fill="#16a34a" stroke="#ffffff" stroke-width="3"/>'
+                . '<line x1="310" y1="70" x2="310" y2="330" stroke="#ffffff" stroke-width="3"/>'
+                . '<circle cx="310" cy="200" r="45" fill="none" stroke="#ffffff" stroke-width="3"/>'
+                . '<circle cx="310" cy="200" r="3" fill="#ffffff"/>'
+                . '<rect x="60" y="125" width="75" height="150" fill="none" stroke="#ffffff" stroke-width="2.5"/>'
+                . '<rect x="60" y="155" width="30" height="90" fill="none" stroke="#ffffff" stroke-width="2"/>'
+                . '<rect x="485" y="125" width="75" height="150" fill="none" stroke="#ffffff" stroke-width="2.5"/>'
+                . '<rect x="530" y="155" width="30" height="90" fill="none" stroke="#ffffff" stroke-width="2"/>'
+                . '<defs><marker id="arrF" markerWidth="8" markerHeight="6" refX="4" refY="3" orient="auto"><polygon points="0 0, 8 3, 0 6" fill="#0f172a"/></marker></defs>'
+                . '<line x1="60" y1="350" x2="560" y2="350" stroke="#0f172a" stroke-width="1.8" marker-start="url(#arrF)" marker-end="url(#arrF)"/>'
+                . '<text x="310" y="368" font-size="12" font-weight="bold" text-anchor="middle" fill="#0f172a">Panjang Lapangan: 100 - 110 Meter</text>'
+                . '<line x1="580" y1="70" x2="580" y2="330" stroke="#0f172a" stroke-width="1.8" marker-start="url(#arrF)" marker-end="url(#arrF)"/>'
+                . '<text x="600" y="205" font-size="12" font-weight="bold" text-anchor="middle" fill="#0f172a" transform="rotate(90, 600, 205)">Lebar: 64 - 75 M</text>'
+                . '</svg>';
+        }
+
+        // 3. PJOK: Lapangan Bola Basket
+        if (strpos($clean, 'basket') !== false) {
+            return '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 620 380" font-family="Arial, sans-serif">'
+                . '<rect width="620" height="380" fill="#f8fafc"/>'
+                . '<rect x="15" y="15" width="590" height="350" rx="8" fill="#ffffff" stroke="#cbd5e1" stroke-width="2"/>'
+                . '<text x="310" y="42" font-size="15" font-weight="bold" text-anchor="middle" fill="#1e293b">DIAGRAM LAPANGAN BOLA BASKET STANDAR FIBA</text>'
+                . '<rect x="70" y="75" width="480" height="250" fill="#ea580c" stroke="#ffffff" stroke-width="3"/>'
+                . '<line x1="310" y1="75" x2="310" y2="325" stroke="#ffffff" stroke-width="3"/>'
+                . '<circle cx="310" cy="200" r="40" fill="none" stroke="#ffffff" stroke-width="3"/>'
+                . '<rect x="70" y="155" width="80" height="90" fill="none" stroke="#ffffff" stroke-width="2.5"/>'
+                . '<circle cx="150" cy="200" r="30" fill="none" stroke="#ffffff" stroke-width="2"/>'
+                . '<rect x="470" y="155" width="80" height="90" fill="none" stroke="#ffffff" stroke-width="2.5"/>'
+                . '<circle cx="470" cy="200" r="30" fill="none" stroke="#ffffff" stroke-width="2"/>'
+                . '<text x="310" y="358" font-size="12" font-weight="bold" text-anchor="middle" fill="#0f172a">Panjang: 28 Meter | Lebar: 15 Meter</text>'
+                . '</svg>';
+        }
+
+        // 4. PJOK: Lapangan Bulu Tangkis
+        if (strpos($clean, 'bulu tangkis') !== false || strpos($clean, 'bulutangkis') !== false || strpos($clean, 'badminton') !== false) {
+            return '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 620 380" font-family="Arial, sans-serif">'
+                . '<rect width="620" height="380" fill="#f8fafc"/>'
+                . '<rect x="15" y="15" width="590" height="350" rx="8" fill="#ffffff" stroke="#cbd5e1" stroke-width="2"/>'
+                . '<text x="310" y="42" font-size="15" font-weight="bold" text-anchor="middle" fill="#1e293b">DIAGRAM LAPANGAN BULU TANGKIS STANDAR BWF</text>'
+                . '<rect x="80" y="80" width="460" height="230" fill="#059669" stroke="#ffffff" stroke-width="3"/>'
+                . '<line x1="310" y1="80" x2="310" y2="310" stroke="#ef4444" stroke-width="4"/>'
+                . '<line x1="250" y1="80" x2="250" y2="310" stroke="#ffffff" stroke-width="2"/>'
+                . '<line x1="370" y1="80" x2="370" y2="310" stroke="#ffffff" stroke-width="2"/>'
+                . '<line x1="80" y1="195" x2="250" y2="195" stroke="#ffffff" stroke-width="2"/>'
+                . '<line x1="370" y1="195" x2="540" y2="195" stroke="#ffffff" stroke-width="2"/>'
+                . '<text x="310" y="355" font-size="12" font-weight="bold" text-anchor="middle" fill="#0f172a">Panjang: 13,40 M | Lebar Ganda: 6,10 M | Lebar Tunggal: 5,18 M</text>'
+                . '</svg>';
+        }
+
+        // 5. Matematika: Bangun Ruang Kubus
+        if (strpos($clean, 'kubus') !== false || strpos($clean, 'cube') !== false) {
+            return '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 540 360" font-family="Arial, sans-serif">'
+                . '<rect width="540" height="360" fill="#f8fafc"/>'
+                . '<rect x="15" y="15" width="510" height="330" rx="8" fill="#ffffff" stroke="#cbd5e1" stroke-width="2"/>'
+                . '<text x="270" y="45" font-size="16" font-weight="bold" text-anchor="middle" fill="#1e293b">BANGUN RUANG: KUBUS</text>'
+                . '<path d="M 160 140 L 320 140 L 320 300 L 160 300 Z" fill="#93c5fd" fill-opacity="0.35" stroke="#1d4ed8" stroke-width="2.5"/>'
+                . '<path d="M 230 70 L 390 70 L 390 230 L 230 230 Z" fill="none" stroke="#1d4ed8" stroke-width="2.5" stroke-dasharray="6,4"/>'
+                . '<line x1="160" y1="140" x2="230" y2="70" stroke="#1d4ed8" stroke-width="2.5"/>'
+                . '<line x1="320" y1="140" x2="390" y2="70" stroke="#1d4ed8" stroke-width="2.5"/>'
+                . '<line x1="320" y1="300" x2="390" y2="230" stroke="#1d4ed8" stroke-width="2.5"/>'
+                . '<line x1="160" y1="300" x2="230" y2="230" stroke="#1d4ed8" stroke-width="2.5" stroke-dasharray="6,4"/>'
+                . '<text x="240" y="325" font-size="14" font-weight="bold" text-anchor="middle" fill="#0f172a">s (sisi/rusuk)</text>'
+                . '<text x="135" y="225" font-size="14" font-weight="bold" text-anchor="middle" fill="#0f172a">s</text>'
+                . '<text x="375" y="180" font-size="14" font-weight="bold" text-anchor="middle" fill="#0f172a">s</text>'
+                . '<text x="270" y="340" font-size="12" fill="#475569" text-anchor="middle">Volume = s × s × s = s³ | Luas Permukaan = 6 × s²</text>'
+                . '</svg>';
+        }
+
+        // 6. Matematika: Bangun Ruang Balok
+        if (strpos($clean, 'balok') !== false || strpos($clean, 'cuboid') !== false) {
+            return '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 560 360" font-family="Arial, sans-serif">'
+                . '<rect width="560" height="360" fill="#f8fafc"/>'
+                . '<rect x="15" y="15" width="530" height="330" rx="8" fill="#ffffff" stroke="#cbd5e1" stroke-width="2"/>'
+                . '<text x="280" y="45" font-size="16" font-weight="bold" text-anchor="middle" fill="#1e293b">BANGUN RUANG: BALOK</text>'
+                . '<rect x="120" y="150" width="260" height="130" fill="#a7f3d0" fill-opacity="0.4" stroke="#047857" stroke-width="2.5"/>'
+                . '<line x1="120" y1="150" x2="200" y2="90" stroke="#047857" stroke-width="2.5"/>'
+                . '<line x1="380" y1="150" x2="460" y2="90" stroke="#047857" stroke-width="2.5"/>'
+                . '<line x1="380" y1="280" x2="460" y2="220" stroke="#047857" stroke-width="2.5"/>'
+                . '<line x1="200" y1="90" x2="460" y2="90" stroke="#047857" stroke-width="2.5"/>'
+                . '<line x1="460" y1="90" x2="460" y2="220" stroke="#047857" stroke-width="2.5"/>'
+                . '<line x1="120" y1="280" x2="200" y2="220" stroke="#047857" stroke-width="2" stroke-dasharray="6,4"/>'
+                . '<line x1="200" y1="220" x2="460" y2="220" stroke="#047857" stroke-width="2" stroke-dasharray="6,4"/>'
+                . '<line x1="200" y1="90" x2="200" y2="220" stroke="#047857" stroke-width="2" stroke-dasharray="6,4"/>'
+                . '<text x="250" y="305" font-size="14" font-weight="bold" text-anchor="middle" fill="#0f172a">Panjang (p)</text>'
+                . '<text x="95" y="220" font-size="14" font-weight="bold" text-anchor="middle" fill="#0f172a">Tinggi (t)</text>'
+                . '<text x="435" y="145" font-size="14" font-weight="bold" text-anchor="middle" fill="#0f172a">Lebar (l)</text>'
+                . '<text x="280" y="340" font-size="12" fill="#475569" text-anchor="middle">Volume = p × l × t | Luas Permukaan = 2 × (pl + pt + lt)</text>'
+                . '</svg>';
+        }
+
+        // 7. Matematika: Tabung (Silinder)
+        if (strpos($clean, 'tabung') !== false || strpos($clean, 'silinder') !== false || strpos($clean, 'cylinder') !== false) {
+            return '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 540 360" font-family="Arial, sans-serif">'
+                . '<rect width="540" height="360" fill="#f8fafc"/>'
+                . '<rect x="15" y="15" width="510" height="330" rx="8" fill="#ffffff" stroke="#cbd5e1" stroke-width="2"/>'
+                . '<text x="270" y="45" font-size="16" font-weight="bold" text-anchor="middle" fill="#1e293b">BANGUN RUANG: TABUNG</text>'
+                . '<ellipse cx="270" cy="110" rx="100" ry="30" fill="#fed7aa" fill-opacity="0.5" stroke="#ea580c" stroke-width="2.5"/>'
+                . '<path d="M 170 110 L 170 250 A 100 30 0 0 0 370 250 L 370 110 Z" fill="#fed7aa" fill-opacity="0.3" stroke="none"/>'
+                . '<line x1="170" y1="110" x2="170" y2="250" stroke="#ea580c" stroke-width="2.5"/>'
+                . '<line x1="370" y1="110" x2="370" y2="250" stroke="#ea580c" stroke-width="2.5"/>'
+                . '<path d="M 170 250 A 100 30 0 0 0 370 250" fill="none" stroke="#ea580c" stroke-width="2.5"/>'
+                . '<path d="M 170 250 A 100 30 0 0 1 370 250" fill="none" stroke="#ea580c" stroke-width="2" stroke-dasharray="6,4"/>'
+                . '<line x1="270" y1="110" x2="370" y2="110" stroke="#0f172a" stroke-width="2"/>'
+                . '<text x="320" y="100" font-size="13" font-weight="bold" fill="#0f172a">r (jari-jari)</text>'
+                . '<line x1="140" y1="110" x2="140" y2="250" stroke="#0f172a" stroke-width="1.8"/>'
+                . '<text x="120" y="185" font-size="13" font-weight="bold" text-anchor="middle" fill="#0f172a">t</text>'
+                . '<text x="270" y="325" font-size="12" fill="#475569" text-anchor="middle">Volume = π × r² × t | Luas Selimut = 2 × π × r × t</text>'
+                . '</svg>';
+        }
+
+        // 8. Matematika: Koordinat Kartesius
+        if (strpos($clean, 'kartesius') !== false || strpos($clean, 'koordinat') !== false) {
+            return '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 540 360" font-family="Arial, sans-serif">'
+                . '<rect width="540" height="360" fill="#f8fafc"/>'
+                . '<rect x="15" y="15" width="510" height="330" rx="8" fill="#ffffff" stroke="#cbd5e1" stroke-width="2"/>'
+                . '<text x="270" y="42" font-size="15" font-weight="bold" text-anchor="middle" fill="#1e293b">SISTEM KOORDINAT KARTESIUS</text>'
+                . '<g stroke="#e2e8f0" stroke-width="1">'
+                . '<line x1="70" y1="100" x2="470" y2="100"/><line x1="70" y1="150" x2="470" y2="150"/><line x1="70" y1="250" x2="470" y2="250"/><line x1="70" y1="300" x2="470" y2="300"/>'
+                . '<line x1="120" y1="60" x2="120" y2="320"/><line x1="170" y1="60" x2="170" y2="320"/><line x1="220" y1="60" x2="220" y2="320"/>'
+                . '<line x1="320" y1="60" x2="320" y2="320"/><line x1="370" y1="60" x2="370" y2="320"/><line x1="420" y1="60" x2="420" y2="320"/>'
+                . '</g>'
+                . '<line x1="70" y1="200" x2="470" y2="200" stroke="#0f172a" stroke-width="2.5"/>'
+                . '<line x1="270" y1="60" x2="270" y2="320" stroke="#0f172a" stroke-width="2.5"/>'
+                . '<text x="480" y="205" font-size="14" font-weight="bold" fill="#0f172a">X</text>'
+                . '<text x="270" y="55" font-size="14" font-weight="bold" text-anchor="middle" fill="#0f172a">Y</text>'
+                . '<circle cx="370" cy="150" r="6" fill="#dc2626"/>'
+                . '<text x="380" y="145" font-size="12" font-weight="bold" fill="#dc2626">Titik A (2, 1)</text>'
+                . '<circle cx="170" cy="250" r="6" fill="#2563eb"/>'
+                . '<text x="110" y="265" font-size="12" font-weight="bold" fill="#2563eb">Titik B (-2, -1)</text>'
+                . '</svg>';
+        }
+
+        // 9. IPA: Siklus Air (Daur Air)
+        if (strpos($clean, 'siklus air') !== false || strpos($clean, 'daur air') !== false || strpos($clean, 'water cycle') !== false) {
+            return '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 600 370" font-family="Arial, sans-serif">'
+                . '<rect width="600" height="370" fill="#f8fafc"/>'
+                . '<rect x="15" y="15" width="570" height="340" rx="8" fill="#ffffff" stroke="#cbd5e1" stroke-width="2"/>'
+                . '<text x="300" y="42" font-size="15" font-weight="bold" text-anchor="middle" fill="#1e293b">SKEMA SIKLUS AIR (DAUR HIDROLOGI)</text>'
+                . '<circle cx="80" cy="90" r="35" fill="#f59e0b"/>'
+                . '<rect x="230" y="70" width="140" height="40" rx="20" fill="#94a3b8" fill-opacity="0.7"/>'
+                . '<text x="300" y="95" font-size="12" font-weight="bold" text-anchor="middle" fill="#0f172a">2. Kondensasi (Awan)</text>'
+                . '<rect x="420" y="160" width="130" height="35" rx="6" fill="#60a5fa" fill-opacity="0.3" stroke="#2563eb"/>'
+                . '<text x="485" y="182" font-size="12" font-weight="bold" text-anchor="middle" fill="#1d4ed8">3. Presipitasi (Hujan)</text>'
+                . '<path d="M 40 320 Q 200 260 380 290 Q 480 310 560 320 L 560 340 L 40 340 Z" fill="#0284c7"/>'
+                . '<text x="300" y="325" font-size="13" font-weight="bold" text-anchor="middle" fill="#ffffff">Laut / Danau / Sungai</text>'
+                . '<rect x="60" y="200" width="125" height="35" rx="6" fill="#fef08a" stroke="#ca8a04"/>'
+                . '<text x="122" y="222" font-size="12" font-weight="bold" text-anchor="middle" fill="#854d0e">1. Evaporasi (Uap)</text>'
+                . '<text x="300" y="275" font-size="12" font-weight="bold" fill="#0f172a">4. Infiltrasi (Penyerapan Tanah)</text>'
+                . '</svg>';
+        }
+
+        // 10. IPA: Sistem Organ Pencernaan / Pernapasan (Bagan Alir Edukasi)
+        if (strpos($clean, 'pencernaan') !== false || strpos($clean, 'lambung') !== false || strpos($clean, 'usus') !== false) {
+            return '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 600 360" font-family="Arial, sans-serif">'
+                . '<rect width="600" height="360" fill="#f8fafc"/>'
+                . '<rect x="15" y="15" width="570" height="330" rx="8" fill="#ffffff" stroke="#cbd5e1" stroke-width="2"/>'
+                . '<text x="300" y="42" font-size="15" font-weight="bold" text-anchor="middle" fill="#1e293b">BAGAN URUTAN SISTEM PENCERNAAN MANUSIA</text>'
+                . '<g font-size="13" font-weight="bold" text-anchor="middle">'
+                . '<rect x="40" y="80" width="130" height="50" rx="8" fill="#dbeafe" stroke="#2563eb" stroke-width="2"/><text x="105" y="110" fill="#1e40af">1. Mulut</text>'
+                . '<rect x="235" y="80" width="130" height="50" rx="8" fill="#dbeafe" stroke="#2563eb" stroke-width="2"/><text x="300" y="110" fill="#1e40af">2. Kerongkongan</text>'
+                . '<rect x="430" y="80" width="130" height="50" rx="8" fill="#fef3c7" stroke="#d97706" stroke-width="2"/><text x="495" y="110" fill="#92400e">3. Lambung</text>'
+                . '<rect x="430" y="200" width="130" height="50" rx="8" fill="#fef3c7" stroke="#d97706" stroke-width="2"/><text x="495" y="230" fill="#92400e">4. Usus Halus</text>'
+                . '<rect x="235" y="200" width="130" height="50" rx="8" fill="#dcfce7" stroke="#16a34a" stroke-width="2"/><text x="300" y="230" fill="#166534">5. Usus Besar</text>'
+                . '<rect x="40" y="200" width="130" height="50" rx="8" fill="#dcfce7" stroke="#16a34a" stroke-width="2"/><text x="105" y="230" fill="#166534">6. Anus</text>'
+                . '</g>'
+                . '<defs><marker id="arrS" markerWidth="8" markerHeight="6" refX="4" refY="3" orient="auto"><polygon points="0 0, 8 3, 0 6" fill="#475569"/></marker></defs>'
+                . '<line x1="170" y1="105" x2="235" y2="105" stroke="#475569" stroke-width="2" marker-end="url(#arrS)"/>'
+                . '<line x1="365" y1="105" x2="430" y2="105" stroke="#475569" stroke-width="2" marker-end="url(#arrS)"/>'
+                . '<line x1="495" y1="130" x2="495" y2="200" stroke="#475569" stroke-width="2" marker-end="url(#arrS)"/>'
+                . '<line x1="430" y1="225" x2="365" y2="225" stroke="#475569" stroke-width="2" marker-end="url(#arrS)"/>'
+                . '<line x1="235" y1="225" x2="170" y2="225" stroke="#475569" stroke-width="2" marker-end="url(#arrS)"/>'
+                . '<text x="300" y="310" font-size="12" fill="#64748b" text-anchor="middle">Proses pencernaan mekanik dan kimiawi berlangsung secara berurutan.</text>'
+                . '</svg>';
+        }
+
+        // 11. Generic Card Diagram Pendidikan (Fallback Bersih)
+        $title = htmlspecialchars(mb_strtoupper(mb_substr($clean, 0, 48), 'UTF-8'));
+        return '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 540 340" font-family="Arial, sans-serif">'
+            . '<rect width="540" height="340" fill="#f8fafc"/>'
+            . '<rect x="15" y="15" width="510" height="310" rx="8" fill="#ffffff" stroke="#cbd5e1" stroke-width="2"/>'
+            . '<rect x="30" y="30" width="480" height="42" rx="6" fill="#f1f5f9"/>'
+            . '<text x="270" y="56" font-size="14" font-weight="bold" text-anchor="middle" fill="#1e293b">DIAGRAM EDUKASI: ' . $title . '</text>'
+            . '<rect x="50" y="95" width="440" height="180" rx="6" fill="#f8fafc" stroke="#94a3b8" stroke-dasharray="6,4"/>'
+            . '<circle cx="270" cy="185" r="50" fill="#dbeafe" stroke="#2563eb" stroke-width="2"/>'
+            . '<text x="270" y="190" font-size="13" font-weight="bold" text-anchor="middle" fill="#1d4ed8">Stimulus Soal</text>'
+            . '<text x="270" y="305" font-size="12" fill="#64748b" text-anchor="middle">Gunakan data visual pada diagram di atas untuk menjawab pertanyaan.</text>'
+            . '</svg>';
+    }
+}
+
+if (!function_exists('ai_generate_diagram_svg')) {
+    // Meminta AI Gemini menyusun ilustrasi/diagram edukatif presisi dalam format XML SVG murni
+    function ai_generate_diagram_svg(string $provider, string $api_key, string $model, string $desc, string $materi = ''): string {
+        if ($api_key === '') {
+            return ai_builtin_diagram_svg($desc);
+        }
+
+        $prompt = "Buatkan ilustrasi atau diagram edukasi dalam format stand-alone valid SVG untuk stimulus naskah soal madrasah berikut:\n"
+            . "\"$desc\"\n"
+            . ($materi !== '' ? "Konteks Materi: $materi\n" : "")
+            . "\nKetentuan pembuatan SVG:\n"
+            . "1. Keluarkan HANYA kode XML SVG utuh (diawali <svg dan diakhiri </svg>) tanpa penjelasan teks dan tanpa markdown backtick.\n"
+            . "2. Gunakan atribut viewBox=\"0 0 600 360\" dengan latar belakang putih/terang yang elegan dan bersih.\n"
+            . "3. Sajikan diagram secara terukur dan presisi (misal garis lapangan olahraga dengan ukuran resmi, bangun ruang geometri bergaris dimensi, bagan organ dengan panah label nama, grafik berangka).\n"
+            . "4. Gunakan font sans-serif bersih, ukuran font 12-16px dengan warna kontras tajam agar mudah dibaca oleh siswa madrasah.\n"
+            . "5. Pastikan semua elemen visual relevan dan matematis/ilmiah tepat.";
+
+        $candidates = [];
+        $want = ai_normalize_gemini_model($model);
+        if ($want !== '') $candidates[] = $want;
+
+        $listed = ai_gemini_list_models($api_key);
+        foreach ($listed as $m) {
+            if (!in_array($m, $candidates, true)) $candidates[] = $m;
+        }
+        foreach (['gemini-2.5-flash', 'gemini-flash-latest', 'gemini-flash-lite-latest', 'gemini-1.5-flash'] as $std) {
+            if (!in_array($std, $candidates, true)) $candidates[] = $std;
+        }
+
+        foreach ($candidates as $try) {
+            $url = 'https://generativelanguage.googleapis.com/v1beta/models/' . rawurlencode($try) . ':generateContent?key=' . urlencode($api_key);
+            $payload = [
+                'contents' => [['parts' => [['text' => $prompt]]]],
+                'generationConfig' => [
+                    'temperature' => 0.2,
+                    'maxOutputTokens' => 8192
+                ]
+            ];
+            [$code, $body] = ai_http_post_json($url, $payload, [], 35);
+            if ($code >= 200 && $code < 300) {
+                $j = json_decode($body, true);
+                $text = $j['candidates'][0]['content']['parts'][0]['text'] ?? '';
+                if (preg_match('/<svg[\s\S]*?<\/svg>/i', $text, $m_svg)) {
+                    return $m_svg[0];
+                }
+            }
+        }
+
+        return ai_builtin_diagram_svg($desc);
+    }
+}
+
 if (!function_exists('ai_resolve_image_file')) {
-    // Cari & unduh foto/diagram nyata edukasi dari ensiklopedia resmi (Wikimedia Commons & Wikipedia).
-    // Prioritas: Wikimedia Commons diagram edukatif -> Wikipedia Indonesia -> Wikipedia English -> Fallback clean textbook generator.
-    function ai_resolve_image_file(string $description): array {
+    // Menghasilkan diagram/ilustrasi edukasi mandiri berbasis SVG (tanpa ketergantungan web luar/scraping).
+    // Prioritas: SVG Cache lokal -> Gemini SVG Generator -> Fallback Vektor Edukasi Bawaan.
+    function ai_resolve_image_file(string $description, ?PDO $pdo = null, int $guru_id = 0): array {
         $desc = trim($description);
         if ($desc === '') return ['', ''];
 
@@ -630,274 +934,41 @@ if (!function_exists('ai_resolve_image_file')) {
         if (!is_dir($dir)) {
             @mkdir($dir, 0777, true);
         }
-        $filePath = $dir . '/img_' . $hash . '.jpg';
 
-        if (is_file($filePath) && filesize($filePath) > 2000) {
-            return [$filePath, (string)file_get_contents($filePath)];
+        // 1. Cek apakah file SVG sudah pernah dibuat sebelumnya
+        $svgPath = $dir . '/img_' . $hash . '.svg';
+        if (is_file($svgPath) && filesize($svgPath) > 80) {
+            return [$svgPath, (string)file_get_contents($svgPath)];
         }
 
-        // Pisahkan teks caption dan english search query jika ada format "| search: ..."
-        $caption = $desc;
-        $search_en = '';
-        if (preg_match('/^(.*?)\|\s*search:\s*(.*?)$/i', $desc, $m_srch)) {
-            $caption = trim($m_srch[1]);
-            $search_en = trim($m_srch[2]);
+        // 2. Cek apakah ada file JPG/PNG lokal sebelumnya
+        $jpgPath = $dir . '/img_' . $hash . '.jpg';
+        if (is_file($jpgPath) && filesize($jpgPath) > 2000) {
+            return [$jpgPath, (string)file_get_contents($jpgPath)];
         }
 
-        $clean = mb_strtolower($caption, 'UTF-8');
-
-        // Pemetaan topik ensiklopedis materi kurikulum madrasah & sekolah (IPA, PJOK, MTK, IPS, PAI)
-        $prio_map = [
-            // PJOK / Olahraga
-            'bola tangan' => 'Bola_tangan',
-            'overhead pass' => 'Team_handball',
-            'bola voli' => 'Bola_voli',
-            'voli' => 'Bola_voli',
-            'sepak bola' => 'Sepak_bola',
-            'bola basket' => 'Bola_basket',
-            'basket' => 'Bola_basket',
-            'bulu tangkis' => 'Bulu_tangkis',
-            'bulutangkis' => 'Bulu_tangkis',
-            'tenis meja' => 'Tenis_meja',
-            'senam' => 'Senam',
-            'atletik' => 'Atletik',
-            'lari estafet' => 'Lari_estafet',
-            'pencak silat' => 'Pencak_silat',
-            'renang' => 'Berenang',
-            'kasti' => 'Kasti',
-            // IPA & Biologi
-            'pencernaan' => 'Sistem_pencernaan_manusia',
-            'lambung' => 'Lambung',
-            'usus' => 'Usus_halus',
-            'pernapasan' => 'Sistem_pernapasan',
-            'pernafasan' => 'Sistem_pernapasan',
-            'paru-paru' => 'Paru-paru',
-            'peredaran darah' => 'Sistem_peredaran_darah',
-            'jantung' => 'Jantung',
-            'darah' => 'Darah',
-            'rangka' => 'Kerangka_manusia',
-            'tulang' => 'Kerangka_manusia',
-            'otot' => 'Otot',
-            'mata' => 'Mata',
-            'telinga' => 'Telinga',
-            'kulit' => 'Kulit',
-            'hidung' => 'Hidung',
-            'lidah' => 'Lidah',
-            'fotosintesis' => 'Fotosintesis',
-            'daur air' => 'Siklus_air',
-            'siklus air' => 'Siklus_air',
-            'hujan' => 'Hujan',
-            'metamorfosis' => 'Metamorfosis',
-            'kupu-kupu' => 'Kupu-kupu',
-            'katak' => 'Katak',
-            'rantai makanan' => 'Rantai_makanan',
-            'jaring-jaring makanan' => 'Jaring-jaring_makanan',
-            'ekosistem' => 'Ekosistem',
-            'tata surya' => 'Tata_Surya',
-            'planet' => 'Tata_Surya',
-            'bumi' => 'Bumi',
-            'bulan' => 'Bulan',
-            'matahari' => 'Matahari',
-            'gerhana' => 'Gerhana',
-            'magnet' => 'Magnet',
-            'listrik' => 'Sirkuit_listrik',
-            'bunyi' => 'Bunyi',
-            'cahaya' => 'Cahaya',
-            'gaya' => 'Gaya_(fisika)',
-            'energi' => 'Energi',
-            'kalor' => 'Kalor',
-            'sampah' => 'Daur_ulang',
-            'daur ulang' => 'Daur_ulang',
-            'kebersihan' => 'Kebersihan',
-            // Matematika
-            'kubus' => 'Kubus',
-            'balok' => 'Balok_(geometri)',
-            'tabung' => 'Silinder_(geometri)',
-            'kerucut' => 'Kerucut',
-            'prisma' => 'Prisma_(geometri)',
-            'limas' => 'Limas',
-            'segitiga' => 'Segitiga',
-            'lingkaran' => 'Lingkaran',
-            'sudut' => 'Sudut_(geometri)',
-            // PAI & Madrasah
-            'pancasila' => 'Garuda_Pancasila',
-            'garuda' => 'Garuda_Pancasila',
-            'sila' => 'Garuda_Pancasila',
-            'sholat' => 'Salat',
-            'salat' => 'Salat',
-            'wudhu' => 'Wudu',
-            'masjid' => 'Masjid',
-            'madrasah' => 'Madrasah',
-            'kabah' => 'Ka\'bah',
-            'tawaf' => 'Tawaf',
-            'haji' => 'Haji',
-            'al-qur\'an' => 'Al-Qur\'an',
-            'alquran' => 'Al-Qur\'an',
-            // IPS & Sejarah
-            'borobudur' => 'Borobudur',
-            'prambanan' => 'Candi_Prambanan',
-            'proklamasi' => 'Proklamasi_Kemerdekaan_Indonesia',
-            'kemerdekaan' => 'Proklamasi_Kemerdekaan_Indonesia',
-            'soekarno' => 'Soekarno',
-            'peta indonesia' => 'Indonesia',
-            'suku' => 'Suku_bangsa_di_Indonesia',
-            'bhineka' => 'Bhinneka_Tunggal_Ika',
-            'bhinneka' => 'Bhinneka_Tunggal_Ika',
-            'norma' => 'Norma_sosial',
-            'gunung' => 'Gunung_berapi',
-            'laut' => 'Laut',
-            'pohon' => 'Pohon',
-        ];
-
-        $matchedPage = '';
-        foreach ($prio_map as $needle => $page) {
-            if (strpos($clean, $needle) !== false) {
-                $matchedPage = $page;
-                break;
+        // 3. Buat ilustrasi diagram baru secara mandiri via Gemini atau engine bawaan
+        $svgContent = '';
+        if ($pdo instanceof PDO && $guru_id > 0) {
+            $cfg = ai_guru_config($pdo, $guru_id);
+            if (!empty($cfg['gemini_key'])) {
+                $svgContent = ai_generate_diagram_svg($cfg['provider'], $cfg['gemini_key'], $cfg['gemini_model'], $desc);
+            }
+        } elseif (isset($GLOBALS['pdo']) && !empty($_SESSION['user_id'])) {
+            $cfg = ai_guru_config($GLOBALS['pdo'], (int)$_SESSION['user_id']);
+            if (!empty($cfg['gemini_key'])) {
+                $svgContent = ai_generate_diagram_svg($cfg['provider'], $cfg['gemini_key'], $cfg['gemini_model'], $desc);
             }
         }
 
-        $imgUrl = '';
-        $ua = 'SIMAD-Madrasah/2.0 (edukasi@madrasah.sch.id)';
-
-        // 1. Coba cari di Wikimedia Commons (Gudang diagram edukatif & foto olahraga berlisensi terbuka)
-        $commons_kw = $search_en !== '' ? $search_en : '';
-        if ($commons_kw === '') {
-            $stopwords = [
-                'ilustrasi', 'gambar', 'foto', 'bagan', 'diagram', 'tabel', 'sebuah', 'suatu', 'tentang',
-                'yang', 'dan', 'di', 'ke', 'dari', 'pada', 'untuk', 'dengan', 'adalah', 'sedang', 'sambil',
-                'serta', 'oleh', 'berbagai', 'macam', 'jenis', 'sangat', 'secara', 'agar', 'bisa', 'dapat',
-                'tersebut', 'mereka', 'kita', 'kami', 'anak-anak', 'peserta', 'didik', 'siswa', 'riang',
-                'senang', 'gembira', 'tersenyum', 'susunan', 'organ', 'struktur', 'bagian', 'alat', 'sistem',
-                'tahapan', 'langkah', 'cara', 'proses', 'hingga', 'sampai', 'mulai', 'berikut', 'ini', 'teknik',
-                'lapangan', 'madrasah', 'sekolah', 'melakukan', 'gerakan', 'posisi'
-            ];
-            $cleanWords = preg_replace('/[^a-z0-9\s-]/u', ' ', $clean);
-            $words = array_values(array_filter(explode(' ', $cleanWords), function($w) use ($stopwords) {
-                return strlen($w) >= 3 && !in_array($w, $stopwords);
-            }));
-            $commons_kw = !empty($words) ? implode(' ', array_slice($words, 0, 3)) : '';
+        // 4. Jika generator AI belum menghasilkan, gunakan engine vektor bawaan
+        if ($svgContent === '' || stripos($svgContent, '<svg') === false) {
+            $svgContent = ai_builtin_diagram_svg($desc);
         }
 
-        if ($commons_kw !== '') {
-            // Pencarian Wikimedia Commons: filter strictly ke file gambar (filetype:bitmap) dan buang file PDF
-            $cmSearchQuery = $commons_kw . ' filetype:bitmap -hoaks -laporan -pdf';
-            $cmUrl = "https://commons.wikimedia.org/w/api.php?action=query&generator=search&gsrsearch=" . rawurlencode($cmSearchQuery) . "&gsrnamespace=6&gsrlimit=5&prop=pageimages&pithumbsize=800&format=json";
-            $ch = curl_init($cmUrl);
-            curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
-            curl_setopt($ch, CURLOPT_USERAGENT, $ua);
-            curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, false);
-            curl_setopt($ch, CURLOPT_TIMEOUT, 6);
-            $res = json_decode((string)curl_exec($ch), true);
-            curl_close($ch);
-
-            if (!empty($res['query']['pages'])) {
-                foreach ($res['query']['pages'] as $p) {
-                    $title_lower = strtolower($p['title'] ?? '');
-                    // Tolak dokumen PDF, berkas hoaks, buku laporan, atau thumbnail dokumen non-gambar
-                    if (strpos($title_lower, '.pdf') !== false || strpos($title_lower, 'hoaks') !== false || strpos($title_lower, 'laporan') !== false) {
-                        continue;
-                    }
-                    if (!empty($p['thumbnail']['source'])) {
-                        $imgUrl = $p['thumbnail']['source'];
-                        break;
-                    }
-                }
-            }
-        }
-
-        // 2. Jika belum dapat, gunakan Wikipedia ID matched priority page
-        if ($imgUrl === '' && $matchedPage !== '') {
-            $summaryUrl = "https://id.wikipedia.org/api/rest_v1/page/summary/" . rawurlencode($matchedPage);
-            $ch = curl_init($summaryUrl);
-            curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
-            curl_setopt($ch, CURLOPT_USERAGENT, $ua);
-            curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, false);
-            curl_setopt($ch, CURLOPT_TIMEOUT, 6);
-            $res = json_decode((string)curl_exec($ch), true);
-            curl_close($ch);
-            $imgUrl = $res['originalimage']['source'] ?? $res['thumbnail']['source'] ?? '';
-        }
-
-        // 3. Jika belum dapat, cari artikel di Wikipedia Indonesia
-        if ($imgUrl === '') {
-            $searchUrl = "https://id.wikipedia.org/w/api.php?action=query&generator=search&gsrsearch=" . rawurlencode($commons_kw) . "&gsrlimit=2&prop=pageimages&pithumbsize=800&format=json";
-            $ch = curl_init($searchUrl);
-            curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
-            curl_setopt($ch, CURLOPT_USERAGENT, $ua);
-            curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, false);
-            curl_setopt($ch, CURLOPT_TIMEOUT, 6);
-            $res = json_decode((string)curl_exec($ch), true);
-            curl_close($ch);
-
-            if (!empty($res['query']['pages'])) {
-                foreach ($res['query']['pages'] as $p) {
-                    if (!empty($p['thumbnail']['source'])) {
-                        $imgUrl = $p['thumbnail']['source'];
-                        break;
-                    }
-                }
-            }
-        }
-
-        // 4. Unduh gambar dari Wikipedia/Commons jika ditemukan
-        if ($imgUrl !== '') {
-            $ch = curl_init($imgUrl);
-            curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
-            curl_setopt($ch, CURLOPT_FOLLOWLOCATION, true);
-            curl_setopt($ch, CURLOPT_USERAGENT, $ua);
-            curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, false);
-            curl_setopt($ch, CURLOPT_TIMEOUT, 12);
-            $rawImg = curl_exec($ch);
-            $code = curl_getinfo($ch, CURLINFO_HTTP_CODE);
-            curl_close($ch);
-
-            if ($code == 200 && is_string($rawImg) && strlen($rawImg) > 2000) {
-                if (extension_loaded('gd')) {
-                    $srcImg = @imagecreatefromstring($rawImg);
-                    if ($srcImg !== false) {
-                        $w = imagesx($srcImg);
-                        $h = imagesy($srcImg);
-                        if ($w > 850) {
-                            $nw = 850;
-                            $nh = (int)floor($h * ($nw / $w));
-                            $dstImg = imagecreatetruecolor($nw, $nh);
-                            imagecopyresampled($dstImg, $srcImg, 0, 0, 0, 0, $nw, $nh, $w, $h);
-                            imagedestroy($srcImg);
-                            ob_start();
-                            imagejpeg($dstImg, null, 85);
-                            $rawImg = (string)ob_get_clean();
-                            imagedestroy($dstImg);
-                        }
-                    }
-                }
-                @file_put_contents($filePath, $rawImg);
-                return [$filePath, $rawImg];
-            }
-        }
-
-        // 5. Fallback terakhir: Generator AI dengan prompt bahasa Inggris bersih & terstandarisasi
-        // DILARANG mengirim teks bahasa Indonesia panjang yang menyebabkan gambar acak/distorsi!
-        $prompt_clean = $search_en !== '' ? $search_en : $commons_kw;
-        $gen_query = "clean educational textbook diagram of " . $prompt_clean . ", white background, clear line art, labeled educational illustration, high quality, accurate science or sport diagram";
-        $pollUrl = "https://image.pollinations.ai/prompt/" . rawurlencode($gen_query) . "?width=650&height=400&nologo=true";
-
-        $ch = curl_init($pollUrl);
-        curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
-        curl_setopt($ch, CURLOPT_FOLLOWLOCATION, true);
-        curl_setopt($ch, CURLOPT_USERAGENT, $ua);
-        curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, false);
-        curl_setopt($ch, CURLOPT_TIMEOUT, 14);
-        $rawImg = curl_exec($ch);
-        $code = curl_getinfo($ch, CURLINFO_HTTP_CODE);
-        curl_close($ch);
-
-        if ($code == 200 && is_string($rawImg) && strlen($rawImg) > 2000) {
-            @file_put_contents($filePath, $rawImg);
-            return [$filePath, $rawImg];
-        }
-
-        return ['', ''];
+        // Simpan file SVG mandiri
+        @file_put_contents($svgPath, $svgContent);
+        return [$svgPath, $svgContent];
     }
 }
 
@@ -1652,96 +1723,98 @@ if (!function_exists('ai_generate_soal')) {
         // Default: Gemini — model otomatis bila kosong / pensiun.
         // PENTING: model Flash didahulukan karena kuota gratisnya jauh lebih besar
         // (Flash ~15 request/menit) dibanding model Pro (~2 request/menit, cepat kena 429).
-        $want = ai_normalize_gemini_model($model);
+        // Default: Gemini — Mode Full Fallback Dinamis (Mendukung Akun Pro maupun Free)
+        // Ambil daftar model aktual yang AKTIF dan TERSEDIA di akun guru dari API Gemini
+        $listed = ai_gemini_list_models($api_key);
+
         $candidates = [];
+        $want = ai_normalize_gemini_model($model);
         if ($want !== '') {
             $candidates[] = $want;
         }
 
-        $flash_first = ['gemini-2.5-flash', 'gemini-flash-latest', 'gemini-1.5-flash'];
-        foreach ($flash_first as $fl) {
-            if (!in_array($fl, $candidates, true)) {
-                $candidates[] = $fl;
-            }
-        }
-
-        // Model dari akun (list) — Flash dulu, Pro belakangan agar hemat kuota.
-        $listed = ai_gemini_list_models($api_key);
-        usort($listed, function ($a, $b) {
-            $score = function ($n) {
-                $n = strtolower($n);
-                if (strpos($n, 'flash') !== false) {
-                    return 0;
-                }
-                return 1;
-            };
-            return $score($a) <=> $score($b);
-        });
+        // Masukkan semua model yang resmi diizinkan akun pengguna ke daftar kerja
         foreach ($listed as $m) {
             if (!in_array($m, $candidates, true)) {
                 $candidates[] = $m;
             }
         }
-        // Pro hanya sebagai pilihan terakhir (kuota gratis sangat kecil).
-        foreach (['gemini-1.5-pro', 'gemini-2.0-pro', 'gemini-pro-latest'] as $pro_m) {
-            if (!in_array($pro_m, $candidates, true)) {
-                $candidates[] = $pro_m;
+
+        // Fallback cadangan jika list model akun gagal diambil (koneksi lambat/filter API)
+        $fallback_standard = [
+            'gemini-2.5-flash',
+            'gemini-2.5-pro',
+            'gemini-2.0-flash',
+            'gemini-1.5-flash',
+            'gemini-1.5-pro',
+            'gemini-flash-latest',
+            'gemini-pro-latest'
+        ];
+        foreach ($fallback_standard as $std) {
+            if (!in_array($std, $candidates, true)) {
+                $candidates[] = $std;
             }
         }
+
         $last_err = 'Tidak ada model Gemini yang bisa dipakai.';
         $hit_429 = false;
         foreach ($candidates as $try) {
             $url = 'https://generativelanguage.googleapis.com/v1beta/models/' . rawurlencode($try) . ':generateContent?key=' . urlencode($api_key);
             $payload = [
                 'contents' => [['parts' => [['text' => $prompt]]]],
-                'generationConfig' => ['temperature' => 0.7, 'responseMimeType' => 'application/json'],
+                'generationConfig' => [
+                    'temperature' => 0.7,
+                    'responseMimeType' => 'application/json',
+                    'maxOutputTokens' => 65536,
+                ],
             ];
-            [$code, $body, $cerr] = ai_http_post_json($url, $payload);
-            // HTTP 0 = koneksi putus (timeout/DNS/firewall): retry sekali sebelum menyerah.
+            [$code, $body, $cerr] = ai_http_post_json($url, $payload, [], 180);
+            // HTTP 0 = koneksi putus (timeout/DNS/firewall): retry sekali sebelum beralih
             if ($code === 0) {
-                sleep(2);
-                [$code, $body, $cerr] = ai_http_post_json($url, $payload, [], 150);
+                sleep(1);
+                [$code, $body, $cerr] = ai_http_post_json($url, $payload, [], 240);
             }
-            // Overload server (500/502/503): retry sekali model yang sama.
-            // Kuota habis (429): JANGAN retry model yang sama (boros kuota) — langsung pindah model lain.
+            // Overload server (500/502/503): retry sekali
             if (in_array($code, [500, 502, 503], true)) {
-                sleep(3);
-                [$code, $body, $cerr] = ai_http_post_json($url, $payload, [], 150);
+                sleep(1);
+                [$code, $body, $cerr] = ai_http_post_json($url, $payload, [], 240);
             }
+            // Jika limit rate / kuota (429): jangan berhenti, otomatis lompat ke model fallback berikutnya
             if ($code === 429) {
                 $hit_429 = true;
-                $last_err = 'Kuota';
-                sleep(2); // jeda singkat sebelum coba model berikutnya
+                $last_err = 'Batas laju pemanggilan API (429) tercapai pada model ' . $try . '. Beralih ke model lain...';
+                continue;
+            }
+            // Jika model tidak ditemukan (404) atau tidak didukung (400): langsung coba model lain di list
+            if ($code === 404 || ($code === 400 && (stripos($body, 'not supported') !== false || stripos($body, 'not found') !== false))) {
                 continue;
             }
             if ($code >= 200 && $code < 300) {
                 $j = json_decode($body, true);
                 $text = $j['candidates'][0]['content']['parts'][0]['text'] ?? '';
                 if ($text === '') {
-                    return [false, 'Respons Gemini kosong (model: ' . $try . ').'];
+                    // Coba model berikutnya bila respons teks kosong
+                    continue;
                 }
-                return ai_parse_soal_json($text);
+                $parsed = ai_parse_soal_json($text);
+                // Jika parsing JSON valid, return langsung
+                if ($parsed[0]) {
+                    return $parsed;
+                }
+                // Jika JSON dari model ini terpotong parah, coba model berikutnya
+                $last_err = $parsed[1] ?? 'Format JSON tidak valid.';
+                continue;
             }
             if ($code === 0) {
                 $why = $cerr !== '' ? $cerr : 'timeout/DNS/firewall server';
                 $last_err = 'Koneksi ke Gemini gagal (' . $why . '). Coba lagi beberapa saat.';
-                break;
-            }
-            if (in_array($code, [500, 502, 503], true)) {
-                $last_err = 'Server Gemini sibuk (' . $code . ', model: ' . $try . '). Sudah dicoba model lain, silakan coba lagi beberapa saat.';
                 continue;
             }
-            // Model tidak cocok untuk output teks/JSON (misal model audio/gambar seperti *-tts):
-            // lewati ke model berikutnya, jangan berhenti.
-            if ($code === 400 && stripos($body, 'not supported') !== false) {
-                sleep(1);
+            if (in_array($code, [500, 502, 503], true)) {
+                $last_err = 'Server Gemini sibuk (' . $code . ', model: ' . $try . '). Sedang dicoba model lain...';
                 continue;
             }
             $last_err = 'Gemini HTTP ' . $code . ' (model: ' . $try . '): ' . mb_substr($body, 0, 200);
-            // Hanya fallback bila model tidak ada / tidak didukung; error lain langsung berhenti.
-            if ($code !== 404) {
-                break;
-            }
         }
         if ($hit_429 && ($last_err === 'Kuota' || stripos($last_err, 'Tidak ada model') !== false)) {
             return [false, 'Kuota gratis Gemini habis sementara (429). Tunggu sekitar 1 menit, lalu coba lagi dengan jumlah soal lebih sedikit (misal 5 butir dulu). Model hemat kuota (Flash) sudah dicoba otomatis. Cek kuota di https://aistudio.google.com/apikey bila sering terjadi.'];

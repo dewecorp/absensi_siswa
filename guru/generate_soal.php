@@ -137,10 +137,24 @@ $('#formGenerateAI').on('submit', function(e) {
         dataType: 'json',
         timeout: 180000
     }).done(function(res) {
+        try {
         if (!res || !res.ok) {
-            var detail = (res && res.msg) ? res.msg : 'Gagal generate soal.';
-            if (res && res.debug) { detail += '\n\n[DEBUG] ' + res.debug; }
-            Swal.fire({ icon: 'error', title: 'Gagal', html: '<div style="text-align:left;white-space:pre-wrap;max-height:300px;overflow:auto;">' + $('<div>').text(detail).html() + '</div>' });
+            var errIcon = 'error';
+            var errTitle = 'Generate Gagal';
+            var detail = res && res.msg ? res.msg : 'Server tidak memberikan respons yang valid.';
+            var swalHtml = '<div style="text-align:left;line-height:1.65;font-size:13.5px;">';
+            if (res && res.msg) {
+                swalHtml += '<p style="margin-bottom:8px;">' + $('<div>').text(res.msg).html() + '</p>';
+            } else {
+                swalHtml += '<p style="margin-bottom:8px;">Server tidak mengembalikan data soal yang valid. Coba ulangi generate.</p>';
+            }
+            if (res && res.debug) {
+                swalHtml += '<details style="margin-top:8px;"><summary style="cursor:pointer;font-size:12px;color:#64748b;">Detail teknis (klik untuk lihat)</summary>'
+                    + '<pre style="font-size:11px;background:#f1f5f9;padding:8px;border-radius:6px;white-space:pre-wrap;margin-top:6px;">'
+                    + $('<div>').text(res.debug).html() + '</pre></details>';
+            }
+            swalHtml += '</div>';
+            Swal.fire({ icon: errIcon, title: errTitle, html: swalHtml, confirmButtonText: 'Tutup' });
             return;
         }
         aiLastSoal = res.soal || [];
@@ -208,14 +222,22 @@ $('#formGenerateAI').on('submit', function(e) {
                     html += ' <span class="badge ' + badgeColor + ' mb-1 font-weight-bold"><i class="fas fa-star mr-1"></i>' + $('<div>').text(kl).html() + '</span>';
                 });
             }
-            if (pg.gambar !== '') {
+            if (s.gambar_svg && typeof s.gambar_svg === 'string' && s.gambar_svg.indexOf('<svg') !== -1) {
+                var cleanCap = (s.gambar_caption || pg.gambar || 'Diagram Edukasi').replace(/\|\s*search:.*$/i, '').trim();
+                var gesc = $('<div>').text(cleanCap).html();
+                html += '<div class="my-2 p-2 bg-white rounded border shadow-sm ai-gambar-box" style="max-width:540px;text-align:center;">'
+                    + '<div class="ai-svg-wrapper mb-1" style="width:100%;max-width:500px;display:inline-block;overflow:hidden;border-radius:6px;border:1px solid #cbd5e1;background:#fff;">' + s.gambar_svg + '</div>'
+                    + '<div class="ai-gambar-cap small text-muted font-weight-bold"><i class="fas fa-project-diagram mr-1 text-primary"></i>' + gesc + '</div>'
+                    + '</div>';
+            } else if (pg.gambar !== '') {
                 var cleanCap = pg.gambar.replace(/\|\s*search:.*$/i, '').trim();
                 var gesc = $('<div>').text(cleanCap).html();
                 var rawDesc = $('<div>').text(pg.gambar).html();
-                html += '<div class="my-2 p-2 bg-white rounded border ai-gambar-box" data-desc="' + rawDesc + '" style="max-width:520px;text-align:center;">'
-                    + '<div class="ai-gambar-loading py-3 text-muted small"><i class="fas fa-circle-notch fa-spin text-primary mr-1"></i> Menyiapkan ilustrasi edukasi: <b>' + gesc + '</b>...</div>'
+                html += '<div class="my-2 p-2 bg-white rounded border shadow-sm ai-gambar-box" data-desc="' + rawDesc + '" style="max-width:540px;text-align:center;">'
+                    + '<div class="ai-gambar-loading py-3 text-muted small"><i class="fas fa-circle-notch fa-spin text-primary mr-1"></i> Menyusun diagram mandiri: <b>' + gesc + '</b>...</div>'
+                    + '<div class="ai-svg-holder mb-1" style="display:none;width:100%;max-width:500px;margin:0 auto;border-radius:6px;overflow:hidden;border:1px solid #cbd5e1;background:#fff;"></div>'
                     + '<img class="ai-gambar-img img-fluid rounded" src="" alt="' + gesc + '" style="max-width:100%;max-height:300px;display:none;" loading="lazy">'
-                    + '<div class="ai-gambar-cap small text-muted mt-1" style="display:none;"><i class="fas fa-image mr-1 text-primary"></i>' + gesc + '</div>'
+                    + '<div class="ai-gambar-cap small text-muted font-weight-bold mt-1" style="display:none;"><i class="fas fa-project-diagram mr-1 text-primary"></i>' + gesc + '</div>'
                     + '<div class="ai-gambar-fallback alert alert-light border small text-muted my-1" style="display:none;font-size:11.5px;padding:8px 12px;"><i class="fas fa-info-circle mr-1 text-info"></i><b>Area Ilustrasi Soal:</b> ' + gesc + '</div>'
                     + '</div>';
             }
@@ -244,9 +266,16 @@ $('#formGenerateAI').on('submit', function(e) {
             }
             $.getJSON('ajax_generate_soal.php', { aksi: 'resolve_image', desc: desc }).done(function(r) {
                 box.find('.ai-gambar-loading').hide();
-                if (r && r.ok && r.url) {
-                    box.find('.ai-gambar-img').attr('src', r.url).show();
-                    box.find('.ai-gambar-cap').show();
+                if (r && r.ok) {
+                    if (r.svg && r.svg.indexOf('<svg') !== -1) {
+                        box.find('.ai-svg-holder').html(r.svg).show();
+                        box.find('.ai-gambar-cap').show();
+                    } else if (r.url) {
+                        box.find('.ai-gambar-img').attr('src', r.url).show();
+                        box.find('.ai-gambar-cap').show();
+                    } else {
+                        box.find('.ai-gambar-fallback').show();
+                    }
                 } else {
                     box.find('.ai-gambar-fallback').show();
                 }
@@ -267,28 +296,60 @@ $('#formGenerateAI').on('submit', function(e) {
         $('#aiCount').text(totalButir);
         $('#aiHasilWrap').show();
         Swal.fire({ icon: 'success', title: 'Selesai', text: totalButir + ' butir (1 paket) berhasil dibuat.', timer: 1800, showConfirmButton: false });
+        } catch (renderErr) {
+            console.error('Error saat merender hasil soal AI:', renderErr);
+            Swal.fire({
+                icon: 'warning',
+                title: 'Data Berhasil Dibuat, Tampilan Terkendala',
+                html: '<div style="text-align:left;line-height:1.6;font-size:13px;">'
+                    + '<p>Soal berhasil diterima dari server AI, namun ada kendala saat menampilkan di layar.</p>'
+                    + '<p class="text-muted small">Detail: ' + $('<div>').text(renderErr.message || renderErr).html() + '</p>'
+                    + '<p class="small">Silakan coba klik <b>Generate Soal</b> sekali lagi.</p>'
+                    + '</div>',
+                confirmButtonText: 'Mengerti'
+            });
+        }
     }).fail(function(xhr, status, error) {
-        var msg = 'Gagal generate soal.';
+        var errTitle = 'Generate Belum Berhasil';
+        var errMsg = 'Terjadi kendala saat memproses permintaan ke server AI.';
+        var errSaran = 'Silakan coba beberapa saat lagi atau kurangi jumlah butir soal jika kuota/koneksi padat.';
+        var debugInfo = '';
+
         if (status === 'timeout') {
-            msg = 'Waktu permintaan habis (timeout). Server AI membutuhkan waktu lebih lama. Silakan coba kembali.';
+            errTitle = 'Waktu Permintaan Habis';
+            errMsg = 'Server AI membutuhkan waktu lebih dari 3 menit untuk memproses soal ini.';
+            errSaran = 'Coba kurangi jumlah butir soal, atau pilih lebih sedikit karakteristik agar waktu proses lebih cepat.';
         } else if (xhr.responseText) {
             try {
                 var r = JSON.parse(xhr.responseText);
-                if (r && r.msg) msg = r.msg;
-                if (r && r.debug) msg += '\n\n[DEBUG]: ' + r.debug;
+                if (r && r.msg) errMsg = r.msg;
+                if (r && r.debug) debugInfo = r.debug;
             } catch(e) {
                 var clean = $('<div>').html(xhr.responseText).text().trim();
                 if (clean) {
-                    msg = clean.substring(0, 400);
-                } else {
-                    msg = 'HTTP ' + xhr.status + ': ' + (error || 'Unknown error');
+                    errMsg = clean.substring(0, 300);
+                } else if (xhr.status) {
+                    errMsg = 'Terjadi kesalahan jaringan/server (HTTP ' + xhr.status + ').';
                 }
             }
         }
+
+        var failHtml = '<div style="text-align:left;line-height:1.65;font-size:13.5px;">'
+            + '<div style="margin-bottom:10px;font-weight:600;color:#dc2626;">' + $('<div>').text(errMsg).html() + '</div>'
+            + '<div style="color:#475569;font-size:12.5px;margin-bottom:8px;"><i class="fas fa-lightbulb text-warning mr-1"></i><b>Saran:</b> ' + errSaran + '</div>';
+
+        if (debugInfo) {
+            failHtml += '<details style="margin-top:10px;"><summary style="cursor:pointer;font-size:11.5px;color:#94a3b8;">Informasi teknis</summary>'
+                + '<pre style="font-size:10.5px;background:#f8fafc;border:1px solid #e2e8f0;padding:8px;border-radius:6px;white-space:pre-wrap;margin-top:6px;color:#334155;">'
+                + $('<div>').text(debugInfo).html() + '</pre></details>';
+        }
+        failHtml += '</div>';
+
         Swal.fire({
             icon: 'error',
-            title: 'Gagal',
-            html: '<div style="text-align:left;white-space:pre-wrap;max-height:300px;overflow:auto;font-size:13px;">' + $('<div>').text(msg).html() + '</div>'
+            title: errTitle,
+            html: failHtml,
+            confirmButtonText: 'Tutup'
         });
     }).always(function() {
         $('#btnProsesAI').prop('disabled', false);

@@ -1,6 +1,8 @@
 <?php
 // Endpoint Generate Soal AI untuk guru: generate (upload materi Word/TXT + textarea),
 // simpan batch ke tb_bank_soal, unduh PDF/XLSX. Konektor milik tiap guru (profil).
+@set_time_limit(300);
+@ini_set('memory_limit', '512M');
 ob_start();
 require_once '../config/database.php';
 require_once '../config/functions.php';
@@ -153,26 +155,40 @@ function ai_bersih_pertanyaan(string $pertanyaan): string {
 }
 
 // Render blok gambar untuk HTML (PDF) maupun DOCX-teks
-// SELALU tampilkan gambar: unduh dulu via resolver, fallback URL publik bila cache belum ada
+// Mendukung gambar SVG mandiri (vektor edukasi internal) maupun format raster (JPG/PNG)
 function ai_gambar_html(string $uraian): string {
     if ($uraian === '') return '';
     $clean_cap = trim(preg_replace('/\|\s*search:.*$/i', '', $uraian));
     [$fp, $bin] = ai_resolve_image_file($uraian);
-    $cap = '<div style="font-size:8pt;color:#444;font-style:italic;margin-top:4px;">Gambar: ' . htmlspecialchars($clean_cap) . '</div>';
+    $cap = '<div style="font-size:8.5pt;color:#334155;font-weight:600;margin-top:6px;text-align:center;">Gambar: ' . htmlspecialchars($clean_cap) . '</div>';
+
+    // 1. Jika konten berupa SVG
+    if ((is_string($bin) && stripos($bin, '<svg') !== false) || (is_string($fp) && pathinfo($fp, PATHINFO_EXTENSION) === 'svg')) {
+        $svg_content = (is_string($bin) && stripos($bin, '<svg') !== false) ? $bin : (string)@file_get_contents($fp);
+        return '<div style="text-align:center;margin:12px auto;max-width:520px;">'
+            . '<div style="width:100%;max-width:500px;display:inline-block;border-radius:6px;overflow:hidden;border:1px solid #cbd5e1;background:#ffffff;box-shadow:0 1px 3px rgba(0,0,0,0.06);">'
+            . $svg_content
+            . '</div>'
+            . $cap . '</div>';
+    }
+
+    // 2. Jika biner JPG/PNG valid
     if ($bin !== '' && strlen($bin) > 2000) {
         $b64 = base64_encode($bin);
-        return '<div style="text-align:center;margin:8px 0;">'
-            . '<img src="data:image/jpeg;base64,' . $b64 . '" style="max-width:480px;width:100%;max-height:280px;border-radius:4px;border:1px solid #777;">'
+        return '<div style="text-align:center;margin:10px 0;">'
+            . '<img src="data:image/jpeg;base64,' . $b64 . '" style="max-width:480px;width:100%;max-height:280px;border-radius:6px;border:1px solid #94a3b8;">'
             . $cap . '</div>';
     }
+
     $hash = md5($uraian);
-    $url = '../uploads/ai_images/img_' . $hash . '.jpg';
-    if (is_string($fp) && $fp !== '' && is_file($fp) && filesize($fp) > 2000) {
-        return '<div style="text-align:center;margin:8px 0;">'
-            . '<img src="' . htmlspecialchars($url) . '" style="max-width:480px;width:100%;height:auto;max-height:280px;border-radius:4px;border:1px solid #777;">'
+    if (is_string($fp) && $fp !== '' && is_file($fp) && filesize($fp) > 80) {
+        $ext = pathinfo($fp, PATHINFO_EXTENSION);
+        $url = '../uploads/ai_images/img_' . $hash . '.' . $ext;
+        return '<div style="text-align:center;margin:10px 0;">'
+            . '<img src="' . htmlspecialchars($url) . '" style="max-width:480px;width:100%;height:auto;max-height:280px;border-radius:6px;border:1px solid #94a3b8;">'
             . $cap . '</div>';
     }
-    // Jika tidak ditemukan gambar ensiklopedia/lokal, tampilkan box frame ilustrasi materi yang bersih
+
     return '<div style="text-align:center;margin:8px 0;padding:12px;background:#f8fafc;border:1px dashed #94a3b8;border-radius:6px;">'
         . '<div style="font-size:9pt;font-weight:bold;color:#334155;">[Area Ilustrasi / Gambar Soal]</div>'
         . $cap . '</div>';
@@ -568,19 +584,26 @@ if ($aksi === 'generate') {
     ]);
 
     $cfg = ai_guru_config($pdo, $guru_id);
+    $res_ai = null;
     if ($cfg['provider'] === 'openai') {
-        [$ok, $data] = ai_generate_soal('openai', $cfg['openai_key'], $cfg['openai_model'], $prompt, $cfg['openai_email'] ?? '');
+        $res_ai = ai_generate_soal('openai', $cfg['openai_key'], $cfg['openai_model'], $prompt, $cfg['openai_email'] ?? '');
     } else {
-        [$ok, $data] = ai_generate_soal('gemini', $cfg['gemini_key'], $cfg['gemini_model'], $prompt, $cfg['gemini_email'] ?? '');
+        $res_ai = ai_generate_soal('gemini', $cfg['gemini_key'], $cfg['gemini_model'], $prompt, $cfg['gemini_email'] ?? '');
     }
+    $ok = (bool)($res_ai[0] ?? false);
+    $data = $res_ai[1] ?? null;
     if (!$ok) {
+        $errMsg = is_string($data) && $data !== '' ? $data : (string)($res_ai[2] ?? '');
+        if ($errMsg === '') {
+            $errMsg = 'Model AI tidak dapat mengembalikan naskah soal. Silakan klik tombol Generate kembali.';
+        }
         $dbg = 'provider=' . $cfg['provider']
             . ' model=' . ($cfg['provider'] === 'openai' ? $cfg['openai_model'] : $cfg['gemini_model'])
             . ' prompt_len=' . strlen($prompt)
             . ' bloom=' . implode(',', $bloom ?? [])
             . ' kesulitan=' . json_encode($kesulitan_dist ?? [], JSON_UNESCAPED_UNICODE)
             . ' karakteristik=' . json_encode($karakteristik ?? [], JSON_UNESCAPED_UNICODE);
-        echo json_encode(['ok' => false, 'msg' => is_string($data) ? $data : 'Gagal generate soal.', 'debug' => $dbg]);
+        echo json_encode(['ok' => false, 'msg' => $errMsg, 'debug' => $dbg]);
         exit;
     }
     // Normalisasi: tiap butir wajib punya bentuk valid + nomor urut paket.
@@ -690,9 +713,26 @@ if ($aksi === 'generate') {
         $user_has_image = !empty($karakteristik['With Image']) || !empty($karakteristik['with_image']);
         if (!$user_has_image) {
             $it['gambar'] = '';
+            $it['gambar_svg'] = '';
+            $it['gambar_caption'] = '';
             $it['pertanyaan'] = preg_replace('/\[GAMBAR:\s*.*?\]/is', '', (string)($it['pertanyaan'] ?? ''));
             $it['karakteristik'] = trim(preg_replace('/\bwith\s*image\b/i', '', $it['karakteristik']));
             $it['karakteristik'] = trim(preg_replace('/^,+|,+$/', '', $it['karakteristik']));
+        } else {
+            // Pengguna meminta With Image: simpan SVG mandiri jika sudah digenerate langsung oleh AI
+            $caption_val = trim((string)($it['gambar_caption'] ?? $it['gambar'] ?? ''));
+            if ($caption_val === '' && preg_match('/\[GAMBAR:\s*([\s\S]*?)\]/i', (string)($it['pertanyaan'] ?? ''), $mg)) {
+                $caption_val = trim($mg[1]);
+            }
+            if ($caption_val !== '') {
+                $hash = md5($caption_val);
+                if (!empty($it['gambar_svg']) && stripos($it['gambar_svg'], '<svg') !== false) {
+                    $svg_code = trim($it['gambar_svg']);
+                    $svg_file = __DIR__ . '/../uploads/ai_images/img_' . $hash . '.svg';
+                    @file_put_contents($svg_file, $svg_code);
+                    $it['gambar_url'] = '../uploads/ai_images/img_' . $hash . '.svg';
+                }
+            }
         }
         $lv = $norm_level($it['level_kognitif'] ?? '');
         $it['level_kognitif'] = $lv !== '' ? $lv : 'L2';
@@ -1856,15 +1896,22 @@ if ($aksi === 'resolve_image') {
     header('Content-Type: application/json');
     $desc = trim((string)($_GET['desc'] ?? $_POST['desc'] ?? ''));
     if ($desc === '') {
-        echo json_encode(['ok' => false, 'url' => '']);
+        echo json_encode(['ok' => false, 'url' => '', 'svg' => '']);
         exit;
     }
-    [$filePath, $data] = ai_resolve_image_file($desc);
+    [$filePath, $data] = ai_resolve_image_file($desc, $pdo, (int)($_SESSION['user_id'] ?? 0));
     $hash = md5($desc);
     if ($filePath !== '' && is_file($filePath)) {
-        echo json_encode(['ok' => true, 'url' => '../uploads/ai_images/img_' . $hash . '.jpg']);
+        $ext = strtolower(pathinfo($filePath, PATHINFO_EXTENSION));
+        $svgData = ($ext === 'svg') ? (string)file_get_contents($filePath) : '';
+        echo json_encode([
+            'ok' => true,
+            'url' => '../uploads/ai_images/img_' . $hash . '.' . $ext,
+            'ext' => $ext,
+            'svg' => $svgData
+        ]);
     } else {
-        echo json_encode(['ok' => false, 'url' => '']);
+        echo json_encode(['ok' => false, 'url' => '', 'svg' => '']);
     }
     exit;
 }
