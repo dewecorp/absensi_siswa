@@ -308,16 +308,43 @@ $page_title = 'Pratinjau: ' . $judul . ($topik !== '' ? ' — ' . $topik : '');
                         <?php
                         $tanya_txt = (string)($it['tanya'] ?? '');
                         $gbr_txt = '';
-                        if (preg_match('/\[GAMBAR:\s*(.*?)\]/s', $tanya_txt, $gm)) {
+                        if (preg_match('/\[GAMBAR:\s*([\s\S]*?)\]/i', $tanya_txt, $gm)) {
                             $gbr_txt = trim($gm[1]);
                         }
+                        $gbr_desc = trim((string)($it['gambar'] ?? $gbr_txt));
+                        $tanya_bersih = preg_replace('/\[GAMBAR:\s*[\s\S]*?\]/i', '', $tanya_txt);
+                        $tanya_bersih = preg_replace("/[ \t]{2,}/", ' ', (string)$tanya_bersih);
+                        $tanya_bersih = trim((string)$tanya_bersih);
                         ?>
                         <li>
-                            <?php if (trim((string)($it['gambar'] ?? $gbr_txt)) !== ''): ?>
-                                <div style="background:#fffbeb;border:1px solid #f59e0b;border-radius:4px;padding:8px 10px;margin-bottom:8px;font-size:13.5px;"><strong>[GAMBAR: <?= htmlspecialchars(trim((string)($it['gambar'] ?? $gbr_txt))) ?>]</strong></div>
+                            <?php if ($gbr_desc !== ''): ?>
+                                <?php
+                                [$fp, $bin] = ai_resolve_image_file($gbr_desc, $pdo, $guru_id);
+                                $clean_cap = trim(preg_replace('/\|\s*search:.*$/i', '', $gbr_desc));
+                                $hash = md5($gbr_desc);
+                                $is_svg = (is_string($bin) && stripos($bin, '<svg') !== false) || (is_string($fp) && pathinfo($fp, PATHINFO_EXTENSION) === 'svg');
+                                ?>
+                                <div style="text-align:center;margin:12px auto 14px auto;max-width:540px;">
+                                    <?php if ($is_svg): ?>
+                                        <?php $svg_code = (is_string($bin) && stripos($bin, '<svg') !== false) ? $bin : (string)@file_get_contents($fp); ?>
+                                        <div style="width:100%;max-width:500px;display:inline-block;border-radius:8px;overflow:hidden;border:1px solid #cbd5e1;background:#ffffff;box-shadow:0 1px 3px rgba(0,0,0,0.06);">
+                                            <?= $svg_code ?>
+                                        </div>
+                                    <?php elseif ($fp !== '' && is_file($fp) && filesize($fp) > 80): ?>
+                                        <?php $ext = pathinfo($fp, PATHINFO_EXTENSION); ?>
+                                        <img src="../uploads/ai_images/img_<?= $hash ?>.<?= $ext ?>" alt="<?= htmlspecialchars($clean_cap) ?>" style="max-width:100%;height:auto;max-height:360px;border-radius:8px;border:1px solid #cbd5e1;box-shadow:0 1px 3px rgba(0,0,0,0.06);">
+                                    <?php else: ?>
+                                        <div style="background:#f8fafc;border:1px dashed #94a3b8;border-radius:6px;padding:12px 14px;color:#475569;font-size:12px;">
+                                            <i class="fas fa-image mr-1 text-primary"></i><strong>[Area Gambar Soal]</strong>
+                                        </div>
+                                    <?php endif; ?>
+                                    <div style="font-size:8.5pt;color:#334155;font-weight:600;margin-top:6px;">
+                                        <i class="fas fa-project-diagram mr-1 text-primary"></i>Gambar: <?= htmlspecialchars($clean_cap) ?>
+                                    </div>
+                                </div>
                             <?php endif; ?>
                             <p><strong>[<?= htmlspecialchars((string)($it['bentuk'] ?? '')) ?>][<?= htmlspecialchars((string)($it['level'] ?? '')) ?>]</strong>
-                            <?= nl2br(htmlspecialchars($tanya_txt)) ?></p>
+                            <?= nl2br(htmlspecialchars($tanya_bersih)) ?></p>
                             <?php if (($it['bentuk'] ?? '') === 'Menjodohkan' && !empty($it['tabel'])): ?>
                                 <table>
                                     <thead><tr><th style="width:36px;">No</th><th>Soal</th><th style="width:52px;">Huruf</th><th>Pilihan Jawaban</th></tr></thead>

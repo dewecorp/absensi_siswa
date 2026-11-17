@@ -855,7 +855,37 @@ if (!function_exists('ai_builtin_diagram_svg')) {
                 . '</svg>';
         }
 
-        // 11. Generic Card Diagram Pendidikan (Fallback Bersih)
+        // 11. Lingkungan / Poster / Pohon / Reboisasi / Sampah
+        if (strpos($clean, 'poster') !== false || strpos($clean, 'pohon') !== false || strpos($clean, 'lingkungan') !== false || strpos($clean, 'menanam') !== false || strpos($clean, 'reboisasi') !== false) {
+            return '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 560 380" font-family="Arial, sans-serif">'
+                . '<rect width="560" height="380" fill="#f0fdf4"/>'
+                . '<rect x="15" y="15" width="530" height="350" rx="10" fill="#ffffff" stroke="#16a34a" stroke-width="3"/>'
+                . '<rect x="35" y="30" width="490" height="46" rx="6" fill="#15803d"/>'
+                . '<text x="280" y="60" font-size="17" font-weight="bold" text-anchor="middle" fill="#ffffff" letter-spacing="1">POSTER AJAKAN MENANAM POHON</text>'
+                . '<!-- Pohon Rindang -->'
+                . '<rect x="265" y="170" width="30" height="110" fill="#78350f" rx="3"/>'
+                . '<circle cx="280" cy="150" r="65" fill="#22c55e" fill-opacity="0.95"/>'
+                . '<circle cx="230" cy="165" r="50" fill="#16a34a" fill-opacity="0.95"/>'
+                . '<circle cx="330" cy="165" r="50" fill="#15803d" fill-opacity="0.95"/>'
+                . '<circle cx="280" cy="115" r="45" fill="#4ade80" fill-opacity="0.95"/>'
+                . '<!-- Slogan Badges -->'
+                . '<rect x="40" y="100" width="140" height="32" rx="16" fill="#dcfce7" stroke="#16a34a" stroke-width="1.5"/>'
+                . '<text x="110" y="121" font-size="11" font-weight="bold" fill="#14532d" text-anchor="middle">Oksigen Bersih</text>'
+                . '<rect x="40" y="145" width="140" height="32" rx="16" fill="#dcfce7" stroke="#16a34a" stroke-width="1.5"/>'
+                . '<text x="110" y="166" font-size="11" font-weight="bold" fill="#14532d" text-anchor="middle">Cegah Banjir</text>'
+                . '<rect x="380" y="100" width="140" height="32" rx="16" fill="#dcfce7" stroke="#16a34a" stroke-width="1.5"/>'
+                . '<text x="450" y="121" font-size="11" font-weight="bold" fill="#14532d" text-anchor="middle">Cegah Longsor</text>'
+                . '<rect x="380" y="145" width="140" height="32" rx="16" fill="#dcfce7" stroke="#16a34a" stroke-width="1.5"/>'
+                . '<text x="450" y="166" font-size="11" font-weight="bold" fill="#14532d" text-anchor="middle">Bumi Lebih Sejuk</text>'
+                . '<!-- Tanah & Rumput -->'
+                . '<path d="M 40 280 Q 280 260 520 280 L 520 295 L 40 295 Z" fill="#84cc16"/>'
+                . '<!-- Call To Action -->'
+                . '<rect x="60" y="310" width="440" height="38" rx="6" fill="#fef08a" stroke="#ca8a04" stroke-width="2"/>'
+                . '<text x="280" y="334" font-size="13" font-weight="bold" text-anchor="middle" fill="#854d0e">"Satu Pohon Hari Ini, Berjuta Nafas Untuk Masa Depan"</text>'
+                . '</svg>';
+        }
+
+        // 12. Generic Card Diagram Pendidikan (Fallback Bersih)
         $title = htmlspecialchars(mb_strtoupper(mb_substr($clean, 0, 48), 'UTF-8'));
         return '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 540 340" font-family="Arial, sans-serif">'
             . '<rect width="540" height="340" fill="#f8fafc"/>'
