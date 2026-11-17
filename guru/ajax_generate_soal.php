@@ -345,6 +345,8 @@ function ai_build_soal_docx(array $items, array $payload): string {
     if ($judul === '') {
         $judul = 'Hasil Generate Soal AI (Paket Soal)';
     }
+    $media_files = [];
+    $image_rels = [];
     $body = ai_docx_p($judul, true, 28);
     $meta = [];
     if (trim((string)($payload['topik'] ?? '')) !== '') {
@@ -391,7 +393,64 @@ function ai_build_soal_docx(array $items, array $payload): string {
         $gbr_it = ai_extract_gambar((string)($it['pertanyaan'] ?? ''), (string)($it['gambar'] ?? ''));
         if ($gbr_it !== '') {
             $gbr_clean = trim(preg_replace('/\|\s*search:.*$/i', '', $gbr_it));
-            $body .= ai_docx_p('Ilustrasi / Gambar Soal: ' . $gbr_clean, true);
+            [$gbr_fp, $gbr_bin] = ai_resolve_image_file($gbr_it);
+            if ($gbr_bin === '' && $gbr_fp !== '' && is_file($gbr_fp)) {
+                $gbr_bin = (string)file_get_contents($gbr_fp);
+            }
+            if ($gbr_bin !== '') {
+                $img_idx = count($media_files) + 1;
+                $is_svg = (stripos($gbr_bin, '<svg') !== false) || (pathinfo($gbr_fp, PATHINFO_EXTENSION) === 'svg');
+                $ext = $is_svg ? 'svg' : (substr($gbr_bin, 0, 8) === "\x89PNG\r\n\x1a\n" ? 'png' : 'jpeg');
+                $media_name = 'image' . $img_idx . '.' . $ext;
+                $rId = 'rIdImg' . $img_idx;
+                $media_files['word/media/' . $media_name] = $gbr_bin;
+                $image_rels[] = '<Relationship Id="' . $rId . '" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/image" Target="media/' . $media_name . '"/>';
+
+                // Ukuran proporsional gambar di DOCX (5.5 inch = 5029200 EMU, tinggi ~3.2 inch = 2926080 EMU)
+                $cx = 5029200;
+                $cy = 2926080;
+                $blip_xml = '<a:blip r:embed="' . $rId . '">';
+                if ($is_svg) {
+                    $blip_xml .= '<a:extLst><a:ext uri="{96DAC542-7B16-430E-8250-E3FC940987E0}">'
+                        . '<asvg:svgBlip xmlns:asvg="http://schemas.microsoft.com/office/drawing/2016/SVG/main" r:embed="' . $rId . '"/>'
+                        . '</a:ext></a:extLst>';
+                }
+                $blip_xml .= '</a:blip>';
+
+                $drawing_xml = '<w:p>'
+                    . '<w:pPr><w:jc w:val="center"/><w:spacing w:before="120" w:after="40"/></w:pPr>'
+                    . '<w:r><w:drawing>'
+                    . '<wp:inline distT="0" distB="0" distL="0" distR="0" xmlns:wp="http://schemas.openxmlformats.org/drawingml/2006/wordprocessingDrawing">'
+                    . '<wp:extent cx="' . $cx . '" cy="' . $cy . '"/>'
+                    . '<wp:docPr id="' . $img_idx . '" name="Gambar ' . $img_idx . '"/>'
+                    . '<wp:cNvGraphicFramePr><a:graphicFrameLocks xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main" noChangeAspect="1"/></wp:cNvGraphicFramePr>'
+                    . '<a:graphic xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main">'
+                    . '<a:graphicData uri="http://schemas.openxmlformats.org/drawingml/2006/picture">'
+                    . '<pic:pic xmlns:pic="http://schemas.openxmlformats.org/drawingml/2006/picture">'
+                    . '<pic:nvPicPr>'
+                    . '<pic:cNvPr id="' . $img_idx . '" name="' . $media_name . '"/>'
+                    . '<pic:cNvPicPr/>'
+                    . '</pic:nvPicPr>'
+                    . '<pic:blipFill xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships">'
+                    . $blip_xml
+                    . '<a:stretch><a:fillRect/></a:stretch>'
+                    . '</pic:blipFill>'
+                    . '<pic:spPr>'
+                    . '<a:xfrm><a:off x="0" y="0"/><a:ext cx="' . $cx . '" cy="' . $cy . '"/></a:xfrm>'
+                    . '<a:prstGeom prst="rect"><a:avLst/></a:prstGeom>'
+                    . '</pic:spPr>'
+                    . '</pic:pic>'
+                    . '</a:graphicData>'
+                    . '</a:graphic>'
+                    . '</wp:inline>'
+                    . '</w:drawing></w:r>'
+                    . '</w:p>';
+
+                $body .= $drawing_xml;
+                $body .= '<w:p><w:pPr><w:jc w:val="center"/><w:spacing w:after="120"/></w:pPr><w:r><w:rPr><w:i/><w:sz w:val="18"/><w:szCs w:val="18"/><w:color w:val="475569"/></w:rPr><w:t xml:space="preserve">Gambar: ' . ai_docx_esc($gbr_clean) . '</w:t></w:r></w:p>';
+            } else {
+                $body .= ai_docx_p('Ilustrasi / Gambar Soal: ' . $gbr_clean, true);
+            }
         }
         if ($b_it === 'Menjodohkan' && !empty($tbl_docx)) {
             $body .= ai_docx_tabel_jodoh($tbl_docx);
@@ -411,7 +470,13 @@ function ai_build_soal_docx(array $items, array $payload): string {
         $body .= ai_docx_p('');
     }
     $doc = '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>'
-        . '<w:document xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main" xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships"><w:body>'
+        . '<w:document xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main" '
+        . 'xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships" '
+        . 'xmlns:wp="http://schemas.openxmlformats.org/drawingml/2006/wordprocessingDrawing" '
+        . 'xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main" '
+        . 'xmlns:pic="http://schemas.openxmlformats.org/drawingml/2006/picture" '
+        . 'xmlns:asvg="http://schemas.microsoft.com/office/drawing/2016/SVG/main">'
+        . '<w:body>'
         . $body
         . '<w:sectPr><w:pgSz w:w="11906" w:h="16838"/><w:pgMar w:top="1440" w:right="1440" w:bottom="1440" w:left="1440"/></w:sectPr>'
         . '</w:body></w:document>';
@@ -419,6 +484,10 @@ function ai_build_soal_docx(array $items, array $payload): string {
         . '<Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types">'
         . '<Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/>'
         . '<Default Extension="xml" ContentType="application/xml"/>'
+        . '<Default Extension="svg" ContentType="image/svg+xml"/>'
+        . '<Default Extension="png" ContentType="image/png"/>'
+        . '<Default Extension="jpg" ContentType="image/jpeg"/>'
+        . '<Default Extension="jpeg" ContentType="image/jpeg"/>'
         . '<Override PartName="/word/document.xml" ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.document.main+xml"/>'
         . '<Override PartName="/word/styles.xml" ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.styles+xml"/>'
         . '<Override PartName="/docProps/core.xml" ContentType="application/vnd.openxmlformats-package.core-properties+xml"/>'
@@ -432,7 +501,8 @@ function ai_build_soal_docx(array $items, array $payload): string {
         . '</Relationships>';
     $word_rels = '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>'
         . '<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">'
-        . '<Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/styles" Target="styles.xml"/>'
+        . '<Relationship Id="rIdStyles" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/styles" Target="styles.xml"/>'
+        . implode('', $image_rels)
         . '</Relationships>';
     $styles = '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>'
         . '<w:styles xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main">'
@@ -444,7 +514,8 @@ function ai_build_soal_docx(array $items, array $payload): string {
         . '<dc:title>' . htmlspecialchars($judul, ENT_XML1, 'UTF-8') . '</dc:title><dc:creator>SIMAD</dc:creator><cp:lastModifiedBy>SIMAD</cp:lastModifiedBy></cp:coreProperties>';
     $app = '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>'
         . '<Properties xmlns="http://schemas.openxmlformats.org/officeDocument/2006/extended-properties"><Application>Microsoft Office Word</Application></Properties>';
-    return ai_zip_stored([
+    
+    $zip_entries = [
         '[Content_Types].xml' => $types,
         '_rels/.rels' => $rels,
         'word/_rels/document.xml.rels' => $word_rels,
@@ -452,7 +523,11 @@ function ai_build_soal_docx(array $items, array $payload): string {
         'word/styles.xml' => $styles,
         'docProps/core.xml' => $core,
         'docProps/app.xml' => $app,
-    ]);
+    ];
+    foreach ($media_files as $m_path => $m_data) {
+        $zip_entries[$m_path] = $m_data;
+    }
+    return ai_zip_stored($zip_entries);
 }
 
 function ai_nama_mapel_kelas(PDO $pdo, $id_mapel, $id_kelas): array {
