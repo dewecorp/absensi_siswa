@@ -53,6 +53,24 @@ if ($nama_kepala === '') { $nama_kepala = trim((string)($school['nama_kepala'] ?
 if ($nama_kepala === '') { $nama_kepala = trim((string)($school['kepala_madrasah'] ?? '')); }
 $kota = trim((string)($school['kota'] ?? ($school['tempat_jadwal'] ?? '')));
 $nama_madrasah = trim((string)($doc['nama_madrasah'] ?: ($school['nama_madrasah'] ?? 'Madrasah')));
+
+// Ketua Komite Madrasah (dari tb_komite_madrasah)
+$nama_ketua_komite = '';
+try {
+    $ks = $pdo->query("SELECT nama FROM tb_komite_madrasah WHERE jabatan LIKE '%ketua%' ORDER BY id ASC LIMIT 1");
+    $nama_ketua_komite = trim((string)($ks->fetchColumn() ?: ''));
+} catch (PDOException $e) {
+    $nama_ketua_komite = '';
+}
+
+// QR tanda tangan digital (validasi dokumen)
+$qr_base = 'https://api.qrserver.com/v1/create-qr-code/?size=140x140&data=';
+$qr_komite_payload = 'Validasi Tanda Tangan Ketua Komite Madrasah: ' . ($nama_ketua_komite !== '' ? $nama_ketua_komite : '-')
+    . ' | ' . $nama_madrasah . ' | RKJM ' . (int)$doc['tahun_awal'] . '-' . (int)$doc['tahun_akhir'];
+$qr_kepala_payload = 'Validasi Tanda Tangan Kepala Madrasah: ' . ($nama_kepala !== '' ? $nama_kepala : '-')
+    . ' | ' . $nama_madrasah . ' | RKJM ' . (int)$doc['tahun_awal'] . '-' . (int)$doc['tahun_akhir'];
+$qr_komite_url = $qr_base . urlencode($qr_komite_payload);
+$qr_kepala_url = $qr_base . urlencode($qr_kepala_payload);
 $nama_yayasan  = trim((string)($school['nama_yayasan'] ?? ''));
 $alamat        = trim((string)($school['alamat'] ?? ''));
 $email_m       = trim((string)($school['email_madrasah'] ?? ''));
@@ -94,7 +112,7 @@ body { font-family: "Times New Roman", Georgia, serif; color:#111; font-size:11.
 .sheet { background:#fff; max-width:215mm; min-height:330mm; margin:0 auto; padding:15mm; box-shadow:0 0 10px rgba(0,0,0,.08); }
 h1,h2,h3,h4 { font-family: "Times New Roman", Georgia, serif; margin:0 0 8px; }
 h1 { font-size:20pt; text-align:center; }
-h2 { font-size:14pt; border-bottom:2px solid #222; padding-bottom:4px; margin:22px 0 10px; }
+h2 { font-size:14pt; text-transform:uppercase; letter-spacing:.4px; border-bottom:2px solid #222; padding-bottom:4px; margin:22px 0 10px; }
 h3 { font-size:12pt; margin:16px 0 6px; }
 p { margin:0 0 8px; text-align:justify; }
 table { width:100%; border-collapse:collapse; font-size:9.5pt; margin:6px 0 12px; }
@@ -116,8 +134,9 @@ th { background:#eee; text-align:center; }
 .cover .alamat { font-size:11pt; margin-top:4px; width:100%; }
 .page-break { page-break-before:always; }
 .sign { margin-top:26px; width:100%; }
-.sign td { border:none; text-align:center; padding-top:4px; }
-.sign .space { height:62px; }
+.sign td { border:none; text-align:center; padding:4px 6px; vertical-align:middle; }
+.sign .qr-cell { padding:6px 0 2px; }
+.sign .qr-sign { display:block; margin:0 auto; width:80px; height:80px; }
 .toolbar { max-width:215mm; margin:0 auto 8px; display:flex; gap:8px; flex-wrap:wrap; justify-content:flex-end; padding:8px 0; }
 .toolbar button, .toolbar a { font-family:Arial, sans-serif; font-size:12px; padding:7px 14px; border-radius:6px; border:1px solid #333; background:#fff; cursor:pointer; text-decoration:none; color:#111; }
 .toolbar .primary { background:#3b5bdb; border-color:#3b5bdb; color:#fff; }
@@ -392,9 +411,12 @@ if (!function_exists('cetak_rkjm_rich')) {
             <td style="width:50%">Mengetahui,<br>Ketua Komite Madrasah</td>
             <td style="width:50%"><?= htmlspecialchars($kota !== '' ? $kota : '....................') ?>, <?= $doc['tanggal_penyusunan'] ? htmlspecialchars(date('d F Y', strtotime($doc['tanggal_penyusunan']))) : '........................' ?><br>Kepala Madrasah</td>
         </tr>
-        <tr><td class="space"></td><td class="space"></td></tr>
         <tr>
-            <td>(.............................................)</td>
+            <td class="qr-cell"><img src="<?= htmlspecialchars($qr_komite_url, ENT_QUOTES, 'UTF-8') ?>" alt="QR Tanda Tangan Ketua Komite" class="qr-sign"></td>
+            <td class="qr-cell"><img src="<?= htmlspecialchars($qr_kepala_url, ENT_QUOTES, 'UTF-8') ?>" alt="QR Tanda Tangan Kepala Madrasah" class="qr-sign"></td>
+        </tr>
+        <tr>
+            <td><strong><?= htmlspecialchars($nama_ketua_komite !== '' ? $nama_ketua_komite : '(.............................................)') ?></strong></td>
             <td><strong><?= htmlspecialchars($nama_kepala ?: '(.............................................)') ?></strong></td>
         </tr>
     </table>
