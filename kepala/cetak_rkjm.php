@@ -47,12 +47,30 @@ if ($ids) {
 }
 
 $statusOpts = rkjmProgramStatusOptions();
-$docStatusOpts = rkjmDocStatusOptions();
 $school = getSchoolProfile($pdo);
 $nama_kepala = trim((string)($doc['nama_kepala'] ?? ''));
 if ($nama_kepala === '') { $nama_kepala = trim((string)($school['nama_kepala'] ?? '')); }
 if ($nama_kepala === '') { $nama_kepala = trim((string)($school['kepala_madrasah'] ?? '')); }
-$kota = trim((string)($school['kota'] ?? ''));
+$kota = trim((string)($school['kota'] ?? ($school['tempat_jadwal'] ?? '')));
+$nama_madrasah = trim((string)($doc['nama_madrasah'] ?: ($school['nama_madrasah'] ?? 'Madrasah')));
+$nama_yayasan  = trim((string)($school['nama_yayasan'] ?? ''));
+$alamat        = trim((string)($school['alamat'] ?? ''));
+$email_m       = trim((string)($school['email_madrasah'] ?? ''));
+$website_m     = trim((string)($school['website_madrasah'] ?? ''));
+$nip_kepala    = trim((string)($school['nip_kepala'] ?? ''));
+
+// Dasar penyusunan default referensial (dipakai hanya bila kolom kosong)
+$dasar_default = '<ol>
+<li>Undang-Undang Nomor 20 Tahun 2003 tentang Sistem Pendidikan Nasional.</li>
+<li>Peraturan Pemerintah Nomor 19 Tahun 2005 jo. PP Nomor 13 Tahun 2015 tentang Standar Nasional Pendidikan.</li>
+<li>Peraturan Menteri Agama Nomor 90 Tahun 2013 jo. PMA Nomor 60 Tahun 2015 tentang Penyelenggaraan Pendidikan Madrasah.</li>
+<li>Keputusan Menteri Agama Nomor 347 Tahun 2022 tentang Pedoman Implementasi Kurikulum Merdeka pada Madrasah.</li>
+<li>Keputusan Direktur Jenderal Pendidikan Islam Nomor 3451 Tahun 2024 tentang Petunjuk Teknis Penyusunan RKJM Madrasah.</li>
+<li>Rencana Strategis Kementerian Agama Tahun 2025–2029.</li>
+<li>Hasil Evaluasi Diri Madrasah (EDM) Tahun ' . (int)$doc['tahun_awal'] . '.</li>
+<li>Rapat Kerja Madrasah dan masukan dari Komite Madrasah sebagai bahan penyusunan program prioritas.</li>
+</ol>';
+
 $total_anggaran = 0.0;
 $by_field = [];
 foreach ($programs as $p) {
@@ -70,10 +88,10 @@ foreach ($programs as $p) {
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>RKJM <?= (int)$doc['tahun_awal'] ?>–<?= (int)$doc['tahun_akhir'] ?> - <?= htmlspecialchars($doc['nama_madrasah'] ?: ($school['nama_madrasah'] ?? 'Madrasah')) ?></title>
 <style>
-@page { size: A4; margin: 18mm 16mm; }
+@page { size: 215mm 330mm; margin: 15mm 15mm; }
 * { box-sizing: border-box; }
 body { font-family: "Times New Roman", Georgia, serif; color:#111; font-size:11.5pt; line-height:1.5; margin:0; background:#f5f6f8; }
-.sheet { background:#fff; max-width:210mm; margin:0 auto; padding:16mm; box-shadow:0 0 10px rgba(0,0,0,.08); }
+.sheet { background:#fff; max-width:215mm; min-height:330mm; margin:0 auto; padding:15mm; box-shadow:0 0 10px rgba(0,0,0,.08); }
 h1,h2,h3,h4 { font-family: "Times New Roman", Georgia, serif; margin:0 0 8px; }
 h1 { font-size:20pt; text-align:center; }
 h2 { font-size:14pt; border-bottom:2px solid #222; padding-bottom:4px; margin:22px 0 10px; }
@@ -85,18 +103,22 @@ th { background:#eee; text-align:center; }
 .center { text-align:center; }
 .right { text-align:right; }
 .muted { color:#555; }
-.cover { text-align:center; padding:24mm 8mm 10mm; page-break-after:always; }
-.cover .logo { max-height:90px; margin-bottom:12px; }
-.cover h1 { font-size:24pt; letter-spacing:.5px; margin-bottom:6px; }
-.cover h2 { border:none; font-size:16pt; margin:0 0 6px; }
-.cover .periode { font-size:15pt; font-weight:bold; margin:14px 0 4px; }
-.cover .instansi { margin-top:40mm; font-size:14pt; font-weight:bold; }
-.cover .alamat { font-size:11pt; margin-top:4px; }
+.cover { text-align:center; padding:18mm 10mm 16mm; page-break-after:always; height:330mm; display:flex; flex-direction:column; justify-content:space-between; align-items:center; }
+.cover-head { width:100%; }
+.cover-logo { flex:1 1 auto; display:flex; align-items:center; justify-content:center; width:100%; }
+.cover-foot { width:100%; }
+.cover .logo { display:block; margin:0 auto; max-height:240px; max-width:70%; width:auto; height:auto; object-fit:contain; }
+.cover h1 { font-size:20pt; letter-spacing:.3px; margin-bottom:6px; text-align:center; width:100%; white-space:nowrap; }
+.cover h2 { border:none; font-size:16pt; margin:0 0 6px; text-align:center; width:100%; }
+.cover .periode { font-size:15pt; font-weight:bold; margin:14px 0 4px; width:100%; }
+.cover .yayasan { font-size:12pt; margin-bottom:6px; width:100%; }
+.cover .instansi { font-size:14pt; font-weight:bold; width:100%; text-transform:uppercase; letter-spacing:.5px; }
+.cover .alamat { font-size:11pt; margin-top:4px; width:100%; }
 .page-break { page-break-before:always; }
 .sign { margin-top:26px; width:100%; }
 .sign td { border:none; text-align:center; padding-top:4px; }
 .sign .space { height:62px; }
-.toolbar { max-width:210mm; margin:0 auto 8px; display:flex; gap:8px; flex-wrap:wrap; justify-content:flex-end; padding:8px 0; }
+.toolbar { max-width:215mm; margin:0 auto 8px; display:flex; gap:8px; flex-wrap:wrap; justify-content:flex-end; padding:8px 0; }
 .toolbar button, .toolbar a { font-family:Arial, sans-serif; font-size:12px; padding:7px 14px; border-radius:6px; border:1px solid #333; background:#fff; cursor:pointer; text-decoration:none; color:#111; }
 .toolbar .primary { background:#3b5bdb; border-color:#3b5bdb; color:#fff; }
 .summary-table td { border:none; padding:2px 4px; }
@@ -110,7 +132,8 @@ th { background:#eee; text-align:center; }
 .rich-text a { color:#111; text-decoration:underline; }
 @media print {
     body { background:#fff; }
-    .sheet { box-shadow:none; max-width:none; padding:0; margin:0; }
+    .sheet { box-shadow:none; max-width:none; min-height:0; padding:0; margin:0; }
+    .cover { height:290mm; min-height:0; page-break-after:always; }
     .toolbar { display:none !important; }
     h2 { page-break-after:avoid; }
     table { page-break-inside:auto; }
@@ -160,40 +183,85 @@ if (!function_exists('cetak_rkjm_rich')) {
 
     <!-- 1. Sampul -->
     <div class="cover">
-        <?php if ($logoPath && is_file(__DIR__ . '/' . $logoPath)): ?>
-            <img src="<?= htmlspecialchars($logoPath) ?>" alt="Logo" class="logo">
-        <?php endif; ?>
-        <h1>RENCANA KERJA JANGKA MENENGAH</h1>
-        <h2>(RKJM)</h2>
-        <div class="periode">Periode <?= (int)$doc['tahun_awal'] ?>–<?= (int)$doc['tahun_akhir'] ?></div>
-        <p class="center muted"><?= htmlspecialchars($doc['nomor_dokumen'] ?: 'Nomor dokumen: ........................') ?></p>
-        <div class="instansi"><?= htmlspecialchars($doc['nama_madrasah'] ?: ($school['nama_madrasah'] ?? 'NAMA MADRASAH')) ?></div>
-        <div class="alamat"><?= htmlspecialchars($school['alamat'] ?? '') ?></div>
+        <div class="cover-head">
+            <h1>RENCANA KERJA JANGKA MENENGAH</h1>
+            <h2>(RKJM)</h2>
+            <div class="periode">Periode <?= (int)$doc['tahun_awal'] ?>–<?= (int)$doc['tahun_akhir'] ?></div>
+        </div>
+        <div class="cover-logo">
+            <?php if ($logoPath && is_file(__DIR__ . '/' . $logoPath)): ?>
+                <img src="<?= htmlspecialchars($logoPath) ?>" alt="Logo" class="logo">
+            <?php endif; ?>
+        </div>
+        <div class="cover-foot">
+            <?php if ($nama_yayasan !== ''): ?>
+                <div class="yayasan"><?= htmlspecialchars($nama_yayasan) ?></div>
+            <?php endif; ?>
+            <div class="instansi"><?= htmlspecialchars($nama_madrasah) ?></div>
+            <div class="alamat"><?= htmlspecialchars($alamat) ?></div>
+            <?php if ($kota !== ''): ?><div class="alamat"><?= htmlspecialchars($kota) ?></div><?php endif; ?>
+        </div>
     </div>
 
     <!-- 2. Identitas -->
     <h2>Identitas Madrasah</h2>
     <table>
-        <tr><th style="width:32%">Nama Madrasah</th><td><?= htmlspecialchars($doc['nama_madrasah'] ?: ($school['nama_madrasah'] ?? '-')) ?></td></tr>
-        <tr><th>Alamat</th><td><?= htmlspecialchars($school['alamat'] ?? '-') ?></td></tr>
-        <tr><th>Nama Kepala Madrasah</th><td><?= htmlspecialchars($nama_kepala ?: '-') ?></td></tr>
-        <tr><th>Nomor Dokumen</th><td><?= htmlspecialchars($doc['nomor_dokumen'] ?: '-') ?></td></tr>
+        <tr><th style="width:32%">Nama Madrasah</th><td><?= htmlspecialchars($nama_madrasah) ?></td></tr>
+        <?php if ($nama_yayasan !== ''): ?>
+        <tr><th>Nama Yayasan / Penyelenggara</th><td><?= htmlspecialchars($nama_yayasan) ?></td></tr>
+        <?php endif; ?>
+        <tr><th>Alamat</th><td><?= htmlspecialchars($alamat ?: '-') ?></td></tr>
+        <?php if ($kota !== ''): ?>
+        <tr><th>Kota / Kabupaten</th><td><?= htmlspecialchars($kota) ?></td></tr>
+        <?php endif; ?>
+        <?php if ($email_m !== ''): ?>
+        <tr><th>Email</th><td><?= htmlspecialchars($email_m) ?></td></tr>
+        <?php endif; ?>
+        <?php if ($website_m !== ''): ?>
+        <tr><th>Website</th><td><?= htmlspecialchars($website_m) ?></td></tr>
+        <?php endif; ?>
+        <tr><th>Nama Kepala Madrasah</th><td><?= htmlspecialchars($nama_kepala ?: '-') ?><?= $nip_kepala && $nip_kepala !== '-' ? ' (NIP: ' . htmlspecialchars($nip_kepala) . ')' : '' ?></td></tr>
         <tr><th>Periode RKJM</th><td><?= (int)$doc['tahun_awal'] ?>–<?= (int)$doc['tahun_akhir'] ?> (<?= count($years) ?> tahun)</td></tr>
-        <tr><th>Tanggal Penyusunan</th><td><?= $doc['tanggal_penyusunan'] ? htmlspecialchars(date('d-m-Y', strtotime($doc['tanggal_penyusunan']))) : '-' ?></td></tr>
-        <tr><th>Status Dokumen</th><td><?= htmlspecialchars($docStatusOpts[$doc['status']] ?? $doc['status']) ?></td></tr>
+        <tr><th>Tanggal Penyusunan</th><td><?= $doc['tanggal_penyusunan'] ? htmlspecialchars(date('d F Y', strtotime($doc['tanggal_penyusunan']))) : '-' ?></td></tr>
     </table>
 
     <!-- 3. Pendahuluan -->
     <h2>Pendahuluan</h2>
-    <p>Rencana Kerja Jangka Menengah (RKJM) ini disusun sebagai arah pengembangan <?= htmlspecialchars($doc['nama_madrasah'] ?: 'madrasah') ?> untuk periode <?= (int)$doc['tahun_awal'] ?>–<?= (int)$doc['tahun_akhir'] ?>. Dokumen ini memuat program prioritas, target tahunan, kebutuhan pembiayaan, serta mekanisme monitoring dan evaluasi yang digunakan sebagai dasar penyusunan rencana kerja tahunan.</p>
-    <?php if (!empty($doc['dasar_penyusunan'])): ?>
-        <h3>Dasar Penyusunan</h3>
-        <div class="rich-text"><?= cetak_rkjm_rich($doc['dasar_penyusunan']) ?></div>
-    <?php endif; ?>
+    <p>Rencana Kerja Jangka Menengah (RKJM) merupakan dokumen perencanaan strategis <?= htmlspecialchars($nama_madrasah) ?> yang memuat arah pengembangan dan program prioritas selama empat tahun, yakni periode <?= (int)$doc['tahun_awal'] ?>–<?= (int)$doc['tahun_akhir'] ?>. RKJM disusun berdasarkan hasil Evaluasi Diri Madrasah (EDM), analisis kekuatan dan kelemahan internal, serta peluang dan tantangan eksternal yang dihadapi madrasah dalam mewujudkan pendidikan berkualitas bagi peserta didik.</p>
+
+    <p>Penyusunan RKJM berpijak pada amanat peraturan perundang-undangan yang berlaku, khususnya Undang-Undang Nomor 20 Tahun 2003 tentang Sistem Pendidikan Nasional dan Peraturan Menteri Agama yang mengatur penyelenggaraan pendidikan madrasah. Dokumen ini menjadi acuan utama dalam penyusunan Rencana Kerja Tahunan (RKT) dan Rencana Kegiatan dan Anggaran Madrasah (RKAM), sehingga setiap kegiatan yang direncanakan dapat terukur, terarah, dan dapat dipertanggungjawabkan kepada seluruh pemangku kepentingan.</p>
+
+    <p>Dalam dokumen ini termuat gambaran profil dan kondisi awal madrasah, visi, misi serta tujuan pengembangan, program kerja per bidang beserta target tahunan, estimasi kebutuhan pembiayaan, dan mekanisme monitoring serta evaluasi. Program-program yang tercantum disusun secara partisipatif melalui rapat kerja yang melibatkan seluruh komponen madrasah, mulai dari pimpinan, pendidik, tenaga kependidikan, hingga Komite Madrasah sebagai representasi orang tua dan masyarakat.</p>
+
+    <p>Madrasah menyadari bahwa perencanaan yang baik merupakan separuh dari keberhasilan. Oleh karena itu, RKJM ini tidak hanya dipandang sebagai dokumen administratif, melainkan sebagai panduan operasional yang hidup dan adaptif. Program yang telah direncanakan bersifat dinamis dan dapat disesuaikan dengan perubahan kebijakan, perkembangan kebutuhan peserta didik, kemampuan anggaran, serta perkembangan lingkungan strategis madrasah sepanjang periode <?= (int)$doc['tahun_awal'] ?>–<?= (int)$doc['tahun_akhir'] ?>.</p>
+
+    <!-- 3a. Dasar Penyusunan -->
+    <h3>Dasar Penyusunan</h3>
+    <div class="rich-text"><?php
+        $ds = trim((string)($doc['dasar_penyusunan'] ?? ''));
+        echo $ds !== '' ? cetak_rkjm_rich($ds) : $dasar_default;
+    ?></div>
 
     <!-- 4. Profil -->
-    <h2>Profil dan Kondisi Awal Madrasah</h2>
-    <div class="rich-text"><?= cetak_rkjm_rich($doc['kondisi_awal'] ?? '', 'Belum diisi. Lengkapi melalui menu Pengaturan RKJM.') ?></div>
+    <h2>Profil Madrasah</h2>
+    <?php
+    $kondisi = trim((string)($doc['kondisi_awal'] ?? ''));
+    if ($kondisi !== ''): ?>
+        <div class="rich-text"><?= cetak_rkjm_rich($kondisi) ?></div>
+    <?php else: ?>
+        <table>
+            <tr><th style="width:32%">Nama Madrasah</th><td><?= htmlspecialchars($nama_madrasah) ?></td></tr>
+            <?php if ($nama_yayasan !== ''): ?>
+            <tr><th>Yayasan / Penyelenggara</th><td><?= htmlspecialchars($nama_yayasan) ?></td></tr>
+            <?php endif; ?>
+            <tr><th>Alamat Lengkap</th><td><?= htmlspecialchars($alamat ?: '-') ?></td></tr>
+            <?php if ($email_m !== ''): ?><tr><th>Email</th><td><?= htmlspecialchars($email_m) ?></td></tr><?php endif; ?>
+            <?php if ($website_m !== ''): ?><tr><th>Website</th><td><?= htmlspecialchars($website_m) ?></td></tr><?php endif; ?>
+            <tr><th>Kepala Madrasah</th><td><?= htmlspecialchars($nama_kepala ?: '-') ?></td></tr>
+            <tr><th>Tahun Ajaran</th><td><?= htmlspecialchars($school['tahun_ajaran'] ?? '-') ?></td></tr>
+        </table>
+        <p class="muted" style="font-size:9pt;font-style:italic">* Isi narasi profil madrasah melalui menu Pengaturan RKJM → Kondisi Awal / Profil Singkat Madrasah.</p>
+    <?php endif; ?>
 
     <!-- 5. Visi Misi Tujuan -->
     <h2>Visi, Misi, dan Tujuan Madrasah</h2>
@@ -322,7 +390,7 @@ if (!function_exists('cetak_rkjm_rich')) {
     <table class="sign">
         <tr>
             <td style="width:50%">Mengetahui,<br>Ketua Komite Madrasah</td>
-            <td style="width:50%"><?= htmlspecialchars($kota !== '' ? $kota : '....................') ?>, <?= $doc['tanggal_penyusunan'] ? htmlspecialchars(date('d-m-Y', strtotime($doc['tanggal_penyusunan']))) : '........................' ?><br>Kepala Madrasah</td>
+            <td style="width:50%"><?= htmlspecialchars($kota !== '' ? $kota : '....................') ?>, <?= $doc['tanggal_penyusunan'] ? htmlspecialchars(date('d F Y', strtotime($doc['tanggal_penyusunan']))) : '........................' ?><br>Kepala Madrasah</td>
         </tr>
         <tr><td class="space"></td><td class="space"></td></tr>
         <tr>

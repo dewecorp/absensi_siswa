@@ -16,9 +16,48 @@ $school_profile = getSchoolProfile($pdo);
 $fields = rkjmFields($pdo);
 
 $profil_madrasah = trim((string)($school_profile['nama_madrasah'] ?? ''));
-$profil_kepala = trim((string)($school_profile['nama_kepala'] ?? ''));
+$profil_kepala   = trim((string)($school_profile['nama_kepala'] ?? ''));
 if ($profil_kepala === '') {
     $profil_kepala = trim((string)($school_profile['kepala_madrasah'] ?? ''));
+}
+
+// Nilai default referensial untuk form pengaturan RKJM (dipakai bila kolom masih kosong)
+$sp_nama     = $profil_madrasah ?: 'Madrasah';
+$sp_yayasan  = trim((string)($school_profile['nama_yayasan'] ?? ''));
+$sp_alamat   = trim((string)($school_profile['alamat'] ?? ''));
+$sp_email    = trim((string)($school_profile['email_madrasah'] ?? ''));
+$sp_web      = trim((string)($school_profile['website_madrasah'] ?? ''));
+$sp_ta       = trim((string)($school_profile['tahun_ajaran'] ?? ''));
+
+$doc_tahun_awal  = (int)($doc['tahun_awal'] ?? date('Y'));
+$doc_tahun_akhir = (int)($doc['tahun_akhir'] ?? (date('Y') + 3));
+
+// Default Profil Singkat Madrasah (narasi murni tanpa tabel, mudah diedit)
+$default_kondisi_awal = '';
+if (trim((string)($doc['kondisi_awal'] ?? '')) === '') {
+    $default_kondisi_awal = '<p>' . htmlspecialchars($sp_nama) . ' merupakan satuan pendidikan madrasah '
+        . ($sp_yayasan !== '' ? 'yang diselenggarakan oleh ' . htmlspecialchars($sp_yayasan) . ', ' : '')
+        . 'beralamat di ' . ($sp_alamat !== '' ? htmlspecialchars($sp_alamat) : '...') . '. '
+        . 'Madrasah ini dipimpin oleh ' . ($profil_kepala !== '' ? htmlspecialchars($profil_kepala) : '...') . ' '
+        . 'dan berkomitmen memberikan layanan pendidikan berkualitas yang berlandaskan nilai-nilai keislaman, kebangsaan, dan kecakapan abad ke-21.</p>'
+        . '<p>Pada tahun ajaran ' . ($sp_ta !== '' ? htmlspecialchars($sp_ta) : '...') . ', madrasah terus berupaya meningkatkan mutu pembelajaran melalui implementasi Kurikulum Merdeka, '
+        . 'pemenuhan sarana dan prasarana belajar, serta penguatan kompetensi pendidik dan tenaga kependidikan.</p>'
+        . '<p>Kemitraan harmonis dengan Komite Madrasah, orang tua, dan masyarakat sekitar menjadi modal utama dalam mewujudkan program kerja dan arah pengembangan madrasah selama periode empat tahun ke depan.</p>';
+}
+
+// Default Dasar Penyusunan RKJM (HTML, diisi TinyMCE)
+$default_dasar_penyusunan = '';
+if (trim((string)($doc['dasar_penyusunan'] ?? '')) === '') {
+    $default_dasar_penyusunan = '<ol>'
+        . '<li>Undang-Undang Nomor 20 Tahun 2003 tentang Sistem Pendidikan Nasional.</li>'
+        . '<li>Peraturan Pemerintah Nomor 19 Tahun 2005 jo. PP Nomor 13 Tahun 2015 tentang Standar Nasional Pendidikan.</li>'
+        . '<li>Peraturan Menteri Agama Nomor 90 Tahun 2013 jo. PMA Nomor 60 Tahun 2015 tentang Penyelenggaraan Pendidikan Madrasah.</li>'
+        . '<li>Keputusan Menteri Agama Nomor 347 Tahun 2022 tentang Pedoman Implementasi Kurikulum Merdeka pada Madrasah.</li>'
+        . '<li>Keputusan Direktur Jenderal Pendidikan Islam Nomor 3451 Tahun 2024 tentang Petunjuk Teknis Penyusunan RKJM Madrasah.</li>'
+        . '<li>Rencana Strategis Kementerian Agama Tahun 2025–2029.</li>'
+        . '<li>Hasil Evaluasi Diri Madrasah (EDM) Tahun ' . $doc_tahun_awal . '.</li>'
+        . '<li>Rapat Kerja Madrasah dan masukan dari Komite Madrasah sebagai bahan penyusunan program prioritas.</li>'
+        . '</ol>';
 }
 
 $docId = (int)($_GET['doc'] ?? 0);
@@ -129,8 +168,11 @@ include '../templates/sidebar.php';
 .rkjm-hero-badges{display:flex;flex-wrap:wrap;gap:8px;margin-bottom:18px}
 .rkjm-hero .badge-soft{background:rgba(255,255,255,.18);border:1px solid rgba(255,255,255,.3);color:#fff;font-weight:600;border-radius:999px;padding:5px 13px;font-size:.78rem;display:inline-flex;align-items:center}
 .rkjm-hero-toolbar{background:rgba(0,0,0,.15);border:1px solid rgba(255,255,255,.18);border-radius:14px;padding:12px 14px;display:flex;flex-wrap:wrap;align-items:center;gap:10px}
-.rkjm-hero-toolbar .btn{border-radius:10px;font-weight:600;font-size:.82rem;padding:7px 14px;display:inline-flex;align-items:center;gap:6px;border:none;box-shadow:0 2px 6px rgba(0,0,0,.12);transition:transform .15s,box-shadow .15s}
+.rkjm-hero-toolbar .btn{border-radius:10px;font-weight:700;font-size:.82rem;padding:7px 14px;display:inline-flex;align-items:center;gap:6px;border:none;box-shadow:0 2px 6px rgba(0,0,0,.12);transition:transform .15s,box-shadow .15s}
 .rkjm-hero-toolbar .btn:hover{transform:translateY(-1px);box-shadow:0 4px 12px rgba(0,0,0,.18)}
+.rkjm-hero-toolbar .btn-doc-setting{background:#ffffff;color:#1e293b !important;box-shadow:0 2px 8px rgba(0,0,0,.18)}
+.rkjm-hero-toolbar .btn-doc-setting:hover{background:#f1f5f9;color:#0f172a !important}
+.rkjm-hero-toolbar .btn-doc-setting i{color:#4f5bd5}
 .rkjm-hero-toolbar .form-control{border-radius:10px;height:36px;font-size:.82rem;font-weight:600;border:1px solid rgba(255,255,255,.3);background:#fff;color:#2b3252}
 .rkjm-chip{display:inline-flex;align-items:center;gap:6px;background:#eef1ff;border:1px solid #d9def8;color:#4b54a8;border-radius:999px;padding:4px 10px;font-size:.75rem;margin:0 6px 6px 0}
 /* Program cards – RKJM (3 kolom di desktop, 2 di tablet, 1 di mobile) */
@@ -239,7 +281,7 @@ include '../templates/sidebar.php';
                         </select>
                     </div>
                 <?php endif; ?>
-                <button type="button" class="btn btn-light" id="btn-doc-settings"><i class="fas fa-cog"></i><?= $doc ? 'Pengaturan RKJM' : 'Buat Dokumen' ?></button>
+                <button type="button" class="btn btn-doc-setting" id="btn-doc-settings" style="background:#ffffff !important;color:#1e293b !important;border:1px solid #cbd5e1 !important;font-weight:700;"><i class="fas fa-cog" style="color:#4f5bd5 !important;"></i><?= $doc ? 'Pengaturan RKJM' : 'Buat Dokumen' ?></button>
                 <?php if ($doc): ?>
                     <button type="button" class="btn btn-warning" id="btn-add-program"><i class="fas fa-plus"></i>Tambah Program</button>
                     <button type="button" class="btn btn-success" id="btn-use-template"><i class="fas fa-copy"></i>Gunakan Template</button>
@@ -505,13 +547,40 @@ include '../templates/sidebar.php';
                     </div>
 
                     <div class="rkjm-section-title">Visi, Misi, dan Tujuan</div>
-                    <div class="mb-2"><label>Visi Madrasah</label><textarea class="form-control rkjm-editor" name="visi" rows="3" placeholder="Tuliskan visi madrasah..."><?= htmlspecialchars($doc['visi'] ?? '') ?></textarea></div>
-                    <div class="mb-2"><label>Misi Madrasah</label><textarea class="form-control rkjm-editor" name="misi" rows="4" placeholder="Tuliskan misi madrasah..."><?= htmlspecialchars($doc['misi'] ?? '') ?></textarea></div>
-                    <div class="mb-2"><label>Tujuan Pengembangan Madrasah</label><textarea class="form-control rkjm-editor" name="tujuan_pengembangan" rows="3" placeholder="Tuliskan tujuan pengembangan..."><?= htmlspecialchars($doc['tujuan_pengembangan'] ?? '') ?></textarea></div>
+                    <div class="mb-2"><label>Visi Madrasah</label><textarea class="form-control rkjm-editor" name="visi" rows="3" placeholder="Tuliskan visi madrasah..."><?= htmlspecialchars($doc['visi'] ?? '', ENT_NOQUOTES, 'UTF-8') ?></textarea></div>
+                    <div class="mb-2"><label>Misi Madrasah</label><textarea class="form-control rkjm-editor" name="misi" rows="4" placeholder="Tuliskan misi madrasah..."><?= htmlspecialchars($doc['misi'] ?? '', ENT_NOQUOTES, 'UTF-8') ?></textarea></div>
+                    <div class="mb-2"><label>Tujuan Pengembangan Madrasah</label><textarea class="form-control rkjm-editor" name="tujuan_pengembangan" rows="3" placeholder="Tuliskan tujuan pengembangan..."><?= htmlspecialchars($doc['tujuan_pengembangan'] ?? '', ENT_NOQUOTES, 'UTF-8') ?></textarea></div>
 
-                    <div class="rkjm-section-title">Profil dan Dasar Penyusunan</div>
-                    <div class="mb-2"><label>Kondisi Awal / Profil Singkat Madrasah</label><textarea class="form-control rkjm-editor" name="kondisi_awal" rows="4" placeholder="Gambaran singkat kondisi madrasah..."><?= htmlspecialchars($doc['kondisi_awal'] ?? '') ?></textarea></div>
-                    <div class="mb-2"><label>Dasar Penyusunan RKJM</label><textarea class="form-control rkjm-editor" name="dasar_penyusunan" rows="3" placeholder="Contoh: regulasi, hasil evaluasi diri, rapat kerja madrasah"><?= htmlspecialchars($doc['dasar_penyusunan'] ?? '') ?></textarea></div>
+                    <div class="rkjm-section-title d-flex justify-content-between align-items-center">
+                        <span>Profil dan Dasar Penyusunan</span>
+                        <button type="button" class="btn btn-sm btn-outline-primary" id="btn-load-default-ref"><i class="fas fa-magic mr-1"></i>Muat Referensi Baku</button>
+                    </div>
+                    <div class="mb-2">
+                        <label>Kondisi Awal / Profil Singkat Madrasah</label>
+                        <small class="text-muted d-block mb-1"><i class="fas fa-info-circle mr-1"></i>Narasi dan/atau tabel profil madrasah. Nilai awal diisi otomatis dari data profil — dapat diedit sesuai kebutuhan.</small>
+                        <textarea id="editor_kondisi_awal" class="form-control rkjm-editor" name="kondisi_awal" rows="5"><?php
+                            $val_kondisi = trim((string)($doc['kondisi_awal'] ?? ''));
+                            echo htmlspecialchars($val_kondisi !== '' ? $val_kondisi : $default_kondisi_awal, ENT_QUOTES, 'UTF-8');
+                        ?></textarea>
+                    </div>
+                    <div class="mb-2">
+                        <label>Dasar Penyusunan RKJM</label>
+                        <small class="text-muted d-block mb-1"><i class="fas fa-info-circle mr-1"></i>Daftar regulasi dan pertimbangan. Nilai awal berupa referensi baku — tambah atau sesuaikan sesuai kondisi madrasah.</small>
+                        <textarea id="editor_dasar_penyusunan" class="form-control rkjm-editor" name="dasar_penyusunan" rows="5"><?php
+                            $val_dasar = trim((string)($doc['dasar_penyusunan'] ?? ''));
+                            echo htmlspecialchars($val_dasar !== '' ? $val_dasar : $default_dasar_penyusunan, ENT_QUOTES, 'UTF-8');
+                        ?></textarea>
+                    </div>
+                    <script>
+                    window._rkjm_kondisi_awal = <?php
+                        $val_kondisi = trim((string)($doc['kondisi_awal'] ?? ''));
+                        echo json_encode($val_kondisi !== '' ? $val_kondisi : $default_kondisi_awal);
+                    ?>;
+                    window._rkjm_dasar_penyusunan = <?php
+                        $val_dasar = trim((string)($doc['dasar_penyusunan'] ?? ''));
+                        echo json_encode($val_dasar !== '' ? $val_dasar : $default_dasar_penyusunan);
+                    ?>;
+                    </script>
                     <input type="hidden" name="existing_created_by" value="<?= htmlspecialchars($doc['created_by'] ?? '') ?>">
                 </div>
                 <div class="modal-footer">
@@ -797,19 +866,35 @@ include '../templates/sidebar.php';
     $('#btn-create-doc, #btn-doc-settings').on('click', function(){ $('#docModal').modal('show'); });
 
     // Editor kaya teks (TinyMCE) untuk Visi, Misi, Tujuan, Profil Singkat, dan Dasar Penyusunan.
-    var rkjmEditorsReady = false;
+    var rkjmEditorsInitialized = false;
+    function setEditorContentsIfReady() {
+        if (typeof tinymce === 'undefined') return;
+        var edKondisi = tinymce.get('editor_kondisi_awal');
+        if (edKondisi && window._rkjm_kondisi_awal) {
+            edKondisi.setContent(window._rkjm_kondisi_awal);
+        }
+        var edDasar = tinymce.get('editor_dasar_penyusunan');
+        if (edDasar && window._rkjm_dasar_penyusunan) {
+            edDasar.setContent(window._rkjm_dasar_penyusunan);
+        }
+    }
+
     function initRkjmEditors(){
-        if (rkjmEditorsReady || typeof tinymce === 'undefined') return;
-        rkjmEditorsReady = true;
-        tinymce.init({
+        if (typeof tinymce === 'undefined') return;
+        if (rkjmEditorsInitialized) {
+            setEditorContentsIfReady();
+            return;
+        }
+        rkjmEditorsInitialized = true;
+        var tinyConfig = {
             selector: '.rkjm-editor',
-            height: 220,
+            height: 240,
             menubar: false,
             branding: false,
             promotion: false,
             license_key: 'gpl',
-            plugins: 'lists link code fullscreen',
-            toolbar: 'undo redo | blocks | bold italic underline strikethrough | bullist numlist | alignleft aligncenter alignright alignjustify | link hr | removeformat | code fullscreen',
+            plugins: 'lists link table code fullscreen',
+            toolbar: 'undo redo | blocks | bold italic underline strikethrough | bullist numlist | alignleft aligncenter alignright alignjustify | table | link hr | removeformat | code fullscreen',
             block_formats: 'Paragraf=p; Heading 3=h3; Heading 4=h4; Kutipan=blockquote',
             formats: {
                 underline: { inline: 'u', exact: true },
@@ -823,17 +908,36 @@ include '../templates/sidebar.php';
                 + " ol ol{list-style:lower-alpha outside}"
                 + " li{margin-bottom:2px}"
                 + " blockquote{border-left:3px solid #d9def8;margin:0 0 8px;padding:4px 12px;color:#4b54a6}",
-            setup: function(editor){
-                editor.on('change keyup', function(){
-                    editor.save();
-                });
+            init_instance_callback: function(editor) {
+                if (editor.id === 'editor_kondisi_awal' && window._rkjm_kondisi_awal) {
+                    editor.setContent(window._rkjm_kondisi_awal);
+                }
+                if (editor.id === 'editor_dasar_penyusunan' && window._rkjm_dasar_penyusunan) {
+                    editor.setContent(window._rkjm_dasar_penyusunan);
+                }
+                editor.on('change keyup', function(){ editor.save(); });
             }
-        });
+        };
+        tinymce.init(tinyConfig);
     }
     function syncRkjmEditors(){
         if (typeof tinymce === 'undefined') return;
         tinymce.triggerSave();
     }
+    // Tombol muat referensi baku profil & dasar penyusunan
+    $(document).on('click', '#btn-load-default-ref', function(){
+        if (typeof tinymce === 'undefined') return;
+        var edK = tinymce.get('editor_kondisi_awal');
+        if (edK && window._rkjm_kondisi_awal) {
+            edK.setContent(window._rkjm_kondisi_awal);
+        }
+        var edD = tinymce.get('editor_dasar_penyusunan');
+        if (edD && window._rkjm_dasar_penyusunan) {
+            edD.setContent(window._rkjm_dasar_penyusunan);
+        }
+        swalOk('Referensi profil & dasar penyusunan dimuat!');
+    });
+
     // Inisialisasi saat modal benar-benar tampil supaya lebar toolbar terhitung benar.
     $('#docModal').on('shown.bs.modal', initRkjmEditors);
 
