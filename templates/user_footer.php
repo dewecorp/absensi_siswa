@@ -68,7 +68,7 @@ if (!isset($school_profile)) {
     ?>
 
     <!-- Spacer for Bottom Navbar (Mobile Only) -->
-    <div class="d-block d-lg-none" style="height: 70px;"></div>
+    <div class="d-block d-lg-none mapp-bottom-spacer" style="height: 70px;"></div>
 
     <style>
     /* Bottom nav: selalu satu baris, semua menu tampil (termasuk Akun) di layar sempit */

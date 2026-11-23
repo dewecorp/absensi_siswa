@@ -587,11 +587,30 @@
 /* ---------- Rapatkan jarak antar box di Dashboard Guru & Wali ----------
    Global .card punya margin-bottom:30px; digabung mb-3/mb-4 membuat jarak
    antar box terlalu lebar. Di section.mapp-ordered jarak diseragamkan. */
-section.mapp-ordered > .row { margin-bottom: 0; }
-section.mapp-ordered > .row > [class*="col-"] { margin-bottom: 16px !important; }
+section.mapp-ordered { display: flex; flex-direction: column; gap: 16px; }
+section.mapp-ordered > .row { margin-bottom: 0 !important; }
+/* Nolkan margin bawah kolom agar tidak double-spacing dengan gap section */
+section.mapp-ordered > .row > [class*="col-"] { margin-bottom: 0 !important; }
 section.mapp-ordered > .row > [class*="col-"] > .card,
 section.mapp-ordered > .row > [class*="col-"] > .d-flex > .card { margin-bottom: 0 !important; }
-section.mapp-ordered > .row:last-child > [class*="col-"] { margin-bottom: 0 !important; }
-@media (max-width: 767.98px) {
-    section.mapp-ordered > .row > [class*="col-"] { margin-bottom: 12px !important; }
+
+@media (max-width: 991.98px) {
+    /* Gap kecil agar judul rapat ke kartunya */
+    section.mapp-ordered { gap: 6px; }
+    /* Kartu yang memulai kelompok baru butuh jarak lebih ke atas */
+    section.mapp-ordered > .row.align-items-stretch,
+    section.mapp-ordered > .row.mapp-row-upacara,
+    section.mapp-ordered > .row.mapp-row-les,
+    section.mapp-ordered > .row.d-lg-none,
+    section.mapp-ordered > .row:has(.mapp-link-card),
+    section.mapp-ordered > .row:has(.dashboard-agenda-card),
+    section.mapp-ordered > .row:has(.mapp-ketentuan-card) { margin-top: 10px; }
+    /* Kolom yang stack di mobile (col-12) perlu row-gap agar kartu tidak menempel */
+    section.mapp-ordered > .row { row-gap: 10px; }
+    /* Pastikan tidak ada sisa margin dari mb-3/mb-4 bawaan Bootstrap */
+    section.mapp-ordered > .row > [class*="col-"],
+    section.mapp-ordered > .row > [class*="col-"] > .card,
+    section.mapp-ordered > .row > [class*="col-"] > .d-flex > .card { margin-bottom: 0 !important; }
+    /* dash-section-head: hapus margin-bottom bawaan, biarkan gap 6px ke kartu di bawahnya, beri pemisah 10px ke atas */
+    section.mapp-ordered > .dash-section-head { margin-bottom: 0 !important; margin-top: 10px; }
 }
