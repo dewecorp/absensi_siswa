@@ -583,3 +583,15 @@
         font-size: 12px;
     }
 }
+
+/* ---------- Rapatkan jarak antar box di Dashboard Guru & Wali ----------
+   Global .card punya margin-bottom:30px; digabung mb-3/mb-4 membuat jarak
+   antar box terlalu lebar. Di section.mapp-ordered jarak diseragamkan. */
+section.mapp-ordered > .row { margin-bottom: 0; }
+section.mapp-ordered > .row > [class*="col-"] { margin-bottom: 16px !important; }
+section.mapp-ordered > .row > [class*="col-"] > .card,
+section.mapp-ordered > .row > [class*="col-"] > .d-flex > .card { margin-bottom: 0 !important; }
+section.mapp-ordered > .row:last-child > [class*="col-"] { margin-bottom: 0 !important; }
+@media (max-width: 767.98px) {
+    section.mapp-ordered > .row > [class*="col-"] { margin-bottom: 12px !important; }
+}
